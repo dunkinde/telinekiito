@@ -1,0 +1,240 @@
+"use client";
+// Hero: headline that reveals word by word after the intro, the address bar that starts a quote,
+// count-up stats and a floating example quote card with gentle parallax.
+import { motion, useReducedMotion, useScroll, useTransform, type Variants } from "framer-motion";
+import { useEffect, useState } from "react";
+import { getQuote, type Quote } from "@/lib/api";
+import { eur } from "@/lib/format";
+import { lineLabel, useI18n } from "@/lib/i18n";
+import { useSite } from "../SiteContext";
+import { Button } from "../ui/Button";
+import { CountUp } from "../ui/CountUp";
+import { IconArrow, IconCheck, IconPin } from "../ui/Icons";
+import { EASE_OUT } from "../ui/motion";
+import { HeroBackground } from "./HeroBackground";
+
+const container: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07, delayChildren: 0.1 } }
+};
+const word: Variants = {
+  hidden: { y: "110%" },
+  show: { y: "0%", transition: { duration: 0.9, ease: EASE_OUT } }
+};
+const fadeUp: Variants = {
+  hidden: { opacity: 0, y: 24 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE_OUT } }
+};
+
+/** One line of the headline, split into words that slide up from behind a mask. */
+function Line({ text }: { text: string }) {
+  const words = text.split(" ");
+  return (
+    <>
+      {words.map((w, i) => (
+        <span key={`${w}-${i}`} className="inline-block overflow-hidden pb-[0.08em] align-bottom">
+          <motion.span className="inline-block" variants={word}>
+            {w}
+            {i < words.length - 1 ? " " : ""}
+          </motion.span>
+        </span>
+      ))}
+    </>
+  );
+}
+
+function AddressBar() {
+  const { t } = useI18n();
+  const { openQuote } = useSite();
+  const [value, setValue] = useState("");
+  return (
+    <form
+      className="mt-9 max-w-xl"
+      onSubmit={(e) => {
+        e.preventDefault();
+        openQuote({ address: value.trim() || undefined });
+      }}
+    >
+      <div className="flex flex-col gap-2 rounded-3xl bg-white p-2 shadow-[0_20px_60px_-20px_rgba(14,18,23,0.35)] ring-1 ring-line sm:flex-row sm:items-center sm:rounded-full">
+        <label className="flex flex-1 items-center gap-3 px-3 sm:pl-5">
+          <IconPin className="h-5 w-5 shrink-0 text-ink-soft" />
+          <span className="sr-only">{t("hero.addressLabel")}</span>
+          <input
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={t("hero.addressPh")}
+            autoComplete="street-address"
+            className="h-12 w-full bg-transparent text-base text-ink placeholder:text-muted focus:outline-none"
+          />
+        </label>
+        <Button type="submit" size="lg" className="w-full sm:w-auto">
+          {t("hero.cta")}
+          <IconArrow className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+        </Button>
+      </div>
+    </form>
+  );
+}
+
+/** Example quote for a typical house, priced live by the API, floating on the right. */
+function ExampleCard() {
+  const i18n = useI18n();
+  const { t } = i18n;
+  const { config } = useSite();
+  const [quote, setQuote] = useState<Quote | null>(null);
+  useEffect(() => {
+    getQuote({ length: 15, width: 10, eave: 3, roofType: "gable", pitch: 30, jobType: "roof", gables: true, days: 28, zone: "A", urgency: "standard" })
+      .then((r) => setQuote(r.quote))
+      .catch(() => {});
+  }, []);
+  const total = quote?.total ?? config?.examples.totals.standard ?? 0;
+  const lines = quote?.lines.filter((l) => l.key !== "min").slice(0, 5) ?? [];
+
+  return (
+    <div className="relative rounded-[28px] bg-white/90 p-6 shadow-[0_40px_80px_-30px_rgba(14,18,23,0.4)] ring-1 ring-line backdrop-blur sm:p-7">
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{t("hero.card.title")}</p>
+        <span className="inline-flex items-center gap-1 rounded-full bg-sun-soft px-2.5 py-1 text-xs font-semibold text-ink">
+          <IconCheck className="h-3.5 w-3.5" /> {t("hero.card.ready")}
+        </span>
+      </div>
+      <div className="mt-5 flex items-center gap-4">
+        {/* Plan view: house with scaffold on the long sides and the roof-catch line. */}
+        <svg viewBox="0 0 120 84" className="h-20 w-28 shrink-0" aria-hidden>
+          <rect x="18" y="20" width="84" height="44" rx="2" fill="#f3f4f1" stroke="#0e1217" strokeWidth="1.5" />
+          <path d="M18 42h84" stroke="#5d6773" strokeDasharray="4 3" />
+          <rect x="12" y="11" width="96" height="6" fill="#ffc20e" stroke="#0e1217" strokeWidth=".8" />
+          <rect x="12" y="67" width="96" height="6" fill="#ffc20e" stroke="#0e1217" strokeWidth=".8" />
+          <rect x="9" y="17" width="6" height="50" fill="#ffc20e" stroke="#0e1217" strokeWidth=".8" />
+          <rect x="105" y="17" width="6" height="50" fill="#ffc20e" stroke="#0e1217" strokeWidth=".8" />
+          <path d="M12 7h96M12 77h96" stroke="#e5484d" strokeWidth="1.6" strokeDasharray="4 3" />
+        </svg>
+        <div className="text-sm">
+          <p className="font-semibold text-ink">{t("hero.card.house")}</p>
+          <p className="text-muted">{t("hero.card.job")}</p>
+          <p className="text-muted">{config ? `${config.examples.area} m²` : "319 m²"}</p>
+        </div>
+      </div>
+      <ul className="mt-5 space-y-2.5 text-sm">
+        {lines.length
+          ? lines.map((l) => (
+              <li key={l.key} className="flex justify-between gap-4 border-b border-line pb-2.5 last:border-0">
+                <span className="text-ink-soft">{lineLabel(i18n, l, quote ?? undefined)}</span>
+                <span className="font-medium tabular-nums">{eur(l.amount)}</span>
+              </li>
+            ))
+          : [0, 1, 2, 3, 4].map((k) => <li key={k} className="h-5 rounded bg-mist" />)}
+      </ul>
+      <div className="mt-5 flex items-end justify-between rounded-2xl bg-ink px-5 py-4 text-white">
+        <span className="text-sm text-white/70">{t("hero.card.total")}</span>
+        <span className="font-display text-3xl font-extrabold tabular-nums">{total ? eur(total) : "—"}</span>
+      </div>
+    </div>
+  );
+}
+
+export function Hero() {
+  const { t, lang } = useI18n();
+  const { introDone, openTrack } = useSite();
+  const reduce = useReducedMotion();
+  const { scrollY } = useScroll();
+  // Gentle parallax: the text column moves a little slower than the page, the card a little more.
+  const textY = useTransform(scrollY, [0, 700], [0, reduce ? 0 : -40]);
+  const cardY = useTransform(scrollY, [0, 700], [0, reduce ? 0 : -110]);
+  const state = introDone ? "show" : "hidden";
+
+  return (
+    <section id="top" className="relative overflow-hidden pt-28 pb-20 sm:pt-32 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-24 lg:pb-16">
+      <HeroBackground start={introDone} />
+
+      <div className="relative mx-auto grid w-full max-w-7xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-8">
+        <motion.div className="lg:col-span-7" style={{ y: textY }} initial="hidden" animate={state} variants={container}>
+          <motion.p variants={fadeUp} className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink-soft ring-1 ring-line backdrop-blur">
+            <span className="relative flex h-2 w-2">
+              <span className="motion-loop absolute inline-flex h-full w-full animate-ping rounded-full bg-sun opacity-75" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-sun-deep" />
+            </span>
+            {t("hero.eyebrow")}
+          </motion.p>
+
+          <motion.h1 key={lang} variants={container} className="font-display text-[clamp(2.3rem,6.4vw,4.75rem)] leading-[1] font-extrabold tracking-[-0.03em] text-ink">
+            <span className="block">
+              <Line text={t("hero.line1")} />
+            </span>
+            <span className="relative mt-1 inline-block">
+              <motion.span
+                aria-hidden
+                className="absolute inset-x-[-0.08em] bottom-[0.08em] h-[0.32em] origin-left rounded-sm bg-sun"
+                variants={{ hidden: { scaleX: 0 }, show: { scaleX: 1, transition: { duration: 0.8, delay: 0.55, ease: EASE_OUT } } }}
+              />
+              <span className="relative">
+                <Line text={t("hero.line2")} />
+              </span>
+            </span>
+          </motion.h1>
+
+          <motion.p variants={fadeUp} className="mt-7 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
+            {t("hero.sub")}
+          </motion.p>
+
+          <motion.div variants={fadeUp}>
+            <AddressBar />
+          </motion.div>
+
+          <motion.ul variants={fadeUp} className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-soft">
+            {(["hero.trust1", "hero.trust2", "hero.trust3"] as const).map((k) => (
+              <li key={k} className="inline-flex items-center gap-1.5">
+                <IconCheck className="h-4 w-4 text-sun-deep" />
+                {t(k)}
+              </li>
+            ))}
+          </motion.ul>
+
+          <motion.div variants={fadeUp} className="mt-10 grid max-w-xl grid-cols-3 gap-4 border-t border-line pt-7">
+            {[
+              { n: 24, u: "h", k: "hero.stat1" as const },
+              { n: 48, u: "h", k: "hero.stat2" as const },
+              { n: 60, u: "s", k: "hero.stat3" as const }
+            ].map((s) => (
+              <div key={s.k}>
+                <p className="font-display text-3xl font-extrabold tabular-nums text-ink sm:text-4xl">
+                  <CountUp to={s.n} />
+                  <span className="ml-0.5 text-sun-deep">{s.u}</span>
+                </p>
+                <p className="mt-1 text-xs leading-snug text-muted sm:text-sm">{t(s.k)}</p>
+              </div>
+            ))}
+          </motion.div>
+
+          <motion.button variants={fadeUp} type="button" onClick={() => openTrack()} className="nav-link mt-8 text-sm font-semibold text-ink-soft hover:text-ink">
+            {t("hero.track")} →
+          </motion.button>
+        </motion.div>
+
+        <motion.div
+          className="relative mx-auto w-full max-w-md lg:col-span-5 lg:max-w-none"
+          style={{ y: cardY }}
+          initial={{ opacity: 0, y: 40 }}
+          animate={introDone ? { opacity: 1, y: 0 } : undefined}
+          transition={{ duration: 1, delay: 0.45, ease: EASE_OUT }}
+        >
+          <motion.div
+            animate={reduce ? undefined : { y: [0, -10, 0] }}
+            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <ExampleCard />
+          </motion.div>
+          <motion.div
+            className="absolute -bottom-6 -left-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-xl sm:-left-8"
+            initial={{ opacity: 0, scale: 0.8, rotate: -6 }}
+            animate={introDone ? { opacity: 1, scale: 1, rotate: -4 } : undefined}
+            transition={{ duration: 0.6, delay: 0.9, ease: EASE_OUT }}
+          >
+            <p className="font-display text-2xl font-extrabold leading-none text-sun">24 h</p>
+            <p className="mt-1 text-xs text-white/70">{t("hero.stat1")}</p>
+          </motion.div>
+        </motion.div>
+      </div>
+    </section>
+  );
+}

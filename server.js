@@ -17,6 +17,9 @@ const { HttpError } = O;
 const PORT = Number(process.env.PORT) || 3000;
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, "data");
 const PUBLIC_DIR = path.join(__dirname, "public");
+// The marketing website (Next.js static export, built into ./site by the Dockerfile).
+const SITE_DIR = process.env.SITE_DIR || path.join(__dirname, "site");
+const DEPLOY_DIR = process.env.DEPLOY_DIR || "/deploy";
 const AI_DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT) || 40;
 
 const store = Store.open(DATA_DIR);
@@ -132,10 +135,44 @@ const route = (method, pattern, handler) => routes.push({ method, pattern, handl
 
 route("GET", /^\/healthz$/, () => ({ ok: true }));
 
-route("GET", /^\/api\/config$/, () => ({
-  pricing: pricing(),
-  features: { ai: ai.enabled, address: true, office: auth.enabled }
-}));
+route("GET", /^\/api\/config$/, () => {
+  const p = pricing();
+  return {
+    pricing: p,
+    features: { ai: ai.enabled, address: true, office: auth.enabled },
+    earliest: O.earliestDates(),
+    examples: O.priceExamples(p)
+  };
+});
+
+// Build status written by deploy/autodeploy.sh on the host (mounted read-only into /deploy).
+route("GET", /^\/healthz\/deploy$/, () => {
+  let status = null, log = "";
+  try { status = JSON.parse(fs.readFileSync(path.join(DEPLOY_DIR, "status.json"), "utf8")); } catch {}
+  try {
+    log = fs.readFileSync(path.join(DEPLOY_DIR, "build.log"), "utf8")
+      .replace(/\x1b\[[0-9;]*[A-Za-z]/g, "")
+      .split("\n").slice(-150).join("\n");
+  } catch {}
+  return { status, log, site: fs.existsSync(path.join(SITE_DIR, "index.html")) };
+});
+
+// Live price for the website's quote wizard. Same engine and prices as orders.
+route("POST", /^\/api\/quote$/, async (req) => {
+  limit(req, "quote", 600, 10 * 60e3);
+  const body = await readJson(req, 4096);
+  return O.quoteFor(O.parseQuoteInput(body), pricing());
+});
+
+// Contact form on the website. Messages show in the office.
+route("POST", /^\/api\/contact$/, async (req) => {
+  limit(req, "contact", 5, 60 * 60e3);
+  const body = await readJson(req, 8192);
+  if (body.website) return { ok: true }; // hidden honeypot field: bots fill it, people don't
+  const lead = store.insertLead(O.parseLead(body));
+  console.log(`[contact] message from ${lead.name}`);
+  return { ok: true };
+});
 
 route("POST", /^\/api\/address$/, async (req) => {
   limit(req, "addr", 20, 10 * 60e3);
@@ -246,6 +283,17 @@ route("DELETE", /^\/api\/office\/orders\/([A-Z0-9-]+)$/, (req, m) => {
   return { ok: true };
 });
 
+route("GET", /^\/api\/office\/leads$/, (req) => {
+  requireOffice(req);
+  return { leads: store.listLeads(200) };
+});
+
+route("DELETE", /^\/api\/office\/leads\/(\d+)$/, (req, m) => {
+  requireOffice(req);
+  if (!store.deleteLead(Number(m[1]))) throw new HttpError(404, "not_found", "Message not found.");
+  return { ok: true };
+});
+
 route("GET", /^\/api\/office\/pricing$/, (req) => {
   requireOffice(req);
   return { pricing: pricing(), defaults: E.DEFAULT_PRICING };
@@ -264,34 +312,82 @@ const MIME = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
+  ".avif": "image/avif",
   ".ico": "image/x-icon",
-  ".json": "application/json; charset=utf-8"
+  ".woff2": "font/woff2",
+  ".woff": "font/woff",
+  ".webmanifest": "application/manifest+json"
 };
-const STATIC_ALIASES = { "/": "index.html", "/office": "office.html" };
+const hasSite = () => fs.existsSync(path.join(SITE_DIR, "index.html"));
 
-function serveStatic(req, res, pathname) {
-  let file;
-  if (pathname === "/engine.js") file = path.join(__dirname, "lib", "engine.js");
-  else if (STATIC_ALIASES[pathname]) file = path.join(PUBLIC_DIR, STATIC_ALIASES[pathname]);
-  else {
-    let decoded;
-    try { decoded = decodeURIComponent(pathname); } catch { return false; }
-    const rel = path.normalize(decoded).replace(/^([/\\])+/, "");
-    if (rel.includes("..") || rel.includes("\0")) return false;
-    file = path.join(PUBLIC_DIR, rel);
-  }
-  if (!file.startsWith(__dirname) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return false;
+// The website's pages run Next.js inline scripts and embed an OpenStreetMap iframe, so they get their own policy.
+const SITE_HEADERS = {
+  ...SECURITY_HEADERS,
+  "Content-Security-Policy": [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline'",
+    "font-src 'self' data:",
+    "img-src 'self' data: blob:",
+    "connect-src 'self'",
+    "frame-src https://www.openstreetmap.org",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join("; ")
+};
+
+function resolveIn(dir, pathname) {
+  let decoded;
+  try { decoded = decodeURIComponent(pathname); } catch { return null; }
+  const rel = path.normalize(decoded).replace(/^([/\\])+/, "");
+  if (rel.includes("..") || rel.includes("\0")) return null;
+  const file = path.join(dir, rel);
+  if (!file.startsWith(dir)) return null;
+  try { return fs.statSync(file).isFile() ? file : null; } catch { return null; }
+}
+
+function sendFile(req, res, file, { site = false, status = 200 } = {}) {
   const ext = path.extname(file);
-  res.writeHead(200, {
-    ...SECURITY_HEADERS,
+  const immutable = site && file.includes(`${path.sep}_next${path.sep}static${path.sep}`);
+  res.writeHead(status, {
+    ...(site ? SITE_HEADERS : SECURITY_HEADERS),
     "Content-Type": MIME[ext] || "application/octet-stream",
-    "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=300"
+    "Cache-Control": immutable ? "public, max-age=31536000, immutable" : ext === ".html" ? "no-cache" : "public, max-age=300"
   });
   if (req.method === "HEAD") return res.end(), true;
   fs.createReadStream(file).pipe(res);
   return true;
+}
+
+function serveStatic(req, res, pathname) {
+  // Old pages: the MVP quote tool (now at /mvp) and the office.
+  if (pathname === "/office") return sendFile(req, res, path.join(PUBLIC_DIR, "office.html"));
+  if (pathname === "/mvp") return sendFile(req, res, path.join(PUBLIC_DIR, "index.html"));
+  if (pathname === "/engine.js") return sendFile(req, res, path.join(__dirname, "lib", "engine.js"));
+  if (hasSite()) {
+    if (pathname === "/") return sendFile(req, res, path.join(SITE_DIR, "index.html"), { site: true });
+    const f = resolveIn(SITE_DIR, pathname) || (!path.extname(pathname) && resolveIn(SITE_DIR, pathname + ".html"));
+    if (f) return sendFile(req, res, f, { site: true });
+  } else if (pathname === "/") {
+    return sendFile(req, res, path.join(PUBLIC_DIR, "index.html"));
+  }
+  const f = resolveIn(PUBLIC_DIR, pathname);
+  return f ? sendFile(req, res, f) : false;
+}
+
+function notFound(req, res) {
+  const page = path.join(SITE_DIR, "404.html");
+  if (req.method === "GET" && fs.existsSync(page)) return sendFile(req, res, page, { site: true, status: 404 });
+  send(res, 404, "Not found");
 }
 
 /* ---------- Server ---------- */
@@ -313,7 +409,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (pathname.startsWith("/api/")) throw new HttpError(404, "not_found", "Unknown API address.");
     if ((req.method === "GET" || req.method === "HEAD") && serveStatic(req, res, pathname)) return;
-    send(res, 404, "Not found");
+    notFound(req, res);
   } catch (e) {
     if (e instanceof HttpError) return send(res, e.status, { error: e.code, message: e.message, ...(e.info ? { info: e.info } : {}) });
     console.error("[error]", req.method, pathname, e);

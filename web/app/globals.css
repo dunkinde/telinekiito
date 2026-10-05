@@ -1,0 +1,110 @@
+@import "tailwindcss";
+
+/* ---------- Design tokens (Tailwind v4 theme) ---------- */
+@theme {
+  --color-ink: #0e1217;
+  --color-ink-soft: #2b323b;
+  --color-muted: #5d6773;
+  --color-line: #e3e7ea;
+  --color-mist: #f3f4f1;
+  --color-paper: #ffffff;
+  --color-sun: #ffc20e;
+  --color-sun-deep: #e0a800;
+  --color-sun-soft: #fff4cc;
+  --color-steel: #c9d6e2;
+  --color-signal: #e5484d;
+
+  --font-display: var(--font-archivo), "Arial Narrow", system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out-quart: cubic-bezier(0.76, 0, 0.24, 1);
+}
+
+/* ---------- Base ---------- */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  ::selection {
+    background: var(--color-sun);
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-ink);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  /* Sections stop below the sticky header when reached through an anchor link. */
+  section[id] {
+    scroll-margin-top: 5rem;
+  }
+  input,
+  textarea,
+  select,
+  button {
+    font: inherit;
+  }
+}
+
+/* ---------- Components that are clearer in CSS than in class lists ---------- */
+@layer components {
+  /* Nav link with an underline that grows from the left on hover. Transform only. */
+  .nav-link {
+    position: relative;
+  }
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -6px;
+    height: 2px;
+    background: var(--color-sun);
+    transform: scaleX(0);
+    transform-origin: right;
+    transition: transform 0.35s var(--ease-out-expo);
+  }
+  .nav-link:hover::after,
+  .nav-link[data-active="true"]::after {
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+
+  /* Form fields shared by the quote wizard and the contact form. */
+  .field-input {
+    @apply w-full rounded-xl border border-line bg-white px-4 py-3 text-[15px] text-ink transition-colors placeholder:text-muted/70 hover:border-ink/30 focus:border-ink focus:outline-none;
+  }
+  .field-label {
+    @apply mb-1.5 block text-[13px] font-semibold text-ink-soft;
+  }
+}
+
+/* If scripts never load, the intro overlay hides itself after 2.5 s. */
+@keyframes tk-intro-failsafe {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+.intro-failsafe {
+  animation: tk-intro-failsafe 0.3s 2.5s forwards;
+}
+
+/* Reduced motion: no smooth scrolling, no intro, no looping background motion. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .intro-failsafe {
+    display: none;
+  }
+  .motion-loop {
+    animation: none !important;
+  }
+}

@@ -1,0 +1,776 @@
+"use client";
+// Finnish (default) and English. Short UI strings live here; longer section content lives in content.ts.
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import type { ApiError, QuoteLine, Quote } from "./api";
+
+export type Lang = "fi" | "en";
+export type Vars = Record<string, string | number>;
+type Entry = string | ((v: Vars) => string);
+const plural = (n: unknown, one: string, many: string) => (Number(n) === 1 ? one : many);
+
+const en = {
+  "lang.label": "Language",
+  "nav.services": "Services",
+  "nav.how": "How it works",
+  "nav.projects": "Projects",
+  "nav.pricing": "Pricing",
+  "nav.faq": "FAQ",
+  "nav.contact": "Contact",
+  "nav.track": "Track order",
+  "nav.quote": "Quote now",
+  "nav.menu": "Open menu",
+  "nav.close": "Close menu",
+  "nav.home": "TelineKiito, back to top",
+
+  "hero.eyebrow": "Scaffolding rental across Finland",
+  "hero.line1": "Scaffolding up fast.",
+  "hero.line2": "Priced in a minute.",
+  "hero.sub": "Type your address and get a complete price for your house – scaffolding, delivery, installation and daily rent. Emergency setup within 24 hours.",
+  "hero.addressLabel": "Site address",
+  "hero.addressPh": "Street and number, city",
+  "hero.cta": "Quote now",
+  "hero.trust1": "Free and non-binding",
+  "hero.trust2": "No sign-up",
+  "hero.trust3": "Price in about a minute",
+  "hero.track": "Already ordered? Track your order",
+  "hero.stat1": "Emergency setup",
+  "hero.stat2": "Express delivery",
+  "hero.stat3": "From address to price",
+  "hero.card.title": "Example quote",
+  "hero.card.house": "1-storey house · 10 × 15 m",
+  "hero.card.job": "Roof renovation · 4 weeks",
+  "hero.card.total": "Total incl. VAT",
+  "hero.card.ready": "Price ready",
+
+  "sec.services.eyebrow": "Services",
+  "sec.services.title": "Scaffolding for every job on your house",
+  "sec.services.intro": "Aluminium frame scaffolding for detached houses, row houses and small business properties. We deliver, install, inspect and collect – you focus on the work.",
+  "sec.how.eyebrow": "How it works",
+  "sec.how.title": "From address to scaffold in three steps",
+  "sec.how.cta": "Start with your address",
+  "sec.projects.eyebrow": "Projects",
+  "sec.projects.title": "Typical jobs we scaffold",
+  "sec.projects.intro": "Every quote is built from the same standard parts: 3.07 m bays, 2 m working levels and inspected aluminium frames.",
+  "sec.pricing.eyebrow": "Pricing",
+  "sec.pricing.title": "Clear prices, no surprises",
+  "sec.pricing.intro": "The price is built from the scaffold area, rental days, installation and delivery. Faster delivery adds a surcharge on the service part only – never on rent.",
+  "sec.faq.eyebrow": "FAQ",
+  "sec.faq.title": "Questions we hear often",
+  "sec.faq.side": "Can't find your answer? Send us a message and we'll get back to you.",
+  "sec.faq.contact": "Ask us",
+  "sec.contact.eyebrow": "Contact",
+  "sec.contact.title": "Talk to us",
+  "sec.contact.intro": "Questions about a site, a business account or a bigger project? Send a message and we'll get back to you.",
+
+  "svc.cta": "Get a price",
+  "svc.contact": "Contact us",
+
+  "price.lead": "Delivery in",
+  "price.example": "Example: 1-storey house 10 × 15 m, roof renovation, 4 weeks, Helsinki region",
+  "price.from": "Example price",
+  "price.incl": "incl. VAT",
+  "price.noSurcharge": "No surcharge",
+  "price.surcharge": "+{pct} % on service",
+  "price.cta": "Get your price",
+  "price.rates": "Unit prices (excl. VAT)",
+  "price.rate.rent": "Rent",
+  "price.rate.rentU": "€ / m² / day",
+  "price.rate.erect": "Installation and inspection",
+  "price.rate.dismantle": "Dismantling",
+  "price.rate.m2": "€ / m²",
+  "price.rate.catch": "Roof-catch guard",
+  "price.rate.perM": "€ / running m",
+  "price.rate.levels": "Extra working level",
+  "price.rate.perLevel": "€ / m / level",
+  "price.rate.trip": "Transport, zone {z} (one way)",
+  "price.rate.min": "Minimum rental",
+  "price.rate.days": (v) => plural(v.n, "1 day", `${v.n} days`),
+  "price.note": "Homeowners can claim the household tax credit on the labour share. The final price is confirmed after we check the details.",
+
+  "contact.name": "Name",
+  "contact.email": "Email",
+  "contact.phone": "Phone (optional)",
+  "contact.message": "Message",
+  "contact.messagePh": "Tell us about the site and the work",
+  "contact.send": "Send message",
+  "contact.sending": "Sending…",
+  "contact.sent": "Thanks! Your message is on its way – we'll get back to you soon.",
+  "contact.privacy": "We use your details only to answer your message.",
+  "contact.phoneLabel": "Phone",
+  "contact.emailLabel": "Email",
+  "contact.hoursLabel": "Opening hours",
+  "contact.hours": "Mon–Fri 7–17 · emergencies 24/7",
+  "contact.areaLabel": "Service area",
+  "contact.area": "Across Finland – fastest in Uusimaa",
+  "contact.map": "Map of the Helsinki region",
+  "contact.mapLink": "Open larger map",
+
+  "foot.tagline": "Fast scaffolding across Finland. Priced online, installed by professionals.",
+  "foot.services": "Services",
+  "foot.company": "Company",
+  "foot.customers": "Customers",
+  "foot.office": "Office login",
+  "foot.rights": "All rights reserved.",
+  "foot.social": "Follow us",
+  "foot.top": "Back to top",
+
+  // Quote wizard
+  "q.title": "Your scaffolding price",
+  "q.close": "Close",
+  "q.step1": "House",
+  "q.step2": "Job",
+  "q.step3": "Timing",
+  "q.step4": "Details",
+  "q.h1": "Tell us about the house",
+  "q.h1.sub": "Find your house by address, or enter the size yourself.",
+  "q.h2": "What's the job?",
+  "q.h2.sub": "This decides which sides get scaffolding and how many levels are decked.",
+  "q.h3": "When do you need it?",
+  "q.h3.sub": "Faster delivery adds a surcharge on the service part only.",
+  "q.h4": "Your details",
+  "q.h4.sub": "You pay nothing now. We check the details, then confirm the price and start date.",
+  "q.address": "Site address",
+  "q.find": "Find",
+  "q.finding": "Looking up…",
+  "q.length": "Length",
+  "q.lengthHint": "gutter side",
+  "q.width": "Width",
+  "q.widthHint": "gable side",
+  "q.floors": "Floors",
+  "q.roof": "Roof type",
+  "q.eave": "Eave height",
+  "q.eaveAuto": "set from floors",
+  "q.pitch": "Roof pitch",
+  "q.more": "Eave height and roof pitch",
+  "q.gables": "Include gable ends",
+  "q.gablesHint": "Edge protection along the roof verges, up to near the ridge.",
+  "q.urgency": "Delivery speed",
+  "q.earliest": "Earliest {date}",
+  "q.start": "Start date",
+  "q.days": "Rental period",
+  "q.daysUnit": "days",
+  "q.weeks": (v) => plural(v.n, "1 week", `${v.n} weeks`),
+  "q.zone": "Delivery zone",
+  "q.zoneAuto": "set from your address",
+  "q.name": "Name",
+  "q.phone": "Phone",
+  "q.email": "Email (optional)",
+  "q.notes": "Notes for the crew",
+  "q.notesPh": "Gate code, obstacles, terrace, sloping ground",
+  "q.summary": "Summary",
+  "q.back": "Back",
+  "q.next": "Next",
+  "q.order": "Place order",
+  "q.ordering": "Placing order…",
+  "q.needSize": "Add the length, width and floors to continue.",
+  "q.err.name": "Add your name.",
+  "q.err.phone": "Add a phone number the crew can call.",
+  "q.done": "Order received!",
+  "q.doneRef": "Your order reference",
+  "q.doneText": "We check the details and confirm the price and start date. Keep the reference to follow your order online.",
+  "q.doneTrack": "Track this order",
+  "q.doneClose": "Done",
+
+  "q.price": "Your price",
+  "q.priceIncl": "incl. VAT {vat} %",
+  "q.priceRange": "Likely range {low}–{high}",
+  "q.priceEmpty": "Add the house size and floors to see the price.",
+  "q.priceArea": "Scaffold",
+  "q.priceWeight": "Weight",
+  "q.priceNet": "Total excl. VAT",
+  "q.priceVat": "VAT {vat} %",
+  "q.priceTotal": "Total",
+  "q.priceLabour": "Labour share {amount} incl. VAT – may qualify for the household tax credit.",
+  "q.breakdown": "Show breakdown",
+  "q.breakdownHide": "Hide breakdown",
+  "q.updating": "Updating…",
+
+  "a.looking": "Looking up the building…",
+  "a.notFound": "We couldn't find that address. Check the spelling, or enter the size below.",
+  "a.short": "Write the street, number and city, for example Mannerheimintie 10, Helsinki.",
+  "a.map": "See it on the map",
+  "a.measured": "measured from the map outline",
+  "a.measuredArea": "map outline, {m2} m² on the ground",
+  "a.estimated": "estimated from floor area",
+  "a.floors": (v) => plural(v.n, "1 floor", `${v.n} floors`),
+  "a.fromMap": "from the map",
+  "a.register": "building register",
+  "a.floorArea": "{m2} m² floor area",
+  "a.built": "Built {year}",
+  "a.filled": "The form is filled in. Change anything that doesn't match your house.",
+  "note.street_only": "The address matched a street, not a house number. Check that the right building was found.",
+  "note.not_rectangle": "The building is not a simple rectangle. The size is its outer box, so check it.",
+  "note.outbuilding": "The nearest building looks like an outbuilding. Check that this is the house.",
+  "note.storeys_many": "The register lists {n} storeys. The online price covers houses up to 2 storeys; we'll check yours.",
+  "note.register_down": "The building register couldn't be reached right now.",
+  "note.size_estimated": "The size is estimated from the register floor area, not measured. Check length and width.",
+  "note.map_busy": "The map service is busy right now. Try again in a minute, or enter the size yourself.",
+  "note.no_outline": "No building outline was found at this address. Enter the size yourself.",
+  "note.no_floors": "Number of floors wasn't found. Choose it below.",
+
+  "ai.title": "Or upload a drawing or photo",
+  "ai.text": "Floor plan, elevation drawing or a photo of the house – AI reads the size, floors and roof.",
+  "ai.choose": "Choose images",
+  "ai.files": (v) => plural(v.n, "1 image chosen", `${v.n} images chosen`),
+  "ai.go": "Read measurements",
+  "ai.reading": "Reading the drawing… this takes 10–40 seconds.",
+  "ai.done": "Filled in from the drawing ({conf} confidence). Check the numbers.",
+  "ai.conf.low": "low",
+  "ai.conf.medium": "medium",
+  "ai.conf.high": "high",
+  "ai.conf.unknown": "unknown",
+  "ai.badFile": "That file isn't an image we can read.",
+
+  // Tracking
+  "tr.title": "Track your order",
+  "tr.intro": "Enter your order reference and the last four digits of the phone number on the order.",
+  "tr.ref": "Order reference",
+  "tr.phone": "Phone, last 4 digits",
+  "tr.find": "Find order",
+  "tr.finding": "Finding…",
+  "tr.err.ref": "Enter the reference from your order, for example TK-7K3Q9M.",
+  "tr.err.phone": "Enter the last four digits of the phone number on the order.",
+  "tr.start": "Start",
+  "tr.rental": "Rental",
+  "tr.days": (v) => plural(v.n, "1 day", `${v.n} days`),
+  "tr.scaffold": "Scaffold",
+  "tr.price": "Price incl. VAT",
+  "tr.zone": "Delivery zone",
+  "tr.arrival": "Crew arrival",
+  "tr.extend": "Extend by 7 days",
+  "tr.pickup": "Request pickup",
+  "tr.msg": "Message the office",
+  "tr.msgPh": "For example: can the crew come after 9:00?",
+  "tr.send": "Send",
+  "tr.extended": "Rental extended to {days} days. New total {price}.",
+  "tr.pickupDone": "Pickup requested. We'll confirm a time.",
+  "tr.msgSent": "Message sent to the office.",
+  "tr.another": "Find another order",
+  "msg.office": "Office",
+  "msg.you": "You",
+
+  // Values from the API
+  "job.roof": "Roof renovation",
+  "job.facade": "Facade work",
+  "job.roof_facade": "Roof and facade",
+  "job.gutters": "Gutters and eaves",
+  "job.roof.desc": "Eaves scaffolding with roof-catch guard",
+  "job.facade.desc": "All sides, every level decked",
+  "job.roof_facade.desc": "All sides decked + roof-catch guard",
+  "job.gutters.desc": "Gutter sides, one working level",
+  "roof.gable": "Gable",
+  "roof.hip": "Hip",
+  "roof.flat": "Flat / mono-pitch",
+  "zone.A": "Helsinki, Espoo, Vantaa, Kauniainen",
+  "zone.B": "Rest of Uusimaa",
+  "zone.C": "Outside Uusimaa, up to 150 km",
+  "urg.standard": "Standard",
+  "urg.express": "Express",
+  "urg.emergency": "Emergency",
+  "urgLead.standard": "3 working days",
+  "urgLead.express": "48 hours",
+  "urgLead.emergency": "24 hours",
+  "status.received": "Order received",
+  "status.confirmed": "Confirmed",
+  "status.loading": "Loading at depot",
+  "status.en_route": "On the way",
+  "status.erected": "Erected and inspected",
+  "status.pickup_requested": "Pickup requested",
+  "status.dismantled": "Dismantled and collected",
+  "status.closed": "Invoiced",
+  "statusCust.received": "We have your order and are checking the details.",
+  "statusCust.confirmed": "Price and start date are confirmed.",
+  "statusCust.loading": "Your scaffold kit is being loaded onto the truck.",
+  "statusCust.en_route": "The crew is driving to your site.",
+  "statusCust.erected": "The scaffold is up, inspected and tagged. Rental days are running.",
+  "statusCust.pickup_requested": "We are scheduling dismantling.",
+  "statusCust.dismantled": "The scaffold has been removed from your site.",
+  "statusCust.closed": "Order complete. Thank you!",
+  "line.rent": "Rent, {days} days",
+  "line.erect": "Installation and inspection",
+  "line.dismantle": "Dismantling",
+  "line.catch": "Roof-catch protection",
+  "line.levels": "Extra working levels, {m} m",
+  "line.transport": "Delivery and pickup",
+  "line.transportN": "Delivery and pickup, {n} loads",
+  "line.premium": "{tier} surcharge (+{pct} % on service)",
+  "line.min": "Minimum order adjustment",
+  "field.length": "length",
+  "field.width": "width",
+  "field.eave": "eave height",
+  "field.floors": "floors",
+  "field.roofType": "roof type",
+  "field.pitch": "roof pitch",
+  "field.jobType": "job",
+  "field.zone": "delivery zone",
+  "field.urgency": "delivery speed",
+  "field.start": "start date",
+  "field.days": "rental period",
+
+  "err.network": "Can't reach the server. Check your connection.",
+  "err.rate_limited": "Too many requests. Wait a moment and try again.",
+  "err.address_short": "Write the street, number and city.",
+  "err.lookup_failed": "The map service didn't answer. Try again or enter the size yourself.",
+  "err.ai_not_configured": "Drawing reading isn't switched on yet.",
+  "err.ai_daily_limit": "Today's limit for drawing reading is used up. Enter the size yourself.",
+  "err.no_images": "Choose a drawing or photo first.",
+  "err.bad_image": "Use JPEG, PNG or WebP images under 4 MB each.",
+  "err.ai_busy": "The AI service is busy right now. Try again in a minute.",
+  "err.ai_unreadable": "Couldn't read measurements from that image. Try a clearer drawing with dimensions.",
+  "err.ai_error": "Reading the drawing failed. Try again.",
+  "err.ai_bad_key": "Drawing reading is unavailable right now.",
+  "err.ai_no_credit": "Drawing reading is unavailable right now.",
+  "err.ai_bad_model": "Drawing reading is unavailable right now.",
+  "err.invalid_fields": "Check these fields: {fields}",
+  "err.address_required": "Add the site address.",
+  "err.name_required": "Add your name.",
+  "err.phone_required": "Add a phone number the crew can call.",
+  "err.email_invalid": "Check the email address.",
+  "err.start_too_early": "The earliest start for this option is {date}.",
+  "err.not_found": "No order matches that reference and phone number.",
+  "err.order_finished": "This order is already finished.",
+  "err.too_long": "Contact us for rentals over a year.",
+  "err.not_erected": "Pickup can be requested once the scaffold is up.",
+  "err.empty_message": "Write a message first.",
+  "err.server_error": "Something went wrong. Try again."
+} satisfies Record<string, Entry>;
+
+export type Key = keyof typeof en;
+
+const fi: Record<Key, Entry> = {
+  "lang.label": "Kieli",
+  "nav.services": "Palvelut",
+  "nav.how": "Näin toimimme",
+  "nav.projects": "Kohteet",
+  "nav.pricing": "Hinnat",
+  "nav.faq": "UKK",
+  "nav.contact": "Yhteystiedot",
+  "nav.track": "Seuraa tilausta",
+  "nav.quote": "Laske hinta",
+  "nav.menu": "Avaa valikko",
+  "nav.close": "Sulje valikko",
+  "nav.home": "TelineKiito, sivun alkuun",
+
+  "hero.eyebrow": "Telinevuokraus koko Suomessa",
+  "hero.line1": "Telineet pystyyn nopeasti.",
+  "hero.line2": "Hinta minuutissa.",
+  "hero.sub": "Kirjoita osoitteesi ja saat talollesi kokonaishinnan – telineet, toimitus, asennus ja päivävuokra. Kiireelliset kohteet pystytämme 24 tunnissa.",
+  "hero.addressLabel": "Kohteen osoite",
+  "hero.addressPh": "Katu ja numero, kaupunki",
+  "hero.cta": "Laske hinta",
+  "hero.trust1": "Maksuton ja sitoumukseton",
+  "hero.trust2": "Ei rekisteröitymistä",
+  "hero.trust3": "Hinta noin minuutissa",
+  "hero.track": "Jo tilannut? Seuraa tilausta",
+  "hero.stat1": "Kiirepystytys",
+  "hero.stat2": "Pikatoimitus",
+  "hero.stat3": "Osoitteesta hintaan",
+  "hero.card.title": "Esimerkkitarjous",
+  "hero.card.house": "1-kerroksinen talo · 10 × 15 m",
+  "hero.card.job": "Kattoremontti · 4 viikkoa",
+  "hero.card.total": "Yhteensä sis. ALV",
+  "hero.card.ready": "Hinta valmis",
+
+  "sec.services.eyebrow": "Palvelut",
+  "sec.services.title": "Telineet jokaiseen talon työhön",
+  "sec.services.intro": "Alumiiniset kehystelineet omakotitaloihin, rivitaloihin ja pienkiinteistöihin. Toimitamme, asennamme, tarkastamme ja noudamme – sinä keskityt itse työhön.",
+  "sec.how.eyebrow": "Näin toimimme",
+  "sec.how.title": "Osoitteesta telineisiin kolmessa vaiheessa",
+  "sec.how.cta": "Aloita osoitteella",
+  "sec.projects.eyebrow": "Kohteet",
+  "sec.projects.title": "Tyypillisiä kohteita",
+  "sec.projects.intro": "Jokainen tarjous lasketaan samoista vakio-osista: 3,07 m:n kentät, 2 m:n työtasot ja tarkastetut alumiinikehykset.",
+  "sec.pricing.eyebrow": "Hinnat",
+  "sec.pricing.title": "Selkeät hinnat ilman yllätyksiä",
+  "sec.pricing.intro": "Hinta muodostuu telineen pinta-alasta, vuokrapäivistä, asennuksesta ja toimituksesta. Nopeampi toimitus nostaa vain palveluosuutta – ei koskaan vuokraa.",
+  "sec.faq.eyebrow": "Usein kysyttyä",
+  "sec.faq.title": "Kysymyksiä, joita kuulemme usein",
+  "sec.faq.side": "Etkö löytänyt vastausta? Lähetä viesti, niin palaamme asiaan.",
+  "sec.faq.contact": "Kysy meiltä",
+  "sec.contact.eyebrow": "Yhteystiedot",
+  "sec.contact.title": "Ota yhteyttä",
+  "sec.contact.intro": "Kysyttävää kohteesta, yritysasiakkuudesta tai isommasta projektista? Lähetä viesti, niin palaamme asiaan.",
+
+  "svc.cta": "Laske hinta",
+  "svc.contact": "Ota yhteyttä",
+
+  "price.lead": "Toimitus",
+  "price.example": "Esimerkki: 1-kerroksinen omakotitalo 10 × 15 m, kattoremontti, 4 viikkoa, pääkaupunkiseutu",
+  "price.from": "Esimerkkihinta",
+  "price.incl": "sis. ALV",
+  "price.noSurcharge": "Ei lisämaksua",
+  "price.surcharge": "+{pct} % palveluihin",
+  "price.cta": "Laske oma hinta",
+  "price.rates": "Yksikköhinnat (alv 0 %)",
+  "price.rate.rent": "Vuokra",
+  "price.rate.rentU": "€ / m² / päivä",
+  "price.rate.erect": "Asennus ja tarkastus",
+  "price.rate.dismantle": "Purku",
+  "price.rate.m2": "€ / m²",
+  "price.rate.catch": "Räystässuoja",
+  "price.rate.perM": "€ / jm",
+  "price.rate.levels": "Lisätyötaso",
+  "price.rate.perLevel": "€ / jm / taso",
+  "price.rate.trip": "Kuljetus, alue {z} (suuntaansa)",
+  "price.rate.min": "Vähimmäisvuokra-aika",
+  "price.rate.days": (v) => plural(v.n, "1 päivä", `${v.n} päivää`),
+  "price.note": "Kotitalousvähennyksen voi hakea työn osuudesta. Lopullinen hinta vahvistetaan, kun olemme tarkistaneet tiedot.",
+
+  "contact.name": "Nimi",
+  "contact.email": "Sähköposti",
+  "contact.phone": "Puhelin (vapaaehtoinen)",
+  "contact.message": "Viesti",
+  "contact.messagePh": "Kerro kohteesta ja työstä",
+  "contact.send": "Lähetä viesti",
+  "contact.sending": "Lähetetään…",
+  "contact.sent": "Kiitos! Viestisi on lähetetty – palaamme asiaan pian.",
+  "contact.privacy": "Käytämme tietojasi vain viestiisi vastaamiseen.",
+  "contact.phoneLabel": "Puhelin",
+  "contact.emailLabel": "Sähköposti",
+  "contact.hoursLabel": "Aukioloajat",
+  "contact.hours": "Ma–pe 7–17 · kiirekohteet 24/7",
+  "contact.areaLabel": "Toiminta-alue",
+  "contact.area": "Koko Suomi – nopeimmin Uudellamaalla",
+  "contact.map": "Kartta pääkaupunkiseudusta",
+  "contact.mapLink": "Avaa suurempi kartta",
+
+  "foot.tagline": "Nopeat telineet koko Suomeen. Hinta verkossa, asennus ammattilaisilta.",
+  "foot.services": "Palvelut",
+  "foot.company": "Yritys",
+  "foot.customers": "Asiakkaille",
+  "foot.office": "Toimiston kirjautuminen",
+  "foot.rights": "Kaikki oikeudet pidätetään.",
+  "foot.social": "Seuraa meitä",
+  "foot.top": "Sivun alkuun",
+
+  "q.title": "Telineidesi hinta",
+  "q.close": "Sulje",
+  "q.step1": "Talo",
+  "q.step2": "Työ",
+  "q.step3": "Aikataulu",
+  "q.step4": "Yhteystiedot",
+  "q.h1": "Kerro talosta",
+  "q.h1.sub": "Hae talo osoitteella tai syötä mitat itse.",
+  "q.h2": "Mikä työ on kyseessä?",
+  "q.h2.sub": "Työ ratkaisee, mille sivuille telineet tulevat ja montako tasoa lankutetaan.",
+  "q.h3": "Milloin tarvitset telineet?",
+  "q.h3.sub": "Nopeampi toimitus nostaa vain palveluosuutta.",
+  "q.h4": "Yhteystietosi",
+  "q.h4.sub": "Et maksa nyt mitään. Tarkistamme tiedot ja vahvistamme hinnan ja aloituspäivän.",
+  "q.address": "Kohteen osoite",
+  "q.find": "Hae",
+  "q.finding": "Haetaan…",
+  "q.length": "Pituus",
+  "q.lengthHint": "räystään puoli",
+  "q.width": "Leveys",
+  "q.widthHint": "päädyn puoli",
+  "q.floors": "Kerrokset",
+  "q.roof": "Kattotyyppi",
+  "q.eave": "Räystäskorkeus",
+  "q.eaveAuto": "kerrosten mukaan",
+  "q.pitch": "Kattokaltevuus",
+  "q.more": "Räystäskorkeus ja kattokaltevuus",
+  "q.gables": "Päädyt mukaan",
+  "q.gablesHint": "Reunasuojaus päätyjen räystäille lähes harjalle asti.",
+  "q.urgency": "Toimitusnopeus",
+  "q.earliest": "Aikaisintaan {date}",
+  "q.start": "Aloituspäivä",
+  "q.days": "Vuokra-aika",
+  "q.daysUnit": "pv",
+  "q.weeks": (v) => plural(v.n, "1 viikko", `${v.n} viikkoa`),
+  "q.zone": "Toimitusalue",
+  "q.zoneAuto": "asetettu osoitteen mukaan",
+  "q.name": "Nimi",
+  "q.phone": "Puhelin",
+  "q.email": "Sähköposti (vapaaehtoinen)",
+  "q.notes": "Lisätietoja asentajille",
+  "q.notesPh": "Portin koodi, esteet, terassi, kalteva maasto",
+  "q.summary": "Yhteenveto",
+  "q.back": "Takaisin",
+  "q.next": "Seuraava",
+  "q.order": "Lähetä tilaus",
+  "q.ordering": "Lähetetään…",
+  "q.needSize": "Lisää pituus, leveys ja kerrokset jatkaaksesi.",
+  "q.err.name": "Lisää nimesi.",
+  "q.err.phone": "Lisää puhelinnumero, johon asentajat voivat soittaa.",
+  "q.done": "Tilaus vastaanotettu!",
+  "q.doneRef": "Tilausviitteesi",
+  "q.doneText": "Tarkistamme tiedot ja vahvistamme hinnan ja aloituspäivän. Säilytä viite, niin voit seurata tilausta verkossa.",
+  "q.doneTrack": "Seuraa tilausta",
+  "q.doneClose": "Valmis",
+
+  "q.price": "Hintasi",
+  "q.priceIncl": "sis. ALV {vat} %",
+  "q.priceRange": "Todennäköinen haarukka {low}–{high}",
+  "q.priceEmpty": "Lisää talon mitat ja kerrokset, niin näet hinnan.",
+  "q.priceArea": "Teline",
+  "q.priceWeight": "Paino",
+  "q.priceNet": "Yhteensä alv 0 %",
+  "q.priceVat": "ALV {vat} %",
+  "q.priceTotal": "Yhteensä",
+  "q.priceLabour": "Työn osuus {amount} sis. ALV – voi oikeuttaa kotitalousvähennykseen.",
+  "q.breakdown": "Näytä erittely",
+  "q.breakdownHide": "Piilota erittely",
+  "q.updating": "Päivitetään…",
+
+  "a.looking": "Haetaan rakennusta…",
+  "a.notFound": "Osoitetta ei löytynyt. Tarkista kirjoitusasu tai syötä mitat alle.",
+  "a.short": "Kirjoita katu, numero ja kaupunki, esimerkiksi Mannerheimintie 10, Helsinki.",
+  "a.map": "Näytä kartalla",
+  "a.measured": "mitattu kartan ääriviivasta",
+  "a.measuredArea": "kartan ääriviiva, pohja-ala {m2} m²",
+  "a.estimated": "arvioitu kerrosalasta",
+  "a.floors": (v) => plural(v.n, "1 kerros", `${v.n} kerrosta`),
+  "a.fromMap": "kartalta",
+  "a.register": "rakennusrekisteri",
+  "a.floorArea": "{m2} m² kerrosalaa",
+  "a.built": "Valmistunut {year}",
+  "a.filled": "Lomake on täytetty. Muuta kohdat, jotka eivät vastaa taloasi.",
+  "note.street_only": "Osoite löytyi vain kadun tarkkuudella. Tarkista, että oikea rakennus löytyi.",
+  "note.not_rectangle": "Rakennus ei ole suorakaide. Mitat ovat sen ulkorajat, joten tarkista ne.",
+  "note.outbuilding": "Lähin rakennus näyttää piharakennukselta. Tarkista, että tämä on talo.",
+  "note.storeys_many": "Rekisterin mukaan kerroksia on {n}. Verkkohinta kattaa enintään 2-kerroksiset talot; tarkistamme kohteesi.",
+  "note.register_down": "Rakennusrekisteriin ei juuri nyt saatu yhteyttä.",
+  "note.size_estimated": "Mitat on arvioitu rekisterin kerrosalasta, ei mitattu. Tarkista pituus ja leveys.",
+  "note.map_busy": "Karttapalvelu on juuri nyt ruuhkainen. Yritä hetken päästä uudelleen tai syötä mitat itse.",
+  "note.no_outline": "Osoitteesta ei löytynyt rakennuksen ääriviivaa. Syötä mitat itse.",
+  "note.no_floors": "Kerroslukua ei löytynyt. Valitse se alta.",
+
+  "ai.title": "Tai lataa piirustus tai valokuva",
+  "ai.text": "Pohjapiirustus, julkisivupiirustus tai valokuva talosta – tekoäly lukee mitat, kerrokset ja katon.",
+  "ai.choose": "Valitse kuvat",
+  "ai.files": (v) => plural(v.n, "1 kuva valittu", `${v.n} kuvaa valittu`),
+  "ai.go": "Lue mitat",
+  "ai.reading": "Luetaan piirustusta… tämä kestää 10–40 sekuntia.",
+  "ai.done": "Täytetty piirustuksen perusteella (varmuus: {conf}). Tarkista luvut.",
+  "ai.conf.low": "matala",
+  "ai.conf.medium": "kohtalainen",
+  "ai.conf.high": "korkea",
+  "ai.conf.unknown": "ei tiedossa",
+  "ai.badFile": "Tiedostoa ei voi lukea kuvana.",
+
+  "tr.title": "Seuraa tilaustasi",
+  "tr.intro": "Syötä tilausviite ja tilauksen puhelinnumeron neljä viimeistä numeroa.",
+  "tr.ref": "Tilausviite",
+  "tr.phone": "Puhelin, 4 viimeistä numeroa",
+  "tr.find": "Hae tilaus",
+  "tr.finding": "Haetaan…",
+  "tr.err.ref": "Syötä tilauksen viite, esimerkiksi TK-7K3Q9M.",
+  "tr.err.phone": "Syötä tilauksen puhelinnumeron neljä viimeistä numeroa.",
+  "tr.start": "Aloitus",
+  "tr.rental": "Vuokra-aika",
+  "tr.days": (v) => plural(v.n, "1 päivä", `${v.n} päivää`),
+  "tr.scaffold": "Teline",
+  "tr.price": "Hinta sis. ALV",
+  "tr.zone": "Toimitusalue",
+  "tr.arrival": "Asentajat saapuvat",
+  "tr.extend": "Jatka 7 päivällä",
+  "tr.pickup": "Pyydä nouto",
+  "tr.msg": "Viesti toimistolle",
+  "tr.msgPh": "Esimerkiksi: voiko asennusryhmä tulla klo 9 jälkeen?",
+  "tr.send": "Lähetä",
+  "tr.extended": "Vuokra-aikaa jatkettu {days} päivään. Uusi hinta {price}.",
+  "tr.pickupDone": "Nouto pyydetty. Vahvistamme ajan.",
+  "tr.msgSent": "Viesti lähetetty toimistolle.",
+  "tr.another": "Hae toinen tilaus",
+  "msg.office": "Toimisto",
+  "msg.you": "Sinä",
+
+  "job.roof": "Kattoremontti",
+  "job.facade": "Julkisivutyö",
+  "job.roof_facade": "Katto ja julkisivu",
+  "job.gutters": "Rännit ja räystäät",
+  "job.roof.desc": "Räystästelineet ja räystässuoja",
+  "job.facade.desc": "Kaikki sivut, jokainen taso lankutettu",
+  "job.roof_facade.desc": "Kaikki sivut lankutettu + räystässuoja",
+  "job.gutters.desc": "Räystäiden puolet, yksi työtaso",
+  "roof.gable": "Harjakatto",
+  "roof.hip": "Aumakatto",
+  "roof.flat": "Tasa- / pulpettikatto",
+  "zone.A": "Helsinki, Espoo, Vantaa, Kauniainen",
+  "zone.B": "Muu Uusimaa",
+  "zone.C": "Uudenmaan ulkopuolella, enintään 150 km",
+  "urg.standard": "Normaali",
+  "urg.express": "Pika",
+  "urg.emergency": "Kiire",
+  "urgLead.standard": "3 arkipäivää",
+  "urgLead.express": "48 tuntia",
+  "urgLead.emergency": "24 tuntia",
+  "status.received": "Tilaus vastaanotettu",
+  "status.confirmed": "Vahvistettu",
+  "status.loading": "Lastataan varastolla",
+  "status.en_route": "Matkalla",
+  "status.erected": "Pystytetty ja tarkastettu",
+  "status.pickup_requested": "Nouto pyydetty",
+  "status.dismantled": "Purettu ja noudettu",
+  "status.closed": "Laskutettu",
+  "statusCust.received": "Tilauksesi on vastaanotettu. Tarkistamme tiedot.",
+  "statusCust.confirmed": "Hinta ja aloituspäivä on vahvistettu.",
+  "statusCust.loading": "Telinesarjaasi lastataan autoon.",
+  "statusCust.en_route": "Asennusryhmä on matkalla kohteeseen.",
+  "statusCust.erected": "Teline on pystytetty, tarkastettu ja merkitty. Vuokra-aika on alkanut.",
+  "statusCust.pickup_requested": "Sovimme purkuajan.",
+  "statusCust.dismantled": "Teline on purettu ja viety pois kohteesta.",
+  "statusCust.closed": "Tilaus on valmis. Kiitos!",
+  "line.rent": "Vuokra, {days} päivää",
+  "line.erect": "Asennus ja tarkastus",
+  "line.dismantle": "Purku",
+  "line.catch": "Räystässuojaus",
+  "line.levels": "Lisätyötasot, {m} m",
+  "line.transport": "Toimitus ja nouto",
+  "line.transportN": "Toimitus ja nouto, {n} kuormaa",
+  "line.premium": "{tier}lisä (+{pct} % palveluihin)",
+  "line.min": "Minimitilauksen täydennys",
+  "field.length": "pituus",
+  "field.width": "leveys",
+  "field.eave": "räystäskorkeus",
+  "field.floors": "kerrokset",
+  "field.roofType": "kattotyyppi",
+  "field.pitch": "kattokaltevuus",
+  "field.jobType": "työ",
+  "field.zone": "toimitusalue",
+  "field.urgency": "toimitusnopeus",
+  "field.start": "aloituspäivä",
+  "field.days": "vuokra-aika",
+
+  "err.network": "Palvelimeen ei saada yhteyttä. Tarkista nettiyhteys.",
+  "err.rate_limited": "Liian monta pyyntöä. Odota hetki ja yritä uudelleen.",
+  "err.address_short": "Kirjoita katu, numero ja kaupunki.",
+  "err.lookup_failed": "Karttapalvelu ei vastannut. Yritä uudelleen tai syötä mitat itse.",
+  "err.ai_not_configured": "Piirustusten luku ei ole vielä käytössä.",
+  "err.ai_daily_limit": "Päivän raja piirustusten luvulle on täynnä. Syötä mitat itse.",
+  "err.no_images": "Valitse ensin piirustus tai valokuva.",
+  "err.bad_image": "Käytä JPEG-, PNG- tai WebP-kuvia, enintään 4 Mt kukin.",
+  "err.ai_busy": "Tekoälypalvelu on juuri nyt ruuhkainen. Yritä minuutin päästä.",
+  "err.ai_unreadable": "Kuvasta ei saatu luettua mittoja. Kokeile selkeämpää piirustusta, jossa on mitat.",
+  "err.ai_error": "Piirustuksen luku epäonnistui. Yritä uudelleen.",
+  "err.ai_bad_key": "Piirustusten luku ei ole juuri nyt käytettävissä.",
+  "err.ai_no_credit": "Piirustusten luku ei ole juuri nyt käytettävissä.",
+  "err.ai_bad_model": "Piirustusten luku ei ole juuri nyt käytettävissä.",
+  "err.invalid_fields": "Tarkista nämä kentät: {fields}",
+  "err.address_required": "Lisää kohteen osoite.",
+  "err.name_required": "Lisää nimesi.",
+  "err.phone_required": "Lisää puhelinnumero, johon asentajat voivat soittaa.",
+  "err.email_invalid": "Tarkista sähköpostiosoite.",
+  "err.start_too_early": "Tämän vaihtoehdon aikaisin aloituspäivä on {date}",
+  "err.not_found": "Viitteellä ja puhelinnumerolla ei löytynyt tilausta.",
+  "err.order_finished": "Tämä tilaus on jo päättynyt.",
+  "err.too_long": "Yli vuoden vuokrista sovitaan kanssamme erikseen.",
+  "err.not_erected": "Noutoa voi pyytää, kun teline on pystytetty.",
+  "err.empty_message": "Kirjoita ensin viesti.",
+  "err.server_error": "Jotain meni pieleen. Yritä uudelleen."
+};
+
+const DICT: Record<Lang, Record<Key, Entry>> = { en, fi };
+
+export function translate(lang: Lang, key: Key, vars?: Vars): string {
+  const e = DICT[lang][key] ?? DICT.en[key];
+  if (e == null) return String(key);
+  if (typeof e === "function") return e(vars || {});
+  return vars ? e.replace(/\{(\w+)\}/g, (m, k: string) => (vars[k] != null ? String(vars[k]) : m)) : e;
+}
+const hasKey = (k: string): k is Key => k in en;
+
+/* ---------- React context ---------- */
+interface I18n {
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (key: Key, vars?: Vars) => string;
+  /** Translate a key built at runtime (e.g. "status." + code); falls back to `fallback`. */
+  tk: (key: string, vars?: Vars, fallback?: string) => string;
+  /** Pick the right language from a { fi, en } pair. */
+  pick: <T>(l: { fi: T; en: T }) => T;
+}
+const Ctx = createContext<I18n | null>(null);
+
+export function LangProvider({ children }: { children: React.ReactNode }) {
+  // The static HTML is rendered in Finnish; the visitor's saved choice or ?lang= is applied after load.
+  const [lang, setLangState] = useState<Lang>("fi");
+
+  useEffect(() => {
+    let next: Lang | null = null;
+    try {
+      const q = new URLSearchParams(window.location.search).get("lang");
+      if (q === "fi" || q === "en") next = q;
+      else {
+        const s = window.localStorage.getItem("tk_lang");
+        if (s === "fi" || s === "en") next = s;
+      }
+    } catch {
+      /* storage blocked: keep Finnish */
+    }
+    if (next && next !== "fi") setLangState(next);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  const setLang = useCallback((l: Lang) => {
+    setLangState(l);
+    try {
+      window.localStorage.setItem("tk_lang", l);
+      const u = new URL(window.location.href);
+      if (u.searchParams.has("lang")) {
+        u.searchParams.delete("lang");
+        window.history.replaceState(null, "", u.pathname + u.search + u.hash);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const value = useMemo<I18n>(
+    () => ({
+      lang,
+      setLang,
+      t: (key, vars) => translate(lang, key, vars),
+      tk: (key, vars, fallback) => (hasKey(key) ? translate(lang, key, vars) : fallback ?? key),
+      pick: (l) => l[lang]
+    }),
+    [lang, setLang]
+  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useI18n(): I18n {
+  const c = useContext(Ctx);
+  if (!c) throw new Error("useI18n must be used inside <LangProvider>");
+  return c;
+}
+
+/* ---------- Helpers for values that come from the API ---------- */
+
+/** Price line label in the page language, using the numbers stored with the line. */
+export function lineLabel(i: I18n, l: QuoteLine, q?: Quote): string {
+  const v = l.vars || {};
+  const fromLabel = (re: RegExp) => (re.exec(l.label || "") || [])[1] || "";
+  switch (l.key) {
+    case "rent":
+      return i.t("line.rent", { days: v.days ?? q?.rentDays ?? fromLabel(/(\d+) days/) });
+    case "transport": {
+      const n = Number(v.loads ?? q?.trucks ?? 1);
+      return n > 1 ? i.t("line.transportN", { n }) : i.t("line.transport");
+    }
+    case "premium": {
+      const tier = String(v.tier || (/^Emergency/.test(l.label) ? "emergency" : "express"));
+      return i.t("line.premium", { tier: i.tk("urg." + tier), pct: v.pct ?? fromLabel(/\+([\d.]+)%/) });
+    }
+    case "levels":
+      return i.t("line.levels", { m: v.m ?? fromLabel(/(\d+) m/) });
+    default:
+      return i.tk("line." + l.key, undefined, l.label);
+  }
+}
+
+/** Error message in the page language, using the error code and details from the API. */
+export function errText(i: I18n, e: unknown, fmtDate: (iso: string) => string): string {
+  const err = e as Partial<ApiError> & { message?: string };
+  const info = (err.info || {}) as { fields?: string[]; date?: string };
+  if (err.code === "invalid_fields" && Array.isArray(info.fields)) {
+    return i.t("err.invalid_fields", { fields: info.fields.map((f) => i.tk("field." + f)).join(", ") });
+  }
+  if (err.code === "start_too_early" && info.date) return i.t("err.start_too_early", { date: fmtDate(info.date) });
+  if (err.code) return i.tk("err." + err.code, undefined, err.message || i.t("err.server_error"));
+  return err.message || i.t("err.server_error");
+}

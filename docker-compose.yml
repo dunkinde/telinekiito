@@ -8,6 +8,8 @@ services:
       PORT: "3000"
     volumes:
       - appdata:/data
+      # Build status from deploy/autodeploy.sh, shown at /healthz/deploy
+      - ./.deploy:/deploy:ro
     # With HTTPS (Caddy) the app is only reachable from the server itself.
     # Without Caddy, setup.sh sets APP_BIND=0.0.0.0:8080 so the site opens on port 8080.
     ports:

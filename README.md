@@ -11,6 +11,30 @@ Scaffolding rental MVP. Customers type their address (or upload a drawing), get 
 
 Plain Node 22, no npm packages. Orders live in SQLite (`node:sqlite`) in a Docker volume. Caddy in front provides HTTPS.
 
+## Website
+
+`web/` is the public website: Next.js (App Router, static export) + TypeScript + Tailwind CSS v4 + Framer Motion, in Finnish and English. It is a single page with the instant quote built in (address → house → job → timing → order), order tracking and a contact form. All prices and orders go through this app's API, so the website, the old MVP page (`/mvp`) and the office always agree.
+
+- The Dockerfile builds it (`npm install`, a TypeScript check that is reported but doesn't block, `next build`) and copies `web/out` into the app image, which serves it at `/`.
+- Text: short strings in `web/lib/i18n.tsx`, section content in `web/lib/content.ts`, company contact details (placeholders) in `web/lib/site.ts`.
+- Contact-form messages appear in the office under **Contact messages**.
+
+Work on it locally:
+
+```bash
+cd web && npm install && npm run build && cd ..
+SITE_DIR=web/out OFFICE_PASSWORD=localpassword npm start   # http://localhost:3000
+```
+
+## Automatic deploys
+
+`deploy/enable-autodeploy.sh` installs a systemd timer that checks GitHub every 2 minutes and rebuilds when `main` has a new commit. A failed build leaves the running version untouched. The latest build status and log are at `/healthz/deploy`.
+
+```bash
+sudo systemctl disable --now telinekiito-deploy.timer   # turn automatic deploys off
+sudo bash /opt/telinekiito/deploy/autodeploy.sh --force --verbose   # rebuild by hand
+```
+
 ## Install on the server
 
 Ubuntu or Debian server, logged in as root (or a user with sudo). Paste this whole block into the server's terminal:

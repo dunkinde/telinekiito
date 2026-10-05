@@ -277,3 +277,9 @@ details.settings summary { cursor: pointer; padding: 14px 18px; font-family: var
 .lang button + button { border-left: 1px solid var(--bar-muted); }
 .lang button:hover { color: var(--bar-fg); }
 .lang button[aria-pressed="true"] { background: var(--bar-fg); color: var(--bar-bg); }
+
+/* Contact messages in the office */
+.leads { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.leads li { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; background: var(--raised); display: grid; gap: 6px; justify-items: start; }
+.lead-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.leads p { margin: 0; white-space: pre-wrap; }

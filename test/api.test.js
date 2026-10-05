@@ -12,7 +12,7 @@ const E = require("../lib/engine");
 const { helsinkiNow } = require("../lib/orders");
 
 const PASSWORD = "test-password-123";
-let proc, base, dataDir;
+let proc, base, dataDir, siteDir;
 
 function freePort() {
   return new Promise((resolve) => {
@@ -38,10 +38,16 @@ async function req(method, url, body, headers = {}) {
 
 test.before(async () => {
   dataDir = fs.mkdtempSync(path.join(os.tmpdir(), "tk-test-"));
+  // A tiny stand-in for the built website.
+  siteDir = path.join(dataDir, "site");
+  fs.mkdirSync(path.join(siteDir, "_next", "static"), { recursive: true });
+  fs.writeFileSync(path.join(siteDir, "index.html"), "<!doctype html><title>site</title>");
+  fs.writeFileSync(path.join(siteDir, "404.html"), "<!doctype html><title>missing</title>");
+  fs.writeFileSync(path.join(siteDir, "_next", "static", "app.js"), "console.log(1)");
   const port = await freePort();
   base = `http://127.0.0.1:${port}`;
   proc = spawn(process.execPath, ["--disable-warning=ExperimentalWarning", path.join(__dirname, "..", "server.js")], {
-    env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, OFFICE_PASSWORD: PASSWORD, SESSION_SECRET: "x".repeat(64), OPENAI_API_KEY: "" },
+    env: { ...process.env, PORT: String(port), DATA_DIR: dataDir, SITE_DIR: siteDir, DEPLOY_DIR: path.join(dataDir, "deploy"), OFFICE_PASSWORD: PASSWORD, SESSION_SECRET: "x".repeat(64), OPENAI_API_KEY: "" },
     stdio: ["ignore", "pipe", "pipe"]
   });
   let log = "";
@@ -155,4 +161,44 @@ test("office login, dispatch, pricing and delete", async () => {
 test("drawing reading is off without a key, address needs text", async () => {
   assert.equal((await req("POST", "/api/ai/drawing", { images: [] })).status, 503);
   assert.equal((await req("POST", "/api/address", { address: "ab" })).status, 400);
+});
+
+test("website files, old tool at /mvp, 404 page", async () => {
+  const home = await req("GET", "/");
+  assert.equal(home.status, 200);
+  assert.match(home.text, /<title>site<\/title>/);
+  assert.match(home.headers.get("content-security-policy"), /script-src 'self' 'unsafe-inline'/);
+  const js = await req("GET", "/_next/static/app.js");
+  assert.match(js.headers.get("cache-control"), /immutable/);
+  assert.match((await req("GET", "/mvp")).text, /quote\.js/);
+  assert.equal((await req("GET", "/office")).status, 200);
+  const miss = await req("GET", "/no-such-page");
+  assert.equal(miss.status, 404);
+  assert.match(miss.text, /missing/);
+  const dep = await req("GET", "/healthz/deploy");
+  assert.equal(dep.json.site, true);
+  assert.equal(dep.json.status, null);
+});
+
+test("live quote, config extras and contact messages", async () => {
+  const q = await req("POST", "/api/quote", { length: 15, width: 10, eave: 3, roofType: "gable", pitch: 30, jobType: "roof", gables: true, days: 28, zone: "A", urgency: "standard" });
+  assert.equal(q.status, 200);
+  assert.equal(q.json.estimate.area, 319);
+  const cfg = (await req("GET", "/api/config")).json;
+  assert.ok(cfg.earliest.emergency < cfg.earliest.standard);
+  assert.equal(cfg.examples.totals.standard, q.json.quote.total);
+  const bad = await req("POST", "/api/quote", { length: 2 });
+  assert.deepEqual(bad.json.info.fields, ["length", "width", "eave", "roofType", "pitch", "jobType"]);
+
+  assert.equal((await req("POST", "/api/contact", { name: "A", email: "nope", message: "hi" })).json.error, "email_invalid");
+  assert.equal((await req("POST", "/api/contact", { name: "Testi", email: "testi@example.fi", message: "Tarvitsen telineet" })).status, 200);
+  assert.equal((await req("POST", "/api/contact", { name: "Bot", email: "b@b.fi", message: "spam", website: "x" })).status, 200);
+  assert.equal((await req("GET", "/api/office/leads")).status, 401);
+  const login = await req("POST", "/api/office/login", { password: PASSWORD });
+  const H = { Cookie: login.headers.get("set-cookie").split(";")[0] };
+  const leads = (await req("GET", "/api/office/leads", undefined, H)).json.leads;
+  assert.equal(leads.length, 1, "the honeypot message is not stored");
+  assert.equal(leads[0].email, "testi@example.fi");
+  assert.equal((await req("DELETE", `/api/office/leads/${leads[0].id}`, undefined, H)).status, 200);
+  assert.equal((await req("GET", "/api/office/leads", undefined, H)).json.leads.length, 0);
 });

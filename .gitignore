@@ -5,3 +5,8 @@ node_modules/
 *.db-shm
 *.db-wal
 .DS_Store
+.deploy/
+web/.next/
+web/out/
+web/node_modules/
+web/next-env.d.ts.bak

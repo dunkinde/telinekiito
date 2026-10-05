@@ -22,9 +22,9 @@
   }
   async function showOffice() {
     $("#login-view").hidden = true; $("#office-view").hidden = false; $("#logout").hidden = false;
-    await Promise.all([loadOrders(), loadPricing()]);
+    await Promise.all([loadOrders(), loadPricing(), loadLeads()]);
     clearInterval(S.timer);
-    S.timer = setInterval(() => { if (!document.hidden) loadOrders(true); }, 20000);
+    S.timer = setInterval(() => { if (!document.hidden) { loadOrders(true); loadLeads(); } }, 20000);
   }
   function handleAuthError(e) {
     if (e.status === 401) { showLogin(); return true; }
@@ -37,7 +37,7 @@
       const r = await api("GET", "/api/office/orders");
       S.orders = r.orders || []; S.loaded = true; S.lastSync = Date.now();
       if (S.selected && !selected()) S.selected = null;
-      renderList(); renderDetail(false); renderSync();
+      renderList(); renderDetail(false); renderSync(); renderLeads();
     } catch (e) {
       if (!handleAuthError(e) && !quiet) toast(e.message);
     }
@@ -51,6 +51,27 @@
       handleAuthError(e);
     }
   }
+  async function loadLeads() {
+    try {
+      const r = await api("GET", "/api/office/leads");
+      S.leads = r.leads || [];
+      renderLeads();
+    } catch (e) {
+      handleAuthError(e);
+    }
+  }
+  // Messages from the website's contact form.
+  function renderLeads() {
+    const ls = S.leads || [];
+    $("#leads-count").textContent = String(ls.length);
+    $("#leads-list").innerHTML = ls.length
+      ? `<ul class="leads">${ls.map((l) =>
+          `<li><div class="lead-head"><b>${esc(l.name)}</b> <a href="mailto:${encodeURIComponent(l.email)}">${esc(l.email)}</a>${l.phone ? ` · <span class="mono">${esc(l.phone)}</span>` : ""}` +
+          `<span class="muted small">${esc(fmtStamp(l.createdAt))} · ${esc(String(l.lang || "").toUpperCase())}</span></div>` +
+          `<p>${esc(l.message)}</p><button class="btn danger" type="button" data-lead="${l.id}">${esc(t("o.leadDelete"))}</button></li>`).join("")}</ul>`
+      : `<p class="muted">${esc(t("o.leadsEmpty"))}</p>`;
+  }
+
   function renderSync() {
     if (S.lastSync) $("#sync-text").textContent = t("o.updated", { time: fmtTime(S.lastSync) });
   }
@@ -291,6 +312,17 @@
         if (!handleAuthError(e)) toast(e.message);
       }
     });
+    $("#leads-list").addEventListener("click", async (ev) => {
+      const b = ev.target.closest("[data-lead]");
+      if (!b) return;
+      try {
+        await api("DELETE", `/api/office/leads/${encodeURIComponent(b.dataset.lead)}`);
+        S.leads = (S.leads || []).filter((l) => String(l.id) !== b.dataset.lead);
+        renderLeads(); toast(t("o.toast.leadDeleted"));
+      } catch (e) {
+        if (!handleAuthError(e)) toast(e.message);
+      }
+    });
     $("#set-reset").addEventListener("click", () => { renderSettings(clone(E.DEFAULT_PRICING)); toast(t("o.toast.defaults")); });
   }
 
@@ -298,7 +330,7 @@
   renderList();
   // Redraw script-built parts when the language changes. Unsaved pricing edits are kept.
   I.onChange(() => {
-    renderList(); renderDetail(false); renderSync();
+    renderList(); renderDetail(false); renderSync(); renderLeads();
     if (!$("#set-grid").children.length || !$("#settings").open) renderSettings(S.pricing);
     else {
       SET_FIELDS.forEach((f) => {

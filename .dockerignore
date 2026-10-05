@@ -1,7 +1,10 @@
 .git
 .env
+.deploy
 data
-node_modules
+**/node_modules
+web/.next
+web/out
 test
 deploy
 *.md
