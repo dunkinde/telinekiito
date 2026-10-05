@@ -29,8 +29,10 @@ export function Modal({
     document.body.style.overflow = "hidden";
     // Focus the first field (or the panel) once the panel has mounted.
     const t = window.setTimeout(() => {
-      const first = panel.current?.querySelector<HTMLElement>("input, select, textarea, button:not([data-close])");
-      (first || panel.current)?.focus();
+      // Prefer the first text field; fall back to the first button, then the panel itself.
+      const p = panel.current;
+      const first = p?.querySelector<HTMLElement>("input:not([type=hidden]):not([tabindex='-1']), textarea, select") || p?.querySelector<HTMLElement>("button:not([data-close])");
+      (first || p)?.focus();
     }, 60);
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
