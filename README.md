@@ -19,6 +19,7 @@ Plain Node 22, no npm packages. Orders live in SQLite (`node:sqlite`) in a Docke
 - Text: short strings in `web/lib/i18n.tsx`, section content in `web/lib/content.ts`, company contact details (placeholders) in `web/lib/site.ts`.
 - Real photos for the gallery: put the file in `web/public/projects/` and set `photo: "/projects/<file>.jpg"` on the project in `web/lib/content.ts`; it replaces the drawing. The installation-day timeline (`BUILD_STEPS`) and the delivery rings on the map (`COVERAGE`) are in the same file.
 - The 3D house model (`web/components/HouseModel.tsx`) uses the quote engine's scaffold rules (`web/lib/geometry.ts`, a port of `sidesFor` in `lib/engine.js`) — change both together.
+- Desktop scrolling goes block by block: every section is one screen tall (`.snap-screen` in `web/app/globals.css`, sizes scale with window height) and `web/components/BlockScroll.tsx` moves one block per wheel step, swipe or arrow key (the installation-day timelapse has five stops). Phones scroll normally. If you add a section, give it `snap-screen section-pad` and check it still fits on a 1280 × 630 window.
 - Contact-form messages appear in the office under **Contact messages**.
 
 Work on it locally:

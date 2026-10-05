@@ -96,6 +96,8 @@ const en = {
   "price.rate.min": "Minimum rental",
   "price.rate.days": (v) => plural(v.n, "1 day", `${v.n} days`),
   "price.note": "Homeowners can claim the household tax credit on the labour share. The final price is confirmed after we check the details.",
+  "price.included": "Every price includes",
+  "price.ratesOpen": "See unit prices",
 
   "contact.name": "Name",
   "contact.email": "Email",
@@ -435,6 +437,8 @@ const fi: Record<Key, Entry> = {
   "price.rate.min": "Vähimmäisvuokra-aika",
   "price.rate.days": (v) => plural(v.n, "1 päivä", `${v.n} päivää`),
   "price.note": "Kotitalousvähennyksen voi hakea työn osuudesta. Lopullinen hinta vahvistetaan, kun olemme tarkistaneet tiedot.",
+  "price.included": "Hintaan sisältyy aina",
+  "price.ratesOpen": "Katso yksikköhinnat",
 
   "contact.name": "Nimi",
   "contact.email": "Sähköposti",

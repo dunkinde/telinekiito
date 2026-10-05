@@ -70,38 +70,69 @@ export function StaggerItem({ children, className, as = "div" }: { children: Rea
   );
 }
 
-/** Section heading block: eyebrow, title and intro, revealed together. */
+/**
+ * Section heading block: eyebrow, title and intro, revealed together.
+ * `split` puts the title on the left and the intro (plus any `aside`, e.g. buttons) on the right on desktops,
+ * which keeps the heading short so the section fits on one screen.
+ */
 export function SectionHead({
   eyebrow,
   title,
   intro,
   dark = false,
+  split = false,
+  aside,
   className = ""
 }: {
   eyebrow: string;
   title: string;
   intro?: string;
   dark?: boolean;
+  split?: boolean;
+  aside?: React.ReactNode;
   className?: string;
 }) {
+  const eyebrowEl = (
+    <StaggerItem>
+      <p className={`mb-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] lg:mb-[clamp(0.5rem,1.6svh,1rem)] ${dark ? "text-sun" : "text-ink-soft"}`}>
+        <span className="h-[2px] w-6 bg-sun" aria-hidden />
+        {eyebrow}
+      </p>
+    </StaggerItem>
+  );
+  const titleEl = (
+    <StaggerItem>
+      <h2 className={`font-display text-[clamp(2rem,4.6vw,3.5rem)] leading-[1.04] font-extrabold tracking-[-0.02em] text-balance lg:text-[clamp(2rem,min(4.2vw,7svh),3.5rem)] ${dark ? "text-white" : "text-ink"}`}>
+        {title}
+      </h2>
+    </StaggerItem>
+  );
+  const introEl = intro ? (
+    <p className={`max-w-2xl text-lg leading-relaxed lg:text-[clamp(1rem,2.5svh,1.125rem)] ${dark ? "text-white/70" : "text-muted"}`}>{intro}</p>
+  ) : null;
+
+  if (split) {
+    return (
+      <Stagger className={`grid gap-5 lg:grid-cols-12 lg:items-end lg:gap-10 ${className}`} stagger={0.1}>
+        <div className="lg:col-span-7">
+          {eyebrowEl}
+          {titleEl}
+        </div>
+        {introEl || aside ? (
+          <StaggerItem className="flex flex-col gap-5 lg:col-span-5 lg:pb-1">
+            {introEl}
+            {aside}
+          </StaggerItem>
+        ) : null}
+      </Stagger>
+    );
+  }
   return (
     <Stagger className={`max-w-3xl ${className}`} stagger={0.1}>
-      <StaggerItem>
-        <p className={`mb-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] ${dark ? "text-sun" : "text-ink-soft"}`}>
-          <span className="h-[2px] w-6 bg-sun" aria-hidden />
-          {eyebrow}
-        </p>
-      </StaggerItem>
-      <StaggerItem>
-        <h2 className={`font-display text-[clamp(2rem,4.6vw,3.5rem)] leading-[1.02] font-extrabold tracking-[-0.02em] ${dark ? "text-white" : "text-ink"}`}>
-          {title}
-        </h2>
-      </StaggerItem>
-      {intro ? (
-        <StaggerItem>
-          <p className={`mt-5 max-w-2xl text-lg leading-relaxed ${dark ? "text-white/70" : "text-muted"}`}>{intro}</p>
-        </StaggerItem>
-      ) : null}
+      {eyebrowEl}
+      {titleEl}
+      {introEl ? <StaggerItem className="mt-5 lg:mt-[clamp(0.75rem,2svh,1.25rem)]">{introEl}</StaggerItem> : null}
+      {aside ? <StaggerItem className="mt-6">{aside}</StaggerItem> : null}
     </Stagger>
   );
 }

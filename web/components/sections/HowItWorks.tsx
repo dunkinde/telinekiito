@@ -14,10 +14,22 @@ export function HowItWorks() {
   const { t, pick } = useI18n();
   const { openQuote } = useSite();
   return (
-    <section id="how" className="relative overflow-hidden bg-mist py-24 sm:py-32">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <SectionHead eyebrow={t("sec.how.eyebrow")} title={t("sec.how.title")} />
-        <div className="relative mt-16">
+    <section id="how" className="snap-screen section-pad relative overflow-hidden bg-mist">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+        <SectionHead
+          split
+          eyebrow={t("sec.how.eyebrow")}
+          title={t("sec.how.title")}
+          aside={
+            <div className="lg:flex lg:justify-end">
+              <Button variant="dark" size="lg" onClick={() => openQuote()}>
+                {t("sec.how.cta")}
+                <IconArrow className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
+              </Button>
+            </div>
+          }
+        />
+        <div className="head-gap relative lg:mt-[clamp(1.75rem,7svh,4.5rem)]">
           {/* Connecting line behind the step numbers (desktop). */}
           <motion.div
             aria-hidden
@@ -37,20 +49,14 @@ export function HowItWorks() {
                       <Icon className="h-6 w-6" />
                       <span className="absolute -top-1 -right-1 grid h-6 w-6 place-items-center rounded-full bg-sun text-[11px] font-bold text-ink">{i + 1}</span>
                     </span>
-                    <h3 className="font-display text-2xl font-bold tracking-[-0.01em] md:mt-6">{pick(s.title)}</h3>
+                    <h3 className="font-display text-2xl font-bold tracking-[-0.01em] md:mt-6 short:md:mt-4">{pick(s.title)}</h3>
                   </div>
-                  <p className="mt-4 leading-relaxed text-muted md:mx-auto md:max-w-sm">{pick(s.text)}</p>
+                  <p className="mt-4 leading-relaxed text-muted md:mx-auto md:max-w-sm short:mt-3 short:text-[15px]">{pick(s.text)}</p>
                   <p className="mt-4 inline-flex rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink-soft ring-1 ring-line">{pick(s.meta)}</p>
                 </StaggerItem>
               );
             })}
           </Stagger>
-        </div>
-        <div className="mt-14 flex justify-start md:justify-center">
-          <Button variant="dark" size="lg" onClick={() => openQuote()}>
-            {t("sec.how.cta")}
-            <IconArrow className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
-          </Button>
         </div>
       </div>
     </section>

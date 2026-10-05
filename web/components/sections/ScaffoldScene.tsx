@@ -79,7 +79,7 @@ export function ScaffoldScene({ kind, title }: { kind: SceneKind; title: string 
         </linearGradient>
       </defs>
       <rect width={W} height={H} fill={`url(#sky-${kind})`} />
-      {!c.storm ? <circle cx={W - 60} cy={68} r={22} fill="#ffc20e" opacity={0.35} /> : null}
+      {!c.storm ? <circle cx={W - 58} cy={94} r={20} fill="#ffc20e" opacity={0.35} /> : null}
       {c.storm
         ? Array.from({ length: 26 }, (_, i) => (
             <path key={i} d={`M${(i * 37) % W} ${24 + ((i * 53) % 170)}l-8 18`} stroke="#ffffff" strokeOpacity={0.35} strokeWidth={1.4} strokeLinecap="round" />

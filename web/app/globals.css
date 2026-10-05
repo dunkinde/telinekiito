@@ -85,6 +85,56 @@
   }
 }
 
+/* "short" = a desktop window that is not very tall (typical laptop with browser bars): hide or tighten extras. */
+@custom-variant short (@media (min-width: 1024px) and (max-height: 860px));
+
+/* ---------- Block-to-block scrolling (desktop) ----------
+   On desktop every section is one screen: from under the fixed header (5rem) to the bottom of the window,
+   with its content centred. components/BlockScroll.tsx moves the page from block to block.
+   Phones and very short windows scroll freely. */
+@layer components {
+  .section-pad {
+    padding-block: 5rem;
+  }
+  .head-gap {
+    margin-top: 3rem;
+  }
+  @media (min-width: 640px) {
+    .section-pad {
+      padding-block: 6rem;
+    }
+  }
+  @media (min-width: 1024px) {
+    .section-pad {
+      padding-block: clamp(1.25rem, 5svh, 4.5rem);
+    }
+    .head-gap {
+      margin-top: clamp(1.25rem, 4.5svh, 3.25rem);
+    }
+  }
+}
+@media (min-width: 1024px) and (min-height: 600px) {
+  .snap-screen {
+    min-height: calc(100svh - 5rem);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  /* The hero and the pinned timelapse start at the very top of the window (they leave room for the header themselves). */
+  .snap-full {
+    min-height: 100svh;
+    scroll-margin-top: 0 !important;
+  }
+}
+
+/* Horizontal sliders: no visible scrollbar. */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 /* If scripts never load, the intro overlay hides itself after 2.5 s. */
 @keyframes tk-intro-failsafe {
   to {

@@ -170,14 +170,16 @@ export const PROJECTS: Project[] = [
   }
 ];
 
+/** Included in every price (shown once, next to the pricing heading). */
 export const PRICE_FEATURES: L[] = [
   { fi: "Toimitus ja nouto", en: "Delivery and pickup" },
   { fi: "Asennus, tarkastus ja purku", en: "Installation, inspection and dismantling" },
   { fi: "Räystässuoja tarvittaessa", en: "Roof-catch guard where needed" },
   { fi: "Tilauksen seuranta verkossa", en: "Online order tracking" }
 ];
-export const PRICE_EXTRA: Record<Urgency, L | null> = {
-  standard: null,
+/** The one thing that sets each delivery speed apart (shown on its card). */
+export const PRICE_EXTRA: Record<Urgency, L> = {
+  standard: { fi: "Edullisin vaihtoehto", en: "Lowest price" },
   express: { fi: "Etusija asennusjonossa", en: "Priority in the install queue" },
   emergency: { fi: "Asentajat paikalla 24 tunnissa", en: "Crew on site within 24 hours" }
 };
@@ -238,13 +240,13 @@ export const FAQ: Faq[] = [
   }
 ];
 
-/** Milestones of the scroll "timelapse" (installation day). `at` is the scroll position 0–1 where it starts. */
+/** Milestones of the scroll "timelapse" (installation day). `at` is the scroll position 0–1 where it starts; on desktops the page snaps to each one. */
 export const BUILD_STEPS: { at: number; time: string; label: L }[] = [
   { at: 0, time: "07:30", label: { fi: "Kuorma saapuu, osat puretaan", en: "Truck arrives, parts unloaded" } },
-  { at: 0.18, time: "08:15", label: { fi: "Säätöjalat ja ensimmäinen taso", en: "Base jacks and first level" } },
-  { at: 0.42, time: "10:00", label: { fi: "Toinen taso ja kaiteet", en: "Second level and guardrails" } },
-  { at: 0.66, time: "12:15", label: { fi: "Päädyt ja räystässuoja", en: "Gable ends and roof-catch guard" } },
-  { at: 0.9, time: "14:00", label: { fi: "Tarkastettu ja merkitty – valmis käyttöön", en: "Inspected and tagged – ready to use" } }
+  { at: 0.25, time: "09:15", label: { fi: "Säätöjalat ja ensimmäinen taso", en: "Base jacks and first level" } },
+  { at: 0.5, time: "11:00", label: { fi: "Toinen taso ja kaiteet", en: "Second level and guardrails" } },
+  { at: 0.75, time: "12:45", label: { fi: "Päädyt ja räystässuoja", en: "Gable ends and roof-catch guard" } },
+  { at: 1, time: "14:30", label: { fi: "Tarkastettu ja merkitty – valmis käyttöön", en: "Inspected and tagged – ready to use" } }
 ];
 
 /** Delivery rings on the map, measured from Helsinki. */

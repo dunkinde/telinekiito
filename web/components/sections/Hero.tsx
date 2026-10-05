@@ -146,7 +146,7 @@ export function Hero() {
   const state = introDone ? "show" : "hidden";
 
   return (
-    <section id="top" className="relative overflow-hidden pt-28 pb-20 sm:pt-32 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-20 lg:pb-[clamp(0.75rem,3svh,2.5rem)]">
+    <section id="top" className="snap-full relative overflow-hidden pt-28 pb-20 sm:pt-32 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-20 lg:pb-[clamp(0.75rem,3svh,2.5rem)]">
       <HeroBackground start={introDone} />
 
       <div className="relative mx-auto grid w-full max-w-7xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-8">

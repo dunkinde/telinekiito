@@ -3,6 +3,7 @@
 // MotionConfig "user" turns off transform animations for visitors who ask for reduced motion.
 import { MotionConfig } from "framer-motion";
 import { LangProvider } from "@/lib/i18n";
+import { BlockScroll } from "./BlockScroll";
 import { Header } from "./Header";
 import { Intro } from "./Intro";
 import { QuoteWizard } from "./quote/QuoteWizard";
@@ -27,6 +28,7 @@ export default function Site() {
         <SiteProvider>
           <ToastProvider>
             <Intro />
+            <BlockScroll />
             <Header />
             <main>
               <Hero />

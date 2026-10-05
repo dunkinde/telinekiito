@@ -20,12 +20,9 @@ const FINLAND: [number, number][] = [
 ];
 const CITIES: { name: string; lon: number; lat: number; major?: boolean; left?: boolean }[] = [
   { name: "Helsinki", lon: 24.94, lat: 60.17, major: true, left: true },
-  { name: "Porvoo", lon: 25.66, lat: 60.39 },
-  { name: "Lahti", lon: 25.66, lat: 60.98 },
-  { name: "Hämeenlinna", lon: 24.46, lat: 61.0, left: true },
-  { name: "Kotka", lon: 26.94, lat: 60.47 },
   { name: "Turku", lon: 22.27, lat: 60.45, left: true },
   { name: "Tampere", lon: 23.76, lat: 61.5, left: true },
+  { name: "Lahti", lon: 25.66, lat: 60.98 },
   { name: "Jyväskylä", lon: 25.75, lat: 62.24 },
   { name: "Oulu", lon: 25.47, lat: 65.01 },
   { name: "Rovaniemi", lon: 25.73, lat: 66.5 }
@@ -44,107 +41,111 @@ export function Coverage() {
   const { t, pick } = useI18n();
   const reduce = useReducedMotion();
   return (
-    <section id="coverage" className="overflow-hidden bg-white py-24 sm:py-32">
-      <div className="mx-auto grid max-w-7xl items-center gap-12 px-4 sm:px-6 lg:grid-cols-12 lg:px-8">
-        <div className="lg:col-span-6">
+    <section id="coverage" className="snap-screen section-pad overflow-hidden bg-white">
+      <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-12 lg:gap-12 lg:px-8">
+        <div className="lg:col-span-7">
           <SectionHead eyebrow={t("cov.eyebrow")} title={t("cov.title")} intro={t("cov.intro")} />
-          <Stagger as="ul" className="mt-10 space-y-4" stagger={0.12}>
+          <Stagger as="ul" className="head-gap grid gap-3 sm:grid-cols-3" stagger={0.12}>
             {COVERAGE.map((c, i) => (
-              <StaggerItem as="li" key={c.km}>
-                <div className="flex items-center gap-5 rounded-2xl bg-mist p-5 ring-1 ring-line">
-                  <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full" style={{ background: RING_FILL[i], boxShadow: "inset 0 0 0 2px #ffc20e" }}>
-                    <span className="font-display text-lg font-extrabold">{pick(c.speed)}</span>
+              <StaggerItem as="li" key={c.km} className="h-full">
+                <div className="flex h-full items-center gap-4 rounded-2xl bg-mist p-4 ring-1 ring-line sm:flex-col sm:items-start sm:gap-3">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full" style={{ background: RING_FILL[i], boxShadow: "inset 0 0 0 2px #ffc20e" }}>
+                    <span className="font-display text-base font-extrabold">{pick(c.speed)}</span>
                   </span>
                   <div>
-                    <p className="font-display text-xl font-bold">
+                    <p className="font-display text-lg font-bold">
                       <CountUp to={c.km} /> km
                     </p>
-                    <p className="text-sm text-muted">{pick(c.text)}</p>
+                    <p className="text-sm leading-snug text-muted">{pick(c.text)}</p>
                   </div>
                 </div>
               </StaggerItem>
             ))}
-            <StaggerItem as="li">
-              <p className="px-1 text-sm text-muted">{t("cov.rest")}</p>
-            </StaggerItem>
           </Stagger>
+          <p className="mt-4 text-sm text-muted">{t("cov.rest")}</p>
         </div>
 
-        <div className="lg:col-span-6">
-          <svg viewBox="0 0 230 485" className="mx-auto h-[min(80vh,640px)] w-auto" role="img" aria-label={t("cov.mapLabel")}>
-            {/* Country outline */}
-            <motion.path
-              d={outline}
-              fill="#f3f4f1"
-              stroke="#0e1217"
-              strokeOpacity={0.35}
-              strokeWidth={1.2}
-              strokeLinejoin="round"
-              initial={{ pathLength: reduce ? 1 : 0, fillOpacity: reduce ? 1 : 0 }}
-              whileInView={{ pathLength: 1, fillOpacity: 1 }}
-              viewport={{ once: true, amount: 0.3 }}
-              transition={{ pathLength: { duration: 1.6, ease: [0.65, 0, 0.35, 1] }, fillOpacity: { duration: 0.6, delay: 1.2 } }}
-            />
-            {/* Delivery rings, largest first so the smaller ones sit on top. */}
-            {[...COVERAGE].reverse().map((c, ri) => {
-              const i = COVERAGE.length - 1 - ri;
-              return (
+        <div className="lg:col-span-5">
+          <div className="mx-auto flex max-w-md items-center justify-center rounded-3xl bg-mist p-4 ring-1 ring-line sm:p-6 lg:max-w-none">
+            <svg viewBox="0 0 230 485" className="h-[min(70svh,34rem)] w-auto lg:h-[clamp(18rem,calc(100svh-13.5rem),36rem)]" role="img" aria-label={t("cov.mapLabel")}>
+              {/* Country outline */}
+              <motion.path
+                d={outline}
+                fill="#ffffff"
+                stroke="#0e1217"
+                strokeOpacity={0.35}
+                strokeWidth={1.2}
+                strokeLinejoin="round"
+                initial={{ pathLength: reduce ? 1 : 0, fillOpacity: reduce ? 1 : 0 }}
+                whileInView={{ pathLength: 1, fillOpacity: 1 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ pathLength: { duration: 1.6, ease: [0.65, 0, 0.35, 1] }, fillOpacity: { duration: 0.6, delay: 1.2 } }}
+              />
+              {/* Delivery rings, largest first so the smaller ones sit on top. */}
+              {[...COVERAGE].reverse().map((c, ri) => {
+                const i = COVERAGE.length - 1 - ri;
+                return (
+                  <motion.circle
+                    key={c.km}
+                    cx={HKI[0]}
+                    cy={HKI[1]}
+                    r={kmToUnits(c.km)}
+                    fill={RING_FILL[i]}
+                    stroke="#e0a800"
+                    strokeWidth={1}
+                    strokeDasharray={i === 2 ? "3 2" : undefined}
+                    initial={{ scale: reduce ? 1 : 0, opacity: reduce ? 1 : 0 }}
+                    whileInView={{ scale: 1, opacity: 1 }}
+                    viewport={{ once: true, amount: 0.3 }}
+                    transition={{ duration: 0.9, delay: 1.3 + i * 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  />
+                );
+              })}
+              {/* Pulse at the base */}
+              {!reduce ? (
                 <motion.circle
-                  key={c.km}
                   cx={HKI[0]}
                   cy={HKI[1]}
-                  r={kmToUnits(c.km)}
-                  fill={RING_FILL[i]}
+                  r={8}
+                  fill="none"
                   stroke="#e0a800"
-                  strokeWidth={1}
-                  strokeDasharray={i === 2 ? "3 2" : undefined}
-                  initial={{ scale: reduce ? 1 : 0, opacity: reduce ? 1 : 0 }}
-                  whileInView={{ scale: 1, opacity: 1 }}
-                  viewport={{ once: true, amount: 0.3 }}
-                  transition={{ duration: 0.9, delay: 1.3 + i * 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  strokeWidth={1.5}
+                  animate={{ scale: [1, 3.2], opacity: [0.8, 0] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut", delay: 2.2 }}
                 />
-              );
-            })}
-            {/* Pulse at the base */}
-            {!reduce ? (
-              <motion.circle
-                cx={HKI[0]}
-                cy={HKI[1]}
-                r={8}
-                fill="none"
-                stroke="#e0a800"
-                strokeWidth={1.5}
-                animate={{ scale: [1, 3.2], opacity: [0.8, 0] }}
-                transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut", delay: 2.2 }}
-              />
-            ) : null}
-            {CITIES.map((c, i) => {
-              const [x, y] = proj(c.lon, c.lat);
-              const left = Boolean(c.left);
-              return (
-                <motion.g
-                  key={c.name}
-                  initial={{ opacity: 0 }}
-                  whileInView={{ opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: 1.6 + i * 0.06 }}
-                >
-                  <circle cx={x} cy={y} r={c.major ? 3.2 : 2} fill="#0e1217" />
-                  <text
-                    x={left ? x - 5 : x + 5}
-                    y={y + 3}
-                    textAnchor={left ? "end" : "start"}
-                    fontSize={c.major ? 11 : 8.5}
-                    fontWeight={c.major ? 700 : 500}
-                    fill="#2b323b"
-                    style={{ fontFamily: "var(--font-sans)" }}
+              ) : null}
+              {CITIES.map((c, i) => {
+                const [x, y] = proj(c.lon, c.lat);
+                const left = Boolean(c.left);
+                return (
+                  <motion.g
+                    key={c.name}
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 1.6 + i * 0.06 }}
                   >
-                    {c.name}
-                  </text>
-                </motion.g>
-              );
-            })}
-          </svg>
+                    <circle cx={x} cy={y} r={c.major ? 3.2 : 2.2} fill="#0e1217" />
+                    <text
+                      x={left ? x - 5 : x + 5}
+                      y={y + 3.2}
+                      textAnchor={left ? "end" : "start"}
+                      fontSize={c.major ? 11.5 : 9}
+                      fontWeight={c.major ? 700 : 600}
+                      fill="#2b323b"
+                      stroke="#ffffff"
+                      strokeWidth={3}
+                      strokeLinejoin="round"
+                      paintOrder="stroke"
+                      style={{ fontFamily: "var(--font-sans)" }}
+                    >
+                      {c.name}
+                    </text>
+                  </motion.g>
+                );
+              })}
+            </svg>
+          </div>
         </div>
       </div>
     </section>
