@@ -24,7 +24,9 @@ const SCENES: Record<SceneKind, SceneCfg> = {
   hip: { floors: 1, roof: "hip", width: 250, decks: "top", catchGuard: true, bg: ["#e6edf3", "#ffffff"] }
 };
 
-const W = 400, H = 400, GROUND = 262, FLOOR = 50, LIFT = 42;
+// The picture layer in the gallery is 116 % of its 4:3 frame (room for parallax), so the drawing is 400 × 348
+// and the part seen at rest is y 24–324. The ground line sits at the same height in every scene.
+const W = 400, H = 348, GROUND = 266, FLOOR = 50, LIFT = 42;
 const INK = "#0e1217", ROOF = "#2b323b", STEEL = "#7f8b97", DECK = "#ffc20e", GLASS = "#c9d6e2", WALL = "#ffffff";
 
 /** Sky colour at the top of a scene, used to fill the frame above the drawing. */
@@ -69,7 +71,7 @@ export function ScaffoldScene({ kind, title }: { kind: SceneKind; title: string 
   const lifts = [GROUND, ...levels.slice().sort((a, b) => b - a)];
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" role="img" aria-label={title} preserveAspectRatio="xMidYMax meet">
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" role="img" aria-label={title} preserveAspectRatio="xMidYMid slice">
       <defs>
         <linearGradient id={`sky-${kind}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" stopColor={c.bg[0]} />
@@ -77,10 +79,10 @@ export function ScaffoldScene({ kind, title }: { kind: SceneKind; title: string 
         </linearGradient>
       </defs>
       <rect width={W} height={H} fill={`url(#sky-${kind})`} />
-      {!c.storm ? <circle cx={W - 62} cy={58} r={26} fill="#ffc20e" opacity={0.35} /> : null}
+      {!c.storm ? <circle cx={W - 60} cy={68} r={22} fill="#ffc20e" opacity={0.35} /> : null}
       {c.storm
         ? Array.from({ length: 26 }, (_, i) => (
-            <path key={i} d={`M${(i * 37) % W} ${(i * 53) % 160}l-8 18`} stroke="#ffffff" strokeOpacity={0.35} strokeWidth={1.4} strokeLinecap="round" />
+            <path key={i} d={`M${(i * 37) % W} ${24 + ((i * 53) % 170)}l-8 18`} stroke="#ffffff" strokeOpacity={0.35} strokeWidth={1.4} strokeLinecap="round" />
           ))
         : null}
 

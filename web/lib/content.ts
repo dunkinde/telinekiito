@@ -131,8 +131,6 @@ export interface Project {
   scene: SceneKind;
   title: L;
   spec: L;
-  /** Grid size on large screens. */
-  tall?: boolean;
   /**
    * Your own photo of the job, e.g. "/projects/espoo-roof.jpg" (put the file in web/public/projects/).
    * When set, the photo replaces the drawing and gets the same parallax and hover zoom.
@@ -142,7 +140,6 @@ export interface Project {
 export const PROJECTS: Project[] = [
   {
     scene: "roof",
-    tall: true,
     title: { fi: "Omakotitalo, kattoremontti", en: "Detached house, roof renovation" },
     spec: { fi: "1 kerros · 10 × 15 m · 319 m² · 4 viikkoa", en: "1 storey · 10 × 15 m · 319 m² · 4 weeks" }
   },
@@ -158,7 +155,6 @@ export const PROJECTS: Project[] = [
   },
   {
     scene: "row",
-    tall: true,
     title: { fi: "Rivitalo, rännit ja otsalaudat", en: "Row house, gutters and fascia" },
     spec: { fi: "Räystäiden puolet · yksi työtaso", en: "Gutter sides · one working level" }
   },
