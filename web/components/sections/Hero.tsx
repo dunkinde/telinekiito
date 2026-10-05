@@ -51,7 +51,7 @@ function AddressBar() {
   const [value, setValue] = useState("");
   return (
     <form
-      className="mt-9 max-w-xl"
+      className="mt-9 max-w-xl lg:mt-[clamp(1rem,3.4svh,2.25rem)]"
       onSubmit={(e) => {
         e.preventDefault();
         // Near the top of the page the bar itself grows into the quote window (shared layout animation).
@@ -72,10 +72,10 @@ function AddressBar() {
             onChange={(e) => setValue(e.target.value)}
             placeholder={t("hero.addressPh")}
             autoComplete="street-address"
-            className="h-12 w-full bg-transparent text-base text-ink placeholder:text-muted focus:outline-none"
+            className="h-12 w-full bg-transparent text-base lg:h-[clamp(2.75rem,7svh,3rem)] text-ink placeholder:text-muted focus:outline-none"
           />
         </label>
-        <Button type="submit" size="lg" className="w-full sm:w-auto">
+        <Button type="submit" size="lg" className="w-full sm:w-auto lg:h-[clamp(3rem,7.6svh,3.5rem)]">
           {t("hero.cta")}
           <IconArrow className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
         </Button>
@@ -101,7 +101,7 @@ function ExampleCard() {
   const lines = quote?.lines.filter((l) => l.key !== "min").slice(0, 4) ?? [];
 
   return (
-    <div className="relative rounded-[28px] bg-white/90 p-6 shadow-[0_40px_80px_-30px_rgba(14,18,23,0.4)] ring-1 ring-line backdrop-blur sm:p-7">
+    <div className="relative rounded-[28px] bg-white/90 p-6 shadow-[0_40px_80px_-30px_rgba(14,18,23,0.4)] ring-1 ring-line backdrop-blur sm:p-7 lg:p-[clamp(1.1rem,3svh,1.75rem)]">
       <div className="flex items-center justify-between gap-3">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{t("hero.card.title")}</p>
         <span className="inline-flex items-center gap-1 rounded-full bg-sun-soft px-2.5 py-1 text-xs font-semibold text-ink">
@@ -109,24 +109,24 @@ function ExampleCard() {
         </span>
       </div>
       {/* 3D model of the example house; the scaffold assembles level by level. */}
-      <HouseModel shape={EXAMPLE_HOUSE} className="mt-3 h-40 w-full sm:h-44" label={t("hero.card.house")} />
+      <HouseModel shape={EXAMPLE_HOUSE} className="mt-3 h-40 w-full sm:h-44 lg:mt-[clamp(0.25rem,1.2svh,0.75rem)] lg:h-[clamp(6.5rem,20svh,11rem)]" label={t("hero.card.house")} />
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
         <p className="font-semibold text-ink">{t("hero.card.house")}</p>
         <p className="text-muted">
           {t("hero.card.job")} · {config ? `${config.examples.area} m²` : "319 m²"}
         </p>
       </div>
-      <ul className="mt-5 space-y-2.5 text-sm">
+      <ul className="mt-5 space-y-2.5 text-sm lg:mt-[clamp(0.75rem,2.2svh,1.25rem)] lg:space-y-[clamp(0.35rem,1.2svh,0.625rem)]">
         {lines.length
           ? lines.map((l) => (
-              <li key={l.key} className="flex justify-between gap-4 border-b border-line pb-2.5 last:border-0">
+              <li key={l.key} className="flex justify-between gap-4 border-b border-line pb-2.5 last:border-0 lg:pb-[clamp(0.35rem,1.2svh,0.625rem)]">
                 <span className="text-ink-soft">{lineLabel(i18n, l, quote ?? undefined)}</span>
                 <span className="font-medium tabular-nums">{eur(l.amount)}</span>
               </li>
             ))
           : [0, 1, 2, 3].map((k) => <li key={k} className="h-5 rounded bg-mist" />)}
       </ul>
-      <div className="mt-5 flex items-end justify-between rounded-2xl bg-ink px-5 py-4 text-white">
+      <div className="mt-5 flex items-end justify-between rounded-2xl bg-ink px-5 py-4 text-white lg:mt-[clamp(0.75rem,2.2svh,1.25rem)] lg:py-[clamp(0.65rem,1.8svh,1rem)]">
         <span className="text-sm text-white/70">{t("hero.card.total")}</span>
         <span className="font-display text-3xl font-extrabold tabular-nums">{total ? eur(total) : "—"}</span>
       </div>
@@ -146,12 +146,12 @@ export function Hero() {
   const state = introDone ? "show" : "hidden";
 
   return (
-    <section id="top" className="relative overflow-hidden pt-28 pb-20 sm:pt-32 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-24 lg:pb-16">
+    <section id="top" className="relative overflow-hidden pt-28 pb-20 sm:pt-32 lg:flex lg:min-h-[100svh] lg:items-center lg:pt-20 lg:pb-[clamp(0.75rem,3svh,2.5rem)]">
       <HeroBackground start={introDone} />
 
       <div className="relative mx-auto grid w-full max-w-7xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-8">
         <motion.div className="lg:col-span-7" style={{ y: textY }} initial="hidden" animate={state} variants={container}>
-          <motion.p variants={fadeUp} className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink-soft ring-1 ring-line backdrop-blur">
+          <motion.p variants={fadeUp} className="mb-6 inline-flex items-center gap-2 rounded-full lg:mb-[clamp(0.75rem,2.6svh,1.5rem)] bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink-soft ring-1 ring-line backdrop-blur">
             <span className="relative flex h-2 w-2">
               <span className="motion-loop absolute inline-flex h-full w-full animate-ping rounded-full bg-sun opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-sun-deep" />
@@ -159,7 +159,7 @@ export function Hero() {
             {t("hero.eyebrow")}
           </motion.p>
 
-          <motion.h1 key={lang} variants={container} className="font-display text-[clamp(2.3rem,6.4vw,4.75rem)] leading-[1] font-extrabold tracking-[-0.03em] text-ink">
+          <motion.h1 key={lang} variants={container} className="font-display text-[clamp(2.3rem,6.4vw,4.75rem)] leading-[1] font-extrabold tracking-[-0.03em] text-ink lg:text-[clamp(2.5rem,min(5.6vw,7.4svh),4.75rem)]">
             <span className="block">
               <Line text={t("hero.line1")} />
             </span>
@@ -175,7 +175,7 @@ export function Hero() {
             </span>
           </motion.h1>
 
-          <motion.p variants={fadeUp} className="mt-7 max-w-xl text-lg leading-relaxed text-muted sm:text-xl">
+          <motion.p variants={fadeUp} className="mt-7 max-w-xl text-lg leading-relaxed text-muted sm:text-xl lg:mt-[clamp(0.75rem,2.6svh,1.75rem)] lg:max-w-[38rem] lg:text-[clamp(1rem,2.4svh,1.25rem)]">
             {t("hero.sub")}
           </motion.p>
 
@@ -183,7 +183,7 @@ export function Hero() {
             <AddressBar />
           </motion.div>
 
-          <motion.ul variants={fadeUp} className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-soft">
+          <motion.ul variants={fadeUp} className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-soft lg:mt-[clamp(0.75rem,2.2svh,1.25rem)]">
             {(["hero.trust1", "hero.trust2", "hero.trust3"] as const).map((k) => (
               <li key={k} className="inline-flex items-center gap-1.5">
                 <IconCheck className="h-4 w-4 text-sun-deep" />
@@ -192,14 +192,14 @@ export function Hero() {
             ))}
           </motion.ul>
 
-          <motion.div variants={fadeUp} className="mt-10 grid max-w-xl grid-cols-3 gap-4 border-t border-line pt-7">
+          <motion.div variants={fadeUp} className="mt-10 grid max-w-xl grid-cols-3 gap-4 border-t border-line pt-7 lg:mt-[clamp(1rem,3.6svh,2.5rem)] lg:pt-[clamp(0.85rem,3svh,1.75rem)]">
             {[
               { n: 24, u: "h", k: "hero.stat1" as const },
               { n: 48, u: "h", k: "hero.stat2" as const },
               { n: 60, u: "s", k: "hero.stat3" as const }
             ].map((s) => (
               <div key={s.k}>
-                <p className="font-display text-3xl font-extrabold tabular-nums text-ink sm:text-4xl">
+                <p className="font-display text-3xl font-extrabold tabular-nums text-ink sm:text-4xl lg:text-[clamp(1.75rem,5svh,2.25rem)]">
                   <CountUp to={s.n} />
                   <span className="ml-0.5 text-sun-deep">{s.u}</span>
                 </p>
@@ -208,7 +208,7 @@ export function Hero() {
             ))}
           </motion.div>
 
-          <motion.button variants={fadeUp} type="button" onClick={() => openTrack()} className="nav-link mt-8 text-sm font-semibold text-ink-soft hover:text-ink">
+          <motion.button variants={fadeUp} type="button" onClick={() => openTrack()} className="nav-link mt-8 text-sm font-semibold text-ink-soft hover:text-ink lg:mt-[clamp(0.75rem,2.6svh,2rem)]">
             {t("hero.track")} →
           </motion.button>
         </motion.div>
@@ -230,7 +230,7 @@ export function Hero() {
             </motion.div>
           </motion.div>
           <motion.div
-            className="absolute -bottom-6 -left-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-xl sm:-left-8"
+            className="absolute top-[22%] -left-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-xl sm:-left-8"
             initial={{ opacity: 0, scale: 0.8, rotate: -6 }}
             animate={introDone ? { opacity: 1, scale: 1, rotate: -4 } : undefined}
             transition={{ duration: 0.6, delay: 0.9, ease: EASE_OUT }}
