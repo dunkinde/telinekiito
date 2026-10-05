@@ -253,6 +253,18 @@ details.settings summary { cursor: pointer; padding: 14px 18px; font-family: var
 .found.warn { border-left-color: var(--warn); }
 .found ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
 .found .src { color: var(--muted); font-size: 12px; }
+.found-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
+.found-head b { font-size: 15px; }
+.found-head a { font-size: 13px; color: var(--action); }
+.found-body { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 14px; align-items: center; }
+.found .outline { width: 150px; height: auto; display: block; }
+.found .outline .est { stroke-dasharray: 4 3; }
+.facts { margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px 14px; }
+.facts div { min-width: 0; }
+.facts dt { font-weight: 600; font-size: 15px; }
+.facts dd { margin: 0; color: var(--muted); font-size: 12px; }
+.found-notes { margin: 0; padding-left: 18px; font-size: 13px; color: var(--warn); display: grid; gap: 2px; }
+@media (max-width: 480px) { .found-body { grid-template-columns: minmax(0, 1fr); } .found .outline { margin: 0 auto; } }
 .foot { color: var(--muted); font-size: 13px; padding-block: 0 32px; display: flex; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
 .login { max-width: 380px; margin: 40px auto; }
 .btn.danger { color: var(--crit); border-color: var(--crit); background: transparent; }

@@ -208,6 +208,23 @@
   }
 
   /* ---------- Address lookup ---------- */
+  // Small picture of the building found on the map, long side left-right, so the customer can recognise it.
+  function outlineSVG(outline, hs, estimated) {
+    if (!hs.length || !hs.width) return "";
+    const W = 150, H = 104, pad = 8, labelW = 34, labelH = 16;
+    const pts = outline && outline.length >= 3 ? outline : [[0, 0], [hs.length, 0], [hs.length, hs.width], [0, hs.width]];
+    const maxX = Math.max(...pts.map((p) => p[0])), maxY = Math.max(...pts.map((p) => p[1]));
+    const sc = Math.min((W - 2 * pad - labelW) / Math.max(maxX, 1), (H - 2 * pad - labelH) / Math.max(maxY, 1));
+    const ox = pad + (W - 2 * pad - labelW - maxX * sc) / 2, oy = pad + (H - 2 * pad - labelH - maxY * sc) / 2;
+    const f = (n) => n.toFixed(1);
+    const poly = pts.map(([x, y]) => `${f(ox + x * sc)},${f(oy + (maxY - y) * sc)}`).join(" ");
+    return `<svg class="outline" viewBox="0 0 ${W} ${H}" role="img" aria-label="Outline of the building found at this address">` +
+      `<polygon class="pl-house${estimated ? " est" : ""}" points="${poly}"/>` +
+      `<text class="pl-label" x="${f(ox + (maxX * sc) / 2)}" y="${f(oy + maxY * sc + 13)}" text-anchor="middle">${NUM.format(hs.length)} m</text>` +
+      `<text class="pl-label" x="${f(ox + maxX * sc + 5)}" y="${f(oy + (maxY * sc) / 2)}" text-anchor="start" dominant-baseline="middle">${NUM.format(hs.width)} m</text>` +
+      `</svg>`;
+  }
+
   async function findHouse() {
     const text = $("#f-address").value.trim();
     const box = $("#addr-result");
@@ -222,27 +239,39 @@
         box.textContent = "We couldn't find that address. Check the spelling, or enter the size below.";
         return;
       }
-      const hs = r.house, d = r.details || {}, items = [];
-      if (hs.length && hs.width) {
-        Object.assign(S.form, { length: hs.length, width: hs.width, preset: "" });
-        items.push(`<li>Outline ${NUM.format(hs.length)} × ${NUM.format(hs.width)} m <span class="src">OpenStreetMap${d.footprintM2 ? ", footprint " + d.footprintM2 + " m²" : ""}</span></li>`);
-      }
-      if (hs.floors) {
-        S.form.floors = hs.floors;
-        const reg = d.register;
-        items.push(`<li>${hs.floors === "2" ? "2 floors" : "1 floor"} <span class="src">${esc(d.floorsSource || "")}${reg && reg.completed ? ", built " + esc(reg.completed) : ""}</span></li>`);
-      }
-      if (hs.roofType) { S.form.roofType = hs.roofType; items.push(`<li>${esc(E.ROOF_TYPES[hs.roofType])} roof <span class="src">OpenStreetMap</span></li>`); }
+      const hs = r.house, d = r.details || {}, reg = d.register || {};
+      if (hs.length && hs.width) Object.assign(S.form, { length: hs.length, width: hs.width, preset: "" });
+      if (hs.floors) S.form.floors = hs.floors;
+      if (hs.roofType) S.form.roofType = hs.roofType;
       if (hs.pitch) S.form.pitch = hs.pitch;
-      if (hs.eave) { S.form.eave = hs.eave; S.form.eaveAuto = false; items.push(`<li>Eave height ${NUM.format(hs.eave)} m <span class="src">${esc(d.eaveSource || "")}</span></li>`); }
+      if (hs.eave) { S.form.eave = hs.eave; S.form.eaveAuto = false; }
       else { S.form.eave = E.EAVE_BY_FLOORS[S.form.floors]; S.form.eaveAuto = true; }
       if (r.zone) { S.form.zone = r.zone; $("#zone-hint").textContent = "set from your address"; }
       S.source = "address";
-      box.className = "found" + (r.notes && r.notes.length ? " warn" : "");
-      box.innerHTML = `<b>Found: ${esc(r.match.display)}</b>` +
-        (items.length ? `<ul>${items.join("")}</ul>` : "") +
-        (r.notes && r.notes.length ? `<ul class="small">${r.notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : "") +
-        `<span class="small muted">Check the numbers below and adjust anything that looks wrong.</span>`;
+
+      const estimated = d.sizeSource === "estimate";
+      const facts = [];
+      if (hs.length && hs.width) {
+        facts.push([`${NUM.format(hs.length)} × ${NUM.format(hs.width)} m`,
+          estimated ? "estimated from floor area" : `measured from the map outline${d.footprintM2 ? ", " + d.footprintM2 + " m² on the ground" : ""}`]);
+      }
+      if (hs.floors) facts.push([hs.floors === "2" ? "2 floors" : "1 floor", d.floorsSource === "OpenStreetMap" ? "from the map" : "building register"]);
+      if (reg.floorArea || reg.grossFloorArea) facts.push([`${NUM.format(reg.floorArea || reg.grossFloorArea)} m² living area`, "building register"]);
+      if (reg.completed) facts.push([`Built ${esc(reg.completed)}`, "building register"]);
+      facts.push([`Eave about ${NUM.format(S.form.eave)} m`, hs.eave ? "from map height data" : "estimated from floors"]);
+      facts.push([`${E.ROOF_TYPES[S.form.roofType]} roof`, hs.roofType ? "from the map" : "assumed, change below if wrong"]);
+
+      const notes = (r.notes || []).filter((n) => !/^Roof shape/.test(n));
+      const ok = hs.length && !estimated && r.match.houseLevel;
+      const mapLink = d.osmWayId ? `https://www.openstreetmap.org/${encodeURIComponent(d.osmType || "way")}/${encodeURIComponent(d.osmWayId)}`
+        : `https://www.openstreetmap.org/?mlat=${r.match.lat}&mlon=${r.match.lon}#map=19/${r.match.lat}/${r.match.lon}`;
+      box.className = "found" + (ok ? "" : " warn");
+      box.innerHTML =
+        `<div class="found-head"><b>${esc(r.match.short || r.match.display)}</b><a href="${mapLink}" target="_blank" rel="noopener">See it on the map</a></div>` +
+        `<div class="found-body">${outlineSVG(d.outline, hs, estimated)}` +
+        `<dl class="facts">${facts.map(([v, src]) => `<div><dt>${v}</dt><dd>${esc(src)}</dd></div>`).join("")}</dl></div>` +
+        (notes.length ? `<ul class="found-notes">${notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : "") +
+        `<span class="small muted">The form below is filled in. Change anything that doesn't match your house.</span>`;
       renderForm(); recalc();
     } catch (e) {
       box.className = "found warn";

@@ -42,44 +42,94 @@ test("address: zones and roof tags", () => {
   assert.equal(I.roofFromTags({}), null);
 });
 
-test("address: full lookup with mocked map services", async () => {
-  const lat = 60.25, lon = 25.0;
+// Mock of Nominatim, Overpass and Ryhti. `opts` switches the scenarios.
+function mockMaps(lat, lon, opts = {}) {
   const calls = [];
-  const fetchImpl = async (url, init) => {
-    calls.push(String(url));
-    const json = (body) => ({ ok: true, status: 200, json: async () => body });
-    if (String(url).includes("nominatim")) {
-      return json([{ lat: String(lat), lon: String(lon), osm_type: "node", osm_id: 1, category: "place",
-        display_name: "Testitie 5, Vantaa", address: { house_number: "5", road: "Testitie", city: "Vantaa", state: "Uusimaa" } }]);
+  const json = (body) => ({ ok: true, status: 200, json: async () => body });
+  const house = rectRing(lat, lon, 14, 9, 20, 2, 1);
+  const address = { house_number: "5", road: "Testitie", postcode: "01400", city: "Vantaa", state: "Uusimaa" };
+  const fetchImpl = async (url) => {
+    const u = String(url);
+    calls.push(u);
+    if (u.includes("nominatim") && u.includes("/search")) {
+      const base = { lat: String(lat), lon: String(lon), display_name: "5, Testitie, Asola, Vantaa, Uusimaa, Suomi", address };
+      if (opts.addressOnBuilding) {
+        return json([{ ...base, osm_type: "way", osm_id: 999, category: "building", type: "house", extratags: { "building:levels": "1" },
+          geojson: { type: "Polygon", coordinates: [house.map((p) => [p.lon, p.lat])] } }]);
+      }
+      return json([{ ...base, osm_type: "node", osm_id: 1, category: "place", type: "house" }]);
     }
-    if (String(url).includes("overpass")) {
+    if (u.includes("nominatim") && u.includes("/reverse")) {
+      if (!opts.reverseHasBuilding) return json({ error: "Unable to geocode" });
+      return json({ lat: String(lat), lon: String(lon), osm_type: "way", osm_id: 555, category: "building", type: "detached", address,
+        geojson: { type: "Polygon", coordinates: [house.map((p) => [p.lon, p.lat])] } });
+    }
+    if (u.includes("overpass") || u.includes("mail.ru")) {
+      if (opts.overpassDown) return { ok: false, status: 504, json: async () => ({}) };
       return json({ elements: [
-        { type: "way", id: 111, tags: { building: "house", "roof:shape": "gabled" }, geometry: rectRing(lat, lon, 14, 9, 20, 2, 1) },
+        { type: "way", id: 111, tags: { building: "house", "roof:shape": "gabled" }, geometry: house },
         { type: "way", id: 222, tags: { building: "garage" }, geometry: rectRing(lat, lon, 6, 4, 0, 25, 0) }
       ] });
     }
-    if (String(url).includes("ryhti")) {
+    if (u.includes("ryhti")) {
       return json({ features: [
-        { geometry: { type: "Point", coordinates: [lon + 2 / 55000, lat + 1 / 110574] }, properties: { number_of_storeys: 2, floor_area: 160, completion_date: "1987-06-01" } },
+        { geometry: { type: "Point", coordinates: [lon + 2 / 55000, lat + 1 / 110574] }, properties: { number_of_storeys: 2, floor_area: 140, gross_floor_area: 160, completion_date: "1987-06-01" } },
         { geometry: { type: "Point", coordinates: [lon + 0.001, lat + 0.0005] }, properties: { number_of_storeys: 1 } }
       ] });
     }
     throw new Error("unexpected url " + url);
   };
-  const svc = createAddressService({ fetchImpl });
+  return { calls, svc: createAddressService({ fetchImpl, log: () => {} }) };
+}
+const LAT = 60.25, LON = 25.0;
+const near = (a, b, tol = 0.3) => Math.abs(a - b) < tol;
+
+test("address: outline from Overpass, floors from the register", async () => {
+  const { calls, svc } = mockMaps(LAT, LON);
   const r = await svc.lookup("Testitie 5, Vantaa");
   assert.equal(r.found, true);
   assert.equal(r.zone, "A");
+  assert.equal(r.match.short, "Testitie 5, 01400 Vantaa");
   assert.equal(r.details.osmWayId, 111);
-  assert.ok(Math.abs(r.house.length - 14) < 0.3, `length ${r.house.length}`);
-  assert.ok(Math.abs(r.house.width - 9) < 0.3, `width ${r.house.width}`);
+  assert.equal(r.details.sizeSource, "OpenStreetMap");
+  assert.ok(near(r.house.length, 14) && near(r.house.width, 9), `${r.house.length} x ${r.house.width}`);
   assert.equal(r.house.roofType, "gable");
   assert.equal(r.house.floors, "2");
   assert.equal(r.details.register.completed, "1987");
+  assert.equal(r.details.outline.length, 4);
+  const xs = r.details.outline.map((p) => p[0]), ys = r.details.outline.map((p) => p[1]);
+  assert.ok(near(Math.max(...xs), 14) && near(Math.max(...ys), 9), "outline is turned long side left-right");
   assert.equal(calls.length, 3);
-  // Second lookup comes from the cache.
   await svc.lookup("testitie 5,  vantaa");
-  assert.equal(calls.length, 3);
+  assert.equal(calls.length, 3, "second lookup comes from the cache");
+});
+
+test("address: building outline straight from Nominatim, no Overpass needed", async () => {
+  const { calls, svc } = mockMaps(LAT, LON, { addressOnBuilding: true });
+  const r = await svc.lookup("Testitie 5, Vantaa");
+  assert.equal(r.details.osmWayId, 999);
+  assert.ok(near(r.house.length, 14) && near(r.house.width, 9));
+  assert.ok(!calls.some((u) => u.includes("overpass")));
+});
+
+test("address: Overpass down -> Nominatim reverse finds the building", async () => {
+  const { calls, svc } = mockMaps(LAT, LON, { overpassDown: true, reverseHasBuilding: true });
+  const r = await svc.lookup("Testitie 5, Vantaa");
+  assert.equal(r.details.osmWayId, 555);
+  assert.ok(near(r.house.length, 14) && near(r.house.width, 9));
+  assert.equal(calls.filter((u) => u.includes("overpass") || u.includes("mail.ru")).length, 3, "all three Overpass servers tried");
+});
+
+test("address: no outline anywhere -> size estimated from register, not cached", async () => {
+  const { calls, svc } = mockMaps(LAT, LON, { overpassDown: true });
+  const r = await svc.lookup("Testitie 5, Vantaa");
+  assert.equal(r.details.sizeSource, "estimate");
+  assert.equal(r.details.footprintM2, 80);
+  assert.ok(r.house.length >= r.house.width && near(r.house.length * r.house.width, 80, 8));
+  assert.ok(r.notes.some((n) => n.includes("estimated")));
+  const n = calls.length;
+  await svc.lookup("Testitie 5, Vantaa");
+  assert.ok(calls.length > n, "a result missing the outline because of an outage isn't cached");
 });
 
 test("address: unknown address", async () => {
