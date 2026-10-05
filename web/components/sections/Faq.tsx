@@ -26,7 +26,7 @@ export function Faq() {
             }
           />
         </div>
-        <Stagger as="ul" className="space-y-3 lg:col-span-7 short:col-span-8 short:space-y-2" stagger={0.06}>
+        <Stagger as="ul" className="space-y-3 lg:col-span-7 short:col-span-8 short:space-y-1.5" stagger={0.06}>
           {FAQ.map((f, i) => {
             const isOpen = open === i;
             return (
@@ -39,7 +39,7 @@ export function Faq() {
                       aria-expanded={isOpen}
                       aria-controls={`faq-a-${i}`}
                       onClick={() => setOpen(isOpen ? null : i)}
-                      className="flex w-full items-center justify-between gap-6 px-6 py-5 text-left font-display text-lg font-bold text-ink short:py-2.5 short:text-base"
+                      className="flex w-full items-center justify-between gap-6 px-6 py-5 text-left font-display text-lg font-bold text-ink short:py-2 short:text-base"
                     >
                       {pick(f.q)}
                       <motion.span
