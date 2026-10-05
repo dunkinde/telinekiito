@@ -7,6 +7,8 @@ Scaffolding rental MVP. Customers type their address (or upload a drawing), get 
 - **Address lookup** – OpenStreetMap (Nominatim + Overpass) for the building outline, the Ryhti building register for the number of floors. Eave height is estimated from floors; heights from 3D city models are a later step.
 - **Drawing reading** – OpenAI vision model reads a floor plan, elevation or photo. Off until an API key is set; capped per visitor and per day.
 
+- **Two languages** – Finnish (default) and English, switched with FI / EN in the header and remembered in the browser. Link straight to English with `?lang=en`. All text lives in `public/i18n.js`.
+
 Plain Node 22, no npm packages. Orders live in SQLite (`node:sqlite`) in a Docker volume. Caddy in front provides HTTPS.
 
 ## Install on the server

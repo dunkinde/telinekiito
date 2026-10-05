@@ -270,3 +270,10 @@ details.settings summary { cursor: pointer; padding: 14px 18px; font-family: var
 .btn.danger { color: var(--crit); border-color: var(--crit); background: transparent; }
 .confirm-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; font-size: 14px; }
 .bar a.tab { text-decoration: none; display: inline-flex; align-items: center; }
+
+/* Language switch in the header */
+.lang { display: inline-flex; border: 1px solid var(--bar-muted); border-radius: var(--r); overflow: hidden; }
+.lang button { background: transparent; border: 0; color: var(--bar-muted); font: 600 12px/1 var(--f-body, inherit); letter-spacing: .06em; padding: 7px 9px; cursor: pointer; min-width: 34px; }
+.lang button + button { border-left: 1px solid var(--bar-muted); }
+.lang button:hover { color: var(--bar-fg); }
+.lang button[aria-pressed="true"] { background: var(--bar-fg); color: var(--bar-bg); }

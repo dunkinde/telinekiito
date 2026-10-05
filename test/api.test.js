@@ -83,6 +83,11 @@ test("order, tracking and customer actions", async () => {
 
   const bad = await req("POST", "/api/orders", { ...order, name: "" });
   assert.equal(bad.status, 400);
+  const early = await req("POST", "/api/orders", { ...order, start: "2020-01-01" });
+  assert.equal(early.json.error, "start_too_early");
+  assert.equal(early.json.info.date, start);
+  const missing = await req("POST", "/api/orders", { ...order, length: 900, zone: "Q" });
+  assert.deepEqual(missing.json.info.fields, ["length", "zone"]);
   assert.equal((await req("POST", "/api/orders", "x", { "Content-Type": "text/plain" })).status, 400);
 
   const r = await req("POST", "/api/orders", order);
@@ -98,6 +103,8 @@ test("order, tracking and customer actions", async () => {
 
   const ext = await req("POST", `/api/orders/${ref}/extend`, { phone: "4321" });
   assert.equal(ext.json.schedule.days, 35);
+  assert.equal(ext.json.history.at(-1).code, "extended");
+  assert.deepEqual(ext.json.quote.lines.find((l) => l.key === "rent").vars, { days: 35 });
   assert.ok(ext.json.quote.total > t.json.quote.total);
 
   const pick = await req("POST", `/api/orders/${ref}/pickup`, { phone: "4321" });

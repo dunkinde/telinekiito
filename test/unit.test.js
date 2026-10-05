@@ -124,6 +124,8 @@ test("address: no outline anywhere -> size estimated from register, not cached",
   const { calls, svc } = mockMaps(LAT, LON, { overpassDown: true });
   const r = await svc.lookup("Testitie 5, Vantaa");
   assert.equal(r.details.sizeSource, "estimate");
+  assert.ok(r.noteCodes.some((n) => n.code === "size_estimated"));
+  assert.equal(r.noteCodes.length, r.notes.length);
   assert.equal(r.details.footprintM2, 80);
   assert.ok(r.house.length >= r.house.width && near(r.house.length * r.house.width, 80, 8));
   assert.ok(r.notes.some((n) => n.includes("estimated")));

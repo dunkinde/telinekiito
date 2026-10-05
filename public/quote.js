@@ -1,7 +1,8 @@
 // Customer page: instant quote, address lookup, drawing reading, ordering and tracking.
 (function () {
   "use strict";
-  const { E, $, $$, EUR, EUR2, NUM, esc, clone, digits, fmtDate, fmtStamp, STATUS_BY_KEY, chip, toast, api, mergePricing, renderMsgs } = window.TK;
+  const { E, I, t, $, $$, EUR, EUR2, NUM, esc, clone, digits, fmtDate, fmtStamp, STATUS_BY_KEY, statusLabel, statusCust, chip,
+    jobLabel, roofLabel, zoneLabel, urgLabel, sideName, lineLabel, toast, api, mergePricing, renderMsgs } = window.TK;
 
   const PRESETS = {
     p1: { length: 15, width: 10, floors: "1", roofType: "gable", pitch: 30 },
@@ -36,7 +37,7 @@
 
   function renderZoneOptions() {
     const sel = $("#f-zone");
-    sel.innerHTML = ["A", "B", "C"].map((z) => `<option value="${z}">${esc(S.pricing.zones[z].label)} — ${esc(EUR.format(S.pricing.zones[z].trip))} per trip</option>`).join("");
+    sel.innerHTML = ["A", "B", "C"].map((z) => `<option value="${z}">${esc(t("q.zone.option", { label: zoneLabel(z), price: EUR.format(S.pricing.zones[z].trip) }))}</option>`).join("");
     sel.value = S.form.zone;
   }
   function renderUrgency() {
@@ -44,8 +45,8 @@
     $("#urgency-opts").innerHTML = ["standard", "express", "emergency"].map((k) => {
       const u = S.pricing.urgency[k];
       return `<label class="opt"><input type="radio" name="urgency" value="${k}" id="f-urg-${k}"${S.form.urgency === k ? " checked" : ""}>` +
-        `<span class="oc"><b>${esc(u.label)} · ${esc(u.lead)}</b><small>Earliest start ${esc(fmtDate(E.earliestStart(k, now)))}</small>` +
-        `<span class="tag${u.pct > 0 ? " prem" : ""}">${u.pct > 0 ? "+" + u.pct + " % on service" : "No surcharge"}</span></span></label>`;
+        `<span class="oc"><b>${esc(urgLabel(k))} · ${esc(t("urgLead." + k))}</b><small>${esc(t("q.earliest", { date: fmtDate(E.earliestStart(k, now)) }))}</small>` +
+        `<span class="tag${u.pct > 0 ? " prem" : ""}">${esc(u.pct > 0 ? t("q.surcharge", { pct: NUM.format(u.pct) }) : t("q.noSurcharge"))}</span></span></label>`;
     }).join("");
   }
   function syncStartMin() {
@@ -62,7 +63,7 @@
     $("#f-gables").checked = !!f.gables;
     $("#f-days").value = f.days; $("#f-start").value = f.start; $("#f-zone").value = f.zone;
     ["address", "name", "phone", "email", "notes"].forEach((k) => { const el = $("#f-" + k); if (el.value !== f[k]) el.value = f[k]; });
-    $("#days-hint").textContent = `minimum ${S.pricing.minRentDays} days charged`;
+    $("#days-hint").textContent = t("q.days.hint", { n: S.pricing.minRentDays });
     renderFormLight();
   }
   function renderFormLight() {
@@ -71,7 +72,7 @@
     $("#pitch-field").hidden = f.roofType === "flat";
     if (f.eaveAuto && $("#f-eave") !== document.activeElement) $("#f-eave").value = f.eave;
     if ($("#f-pitch") !== document.activeElement) $("#f-pitch").value = f.pitch;
-    $("#eave-hint").textContent = f.eaveAuto ? "from ground, set from floors" : "from ground, your value";
+    $("#eave-hint").textContent = t(f.eaveAuto ? "q.eave.auto" : "q.eave.own");
     $$("#presets [data-preset]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.preset === f.preset)));
     $$("#days-chips [data-days]").forEach((b) => b.setAttribute("aria-pressed", String(Number(b.dataset.days) === Number(f.days))));
   }
@@ -90,7 +91,7 @@
     const hw = L * sc, hh = D * sc, x0 = (W - hw) / 2, y0 = (H - hh) / 2;
     const gap = Math.max(2, 0.3 * sc), sw = Math.max(7, 0.73 * sc), ext = 1.0 * sc;
     const f = (n) => n.toFixed(1);
-    const out = [`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Plan view of the house showing where scaffolding stands">`];
+    const out = [`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t("t.planAria"))}">`];
     est.sides.forEach((s) => {
       let r, c;
       const top = s.name === "Long side A", bottom = s.name === "Long side B", left = / A$/.test(s.name) && !top;
@@ -118,25 +119,26 @@
   function renderTicket() {
     const box = $("#ticket");
     if (!S.est || !S.q) {
-      box.innerHTML = '<div><div class="eyebrow">Scaffold estimate</div><div class="total">—</div><div class="range">Check the house size: length 3–60 m, width 3–40 m, eave height 2–12 m.</div></div>';
+      box.innerHTML = `<div><div class="eyebrow">${esc(t("t.estimate"))}</div><div class="total">—</div><div class="range">${esc(t("t.badSize"))}</div></div>`;
       return;
     }
-    const est = S.est, q = S.q, t = est.totals, h = houseFromForm(S.form);
+    const est = S.est, q = S.q, tot = est.totals, h = houseFromForm(S.form);
+    const vat = NUM.format(S.pricing.vat);
     const sidesRows = est.sides.map((s) =>
-      `<tr><td>${esc(s.name)}${s.catchOn ? ' <span class="small muted">+ catch</span>' : ""}</td><td class="r">${s.bays}</td><td class="r">${s.lifts}</td><td class="r">${NUM.format(s.workH)} m</td><td class="r">${Math.round(s.area)}</td></tr>`
+      `<tr><td>${esc(sideName(s.name))}${s.catchOn ? ` <span class="small muted">${esc(t("t.plusCatch"))}</span>` : ""}</td><td class="r">${s.bays}</td><td class="r">${s.lifts}</td><td class="r">${NUM.format(s.workH)} m</td><td class="r">${Math.round(s.area)}</td></tr>`
     ).join("");
-    const lineRows = q.lines.map((l) => `<tr><td>${esc(l.label)}</td><td class="r">${EUR.format(l.amount)}</td></tr>`).join("");
+    const lineRows = q.lines.map((l) => `<tr><td>${esc(lineLabel(l, q))}</td><td class="r">${EUR.format(l.amount)}</td></tr>`).join("");
     box.innerHTML =
-      `<div><div class="eyebrow">Scaffold estimate · ${esc(E.JOB_TYPES[S.form.jobType])}</div>` +
+      `<div><div class="eyebrow">${esc(t("t.estimate"))} · ${esc(jobLabel(S.form.jobType))}</div>` +
       `<div class="total">${EUR.format(q.total)}</div>` +
-      `<div class="range">incl. VAT ${NUM.format(S.pricing.vat)} % · likely range ${EUR.format(q.low)}–${EUR.format(q.high)} until we check the details</div></div>` +
-      `<div class="figs"><div><b>${t.area}</b><span>m² scaffold</span></div><div><b>${NUM.format(t.runM)}</b><span>running m</span></div><div><b>${NUM.format(t.weightKg / 1000)}</b><span>tonnes</span></div><div><b>${EUR2.format(q.perM2).replace(/\s?€/, "")}</b><span>€/m² net</span></div></div>` +
-      `<div class="plan">${planSVG(h, est)}<div class="legend"><span><i class="lg-strip"></i>Scaffold</span>${t.catchRunM > 0 ? '<span><i class="lg-catch"></i>Roof-catch guard</span>' : ""}</div></div>` +
-      `<div class="tbl-wrap"><table><thead><tr><th>Side</th><th class="r">Bays</th><th class="r">Levels</th><th class="r">Work h.</th><th class="r">m²</th></tr></thead><tbody>${sidesRows}</tbody></table></div>` +
-      `<table class="lines"><tbody>${lineRows}<tr class="sum"><td>Total excl. VAT</td><td class="r">${EUR.format(q.net)}</td></tr>` +
-      `<tr><td>VAT ${NUM.format(S.pricing.vat)} %</td><td class="r">${EUR.format(q.vat)}</td></tr>` +
-      `<tr class="grand"><td>Total</td><td class="r">${EUR.format(q.total)}</td></tr></tbody></table>` +
-      `<p class="note">Labour share ${EUR.format(q.labourGross)} incl. VAT. Homeowners may claim the household tax credit on this part.</p>`;
+      `<div class="range">${esc(t("t.range", { vat, low: EUR.format(q.low), high: EUR.format(q.high) }))}</div></div>` +
+      `<div class="figs"><div><b>${tot.area}</b><span>${esc(t("t.m2"))}</span></div><div><b>${NUM.format(tot.runM)}</b><span>${esc(t("t.runM"))}</span></div><div><b>${NUM.format(tot.weightKg / 1000)}</b><span>${esc(t("t.tonnes"))}</span></div><div><b>${EUR2.format(q.perM2).replace(/\s?€/, "")}</b><span>${esc(t("t.perM2"))}</span></div></div>` +
+      `<div class="plan">${planSVG(h, est)}<div class="legend"><span><i class="lg-strip"></i>${esc(t("t.scaffold"))}</span>${tot.catchRunM > 0 ? `<span><i class="lg-catch"></i>${esc(t("t.catchGuard"))}</span>` : ""}</div></div>` +
+      `<div class="tbl-wrap"><table><thead><tr><th>${esc(t("t.side"))}</th><th class="r">${esc(t("t.bays"))}</th><th class="r">${esc(t("t.levels"))}</th><th class="r">${esc(t("t.workH"))}</th><th class="r">m²</th></tr></thead><tbody>${sidesRows}</tbody></table></div>` +
+      `<table class="lines"><tbody>${lineRows}<tr class="sum"><td>${esc(t("t.net"))}</td><td class="r">${EUR.format(q.net)}</td></tr>` +
+      `<tr><td>${esc(t("t.vat", { vat }))}</td><td class="r">${EUR.format(q.vat)}</td></tr>` +
+      `<tr class="grand"><td>${esc(t("t.total"))}</td><td class="r">${EUR.format(q.total)}</td></tr></tbody></table>` +
+      `<p class="note">${esc(t("t.labour", { amount: EUR.format(q.labourGross) }))}</p>`;
   }
 
   function bindForm() {
@@ -171,7 +173,8 @@
     $("#q-done-new").addEventListener("click", () => {
       $("#q-done").hidden = true; $("#q-form").hidden = false;
       Object.assign(S.form, { name: "", phone: "", email: "", notes: "", address: "" });
-      $("#addr-result").hidden = true;
+      S.found = null; S.lastOrder = null;
+      $("#addr-result").hidden = true; $("#zone-hint").textContent = "";
       renderForm(); window.scrollTo(0, 0);
     });
     $("#q-done-track").addEventListener("click", () => {
@@ -183,27 +186,27 @@
   async function placeOrder() {
     const f = S.form, err = $("#q-err");
     err.textContent = "";
-    if (!S.est) { err.textContent = "Check the house size before ordering."; return; }
-    if (!f.address.trim()) { err.textContent = "Add the site address in step 1."; $("#f-address").focus(); return; }
-    if (!f.name.trim()) { err.textContent = "Add your name."; $("#f-name").focus(); return; }
-    if (digits(f.phone).length < 6) { err.textContent = "Add a phone number the crew can call."; $("#f-phone").focus(); return; }
+    if (!S.est) { err.textContent = t("q.err.size"); return; }
+    if (!f.address.trim()) { err.textContent = t("q.err.address"); $("#f-address").focus(); return; }
+    if (!f.name.trim()) { err.textContent = t("q.err.name"); $("#f-name").focus(); return; }
+    if (digits(f.phone).length < 6) { err.textContent = t("q.err.phone"); $("#f-phone").focus(); return; }
     const btn = $("#q-submit");
-    btn.disabled = true; btn.textContent = "Placing order…";
+    btn.disabled = true; btn.textContent = t("q.submitting");
     const h = houseFromForm(f);
     try {
       const r = await api("POST", "/api/orders", {
         ...h, floors: f.floors, zone: f.zone, urgency: f.urgency, start: f.start, days: Number(f.days) || S.pricing.minRentDays,
         name: f.name, phone: f.phone, email: f.email, address: f.address, notes: f.notes, source: S.source
       });
-      S.lastRef = r.ref; S.lastPhone4 = digits(f.phone).slice(-4);
+      S.lastRef = r.ref; S.lastPhone4 = digits(f.phone).slice(-4); S.lastOrder = r.order;
       $("#q-done-ref").textContent = r.ref;
-      $("#q-done-text").textContent = `Saved. Price ${EUR.format(r.order.quote.total)} incl. VAT. We check the details, then confirm the ${fmtDate(r.order.schedule.start)} start. Keep this reference to follow the order.`;
+      renderDone();
       $("#q-form").hidden = true; $("#q-done").hidden = false;
       $("#q-done").scrollIntoView({ block: "start" });
     } catch (e) {
       err.textContent = e.message;
     } finally {
-      btn.disabled = false; btn.textContent = "Place order";
+      btn.disabled = false; btn.textContent = t("q.submit");
     }
   }
 
@@ -218,7 +221,7 @@
     const ox = pad + (W - 2 * pad - labelW - maxX * sc) / 2, oy = pad + (H - 2 * pad - labelH - maxY * sc) / 2;
     const f = (n) => n.toFixed(1);
     const poly = pts.map(([x, y]) => `${f(ox + x * sc)},${f(oy + (maxY - y) * sc)}`).join(" ");
-    return `<svg class="outline" viewBox="0 0 ${W} ${H}" role="img" aria-label="Outline of the building found at this address">` +
+    return `<svg class="outline" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t("a.outlineAria"))}">` +
       `<polygon class="pl-house${estimated ? " est" : ""}" points="${poly}"/>` +
       `<text class="pl-label" x="${f(ox + (maxX * sc) / 2)}" y="${f(oy + maxY * sc + 13)}" text-anchor="middle">${NUM.format(hs.length)} m</text>` +
       `<text class="pl-label" x="${f(ox + maxX * sc + 5)}" y="${f(oy + (maxY * sc) / 2)}" text-anchor="start" dominant-baseline="middle">${NUM.format(hs.width)} m</text>` +
@@ -228,63 +231,76 @@
   async function findHouse() {
     const text = $("#f-address").value.trim();
     const box = $("#addr-result");
-    if (text.length < 5) { box.hidden = false; box.className = "found warn"; box.textContent = "Write the street, number and city, for example Mannerheimintie 10, Helsinki."; return; }
+    S.found = null;
+    if (text.length < 5) { box.hidden = false; box.className = "found warn"; box.textContent = t("a.short"); return; }
     const btn = $("#addr-find");
-    btn.disabled = true; btn.textContent = "Looking up…";
-    box.hidden = false; box.className = "found"; box.textContent = "Looking up the building…";
+    btn.disabled = true; btn.textContent = t("q.finding");
+    box.hidden = false; box.className = "found"; box.textContent = t("a.looking");
     try {
       const r = await api("POST", "/api/address", { address: text });
       if (!r.found) {
         box.className = "found warn";
-        box.textContent = "We couldn't find that address. Check the spelling, or enter the size below.";
+        box.textContent = t("a.notFound");
         return;
       }
-      const hs = r.house, d = r.details || {}, reg = d.register || {};
+      const hs = r.house;
       if (hs.length && hs.width) Object.assign(S.form, { length: hs.length, width: hs.width, preset: "" });
       if (hs.floors) S.form.floors = hs.floors;
       if (hs.roofType) S.form.roofType = hs.roofType;
       if (hs.pitch) S.form.pitch = hs.pitch;
       if (hs.eave) { S.form.eave = hs.eave; S.form.eaveAuto = false; }
       else { S.form.eave = E.EAVE_BY_FLOORS[S.form.floors]; S.form.eaveAuto = true; }
-      if (r.zone) { S.form.zone = r.zone; $("#zone-hint").textContent = "set from your address"; }
+      if (r.zone) S.form.zone = r.zone;
       S.source = "address";
-
-      const estimated = d.sizeSource === "estimate";
-      const facts = [];
-      if (hs.length && hs.width) {
-        facts.push([`${NUM.format(hs.length)} × ${NUM.format(hs.width)} m`,
-          estimated ? "estimated from floor area" : `measured from the map outline${d.footprintM2 ? ", " + d.footprintM2 + " m² on the ground" : ""}`]);
-      }
-      if (hs.floors) facts.push([hs.floors === "2" ? "2 floors" : "1 floor", d.floorsSource === "OpenStreetMap" ? "from the map" : "building register"]);
-      if (reg.floorArea || reg.grossFloorArea) facts.push([`${NUM.format(reg.floorArea || reg.grossFloorArea)} m² living area`, "building register"]);
-      if (reg.completed) facts.push([`Built ${esc(reg.completed)}`, "building register"]);
-      facts.push([`Eave about ${NUM.format(S.form.eave)} m`, hs.eave ? "from map height data" : "estimated from floors"]);
-      facts.push([`${E.ROOF_TYPES[S.form.roofType]} roof`, hs.roofType ? "from the map" : "assumed, change below if wrong"]);
-
-      const notes = (r.notes || []).filter((n) => !/^Roof shape/.test(n));
-      const ok = hs.length && !estimated && r.match.houseLevel;
-      const mapLink = d.osmWayId ? `https://www.openstreetmap.org/${encodeURIComponent(d.osmType || "way")}/${encodeURIComponent(d.osmWayId)}`
-        : `https://www.openstreetmap.org/?mlat=${r.match.lat}&mlon=${r.match.lon}#map=19/${r.match.lat}/${r.match.lon}`;
-      box.className = "found" + (ok ? "" : " warn");
-      box.innerHTML =
-        `<div class="found-head"><b>${esc(r.match.short || r.match.display)}</b><a href="${mapLink}" target="_blank" rel="noopener">See it on the map</a></div>` +
-        `<div class="found-body">${outlineSVG(d.outline, hs, estimated)}` +
-        `<dl class="facts">${facts.map(([v, src]) => `<div><dt>${v}</dt><dd>${esc(src)}</dd></div>`).join("")}</dl></div>` +
-        (notes.length ? `<ul class="found-notes">${notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : "") +
-        `<span class="small muted">The form below is filled in. Change anything that doesn't match your house.</span>`;
+      S.found = r;
+      renderFound();
       renderForm(); recalc();
     } catch (e) {
       box.className = "found warn";
       box.textContent = e.message;
     } finally {
-      btn.disabled = false; btn.textContent = "Find my house";
+      btn.disabled = false; btn.textContent = t("q.find");
     }
+  }
+
+  // The address result box, kept in S.found so it can be redrawn when the language changes.
+  function renderFound() {
+    const r = S.found, box = $("#addr-result");
+    $("#zone-hint").textContent = r && r.zone ? t("q.zone.fromAddress") : "";
+    if (!r) return;
+    const hs = r.house, d = r.details || {}, reg = d.register || {};
+    const estimated = d.sizeSource === "estimate";
+    const facts = [];
+    if (hs.length && hs.width) {
+      facts.push([`${NUM.format(hs.length)} × ${NUM.format(hs.width)} m`,
+        estimated ? t("a.estimated") : d.footprintM2 ? t("a.measuredArea", { m2: d.footprintM2 }) : t("a.measured")]);
+    }
+    if (hs.floors) facts.push([t("a.floors", { n: hs.floors === "2" ? 2 : 1 }), d.floorsSource === "OpenStreetMap" ? t("a.fromMap") : t("a.register")]);
+    if (reg.floorArea || reg.grossFloorArea) facts.push([t("a.floorArea", { m2: NUM.format(reg.floorArea || reg.grossFloorArea) }), t("a.register")]);
+    if (reg.completed) facts.push([t("a.built", { year: reg.completed }), t("a.register")]);
+    facts.push([t("a.eave", { m: NUM.format(S.form.eave) }), hs.eave ? t("a.eaveMap") : t("a.eaveFloors")]);
+    facts.push([t("a.roof", { roof: roofLabel(S.form.roofType) }), hs.roofType ? t("a.fromMap") : t("a.roofAssumed")]);
+
+    const notes = Array.isArray(r.noteCodes)
+      ? r.noteCodes.filter((n) => n.code !== "roof_assumed").map((n) => t("note." + n.code, n))
+      : (r.notes || []).filter((n) => !/^Roof shape/.test(n));
+    const ok = hs.length && !estimated && r.match.houseLevel;
+    const mapLink = d.osmWayId ? `https://www.openstreetmap.org/${encodeURIComponent(d.osmType || "way")}/${encodeURIComponent(d.osmWayId)}`
+      : `https://www.openstreetmap.org/?mlat=${r.match.lat}&mlon=${r.match.lon}#map=19/${r.match.lat}/${r.match.lon}`;
+    box.hidden = false;
+    box.className = "found" + (ok ? "" : " warn");
+    box.innerHTML =
+      `<div class="found-head"><b>${esc(r.match.short || r.match.display)}</b><a href="${mapLink}" target="_blank" rel="noopener">${esc(t("a.map"))}</a></div>` +
+      `<div class="found-body">${outlineSVG(d.outline, hs, estimated)}` +
+      `<dl class="facts">${facts.map(([v, src]) => `<div><dt>${esc(v)}</dt><dd>${esc(src)}</dd></div>`).join("")}</dl></div>` +
+      (notes.length ? `<ul class="found-notes">${notes.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : "") +
+      `<span class="small muted">${esc(t("a.filled"))}</span>`;
   }
 
   /* ---------- Drawing reading (AI on the server) ---------- */
   function setAI(msg, kind) { const m = $("#ai-msg"); m.textContent = msg; m.className = "ai-msg" + (kind ? " " + kind : ""); }
   function showFiles() {
-    $("#ai-files").textContent = S.aiFiles.length ? S.aiFiles.map((f) => f.name).join(", ") : "or drop them here · up to 3 images";
+    $("#ai-files").textContent = S.aiFiles.length ? S.aiFiles.map((f) => f.name).join(", ") : t("ai.drop");
   }
   function shrink(file) {
     return new Promise((resolve, reject) => {
@@ -300,7 +316,7 @@
         URL.revokeObjectURL(url);
         resolve(c.toDataURL("image/jpeg", 0.85));
       };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("That file isn't an image we can read.")); };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error(t("ai.badFile"))); };
       img.src = url;
     });
   }
@@ -312,23 +328,23 @@
     drop.addEventListener("drop", (ev) => {
       ev.preventDefault(); drop.classList.remove("over");
       const fs = Array.from((ev.dataTransfer && ev.dataTransfer.files) || []).filter((f) => /^image\//.test(f.type)).slice(0, 3);
-      if (!fs.length) { setAI("Drop image files: JPEG, PNG or WebP.", "err"); return; }
+      if (!fs.length) { setAI(t("ai.dropOnly"), "err"); return; }
       S.aiFiles = fs; showFiles();
     });
     $("#ai-go").addEventListener("click", async () => {
-      if (!S.aiFiles.length) { setAI("Choose a drawing or photo first.", "err"); return; }
+      if (!S.aiFiles.length) { setAI(t("ai.chooseFirst"), "err"); return; }
       const btn = $("#ai-go");
       btn.disabled = true;
-      setAI("Reading the drawing… this takes 10–40 seconds.", "");
+      setAI(t("ai.reading"), "");
       try {
         const images = await Promise.all(S.aiFiles.map(shrink));
-        const r = await api("POST", "/api/ai/drawing", { images });
+        const r = await api("POST", "/api/ai/drawing", { images, lang: I.lang });
         const h = r.house;
         Object.assign(S.form, { length: h.length, width: h.width, floors: h.floors, roofType: h.roofType, pitch: h.pitch, preset: "" });
         if (h.eave) { S.form.eave = h.eave; S.form.eaveAuto = false; } else { S.form.eave = E.EAVE_BY_FLOORS[h.floors]; S.form.eaveAuto = true; }
         S.source = "ai";
         renderForm(); recalc();
-        setAI(`Filled in from the drawing (${h.confidence} confidence). ${h.notes ? h.notes + " " : ""}Check the numbers before ordering.`, "ok");
+        setAI(t("ai.done", { conf: t("ai.conf." + (h.confidence || "unknown")), notes: h.notes ? h.notes + " " : "" }), "ok");
       } catch (e) {
         setAI(e.message, "err");
       } finally {
@@ -348,8 +364,8 @@
     const ref = normRef($("#tr-ref").value), last4 = digits($("#tr-phone").value);
     const err = $("#tr-err");
     err.textContent = "";
-    if (ref.length < 9) { err.textContent = "Enter the reference from your order, for example TK-7K3Q9M."; return; }
-    if (last4.length !== 4) { err.textContent = "Enter the last four digits of the phone number on the order."; return; }
+    if (ref.length < 9) { err.textContent = t("tr.err.ref"); return; }
+    if (last4.length !== 4) { err.textContent = t("tr.err.phone"); return; }
     $("#tr-ref").value = ref;
     try {
       const o = await api("GET", `/api/orders/${encodeURIComponent(ref)}?phone=${last4}`);
@@ -385,18 +401,17 @@
     const tl = steps.map((s) => {
       const i = STATUS_BY_KEY[s.key].i, at = lastAt(o, s.key);
       const cls = i < cur ? "done" : i === cur ? "now" : "todo";
-      return `<li class="${cls}"><span class="dot" aria-hidden="true"></span><div><b>${esc(s.label)}</b>${i === cur ? `<div class="small">${esc(s.cust)}</div>` : ""}</div><span class="when">${at && i <= cur ? esc(fmtStamp(at)) : ""}</span></li>`;
+      return `<li class="${cls}"><span class="dot" aria-hidden="true"></span><div><b>${esc(statusLabel(s.key))}</b>${i === cur ? `<div class="small">${esc(statusCust(s.key))}</div>` : ""}</div><span class="when">${at && i <= cur ? esc(fmtStamp(at)) : ""}</span></li>`;
     }).join("");
-    const zone = S.pricing.zones[o.site && o.site.zone] || {};
     $("#tr-body").innerHTML =
-      `<div class="card-head"><div><div class="eyebrow">Order${o.example ? " · example" : ""}</div><h2 class="mono">${esc(o.ref)}</h2><p class="muted">${esc(o.site && o.site.address)}</p></div>${chip(o.status)}</div>` +
-      (o.eta ? `<p><b>Crew arrival:</b> ${esc(o.eta)}${o.crew ? " · " + esc(o.crew) : ""}</p>` : "") +
+      `<div class="card-head"><div><div class="eyebrow">${esc(t("tr.order"))}${o.example ? " · " + esc(t("tr.example")) : ""}</div><h2 class="mono">${esc(o.ref)}</h2><p class="muted">${esc(o.site && o.site.address)}</p></div>${chip(o.status)}</div>` +
+      (o.eta ? `<p><b>${esc(t("tr.arrival"))}</b> ${esc(o.eta)}${o.crew ? " · " + esc(o.crew) : ""}</p>` : "") +
       `<ol class="timeline">${tl}</ol>` +
-      `<div class="kv"><div><span>Start</span><b>${esc(fmtDate(o.schedule && o.schedule.start))}</b></div>` +
-      `<div><span>Rental</span><b>${esc((o.quote && o.quote.rentDays) || (o.schedule && o.schedule.days))} days</b></div>` +
-      `<div><span>Scaffold</span><b>${esc(o.estimate && o.estimate.area)} m² · ${esc(E.JOB_TYPES[o.house && o.house.jobType] || "")}</b></div>` +
-      `<div><span>Price incl. VAT</span><b>${o.quote ? EUR.format(o.quote.total) : "—"}</b></div>` +
-      `<div><span>Delivery zone</span><b>${esc(zone.label || "")}</b></div></div>`;
+      `<div class="kv"><div><span>${esc(t("tr.start"))}</span><b>${esc(fmtDate(o.schedule && o.schedule.start))}</b></div>` +
+      `<div><span>${esc(t("tr.rental"))}</span><b>${esc(t("tr.days", { n: (o.quote && o.quote.rentDays) || (o.schedule && o.schedule.days) }))}</b></div>` +
+      `<div><span>${esc(t("tr.scaffold"))}</span><b>${esc(o.estimate && o.estimate.area)} m² · ${esc(jobLabel(o.house && o.house.jobType))}</b></div>` +
+      `<div><span>${esc(t("tr.price"))}</span><b>${o.quote ? EUR.format(o.quote.total) : "—"}</b></div>` +
+      `<div><span>${esc(t("tr.zone"))}</span><b>${esc(zoneLabel(o.site && o.site.zone))}</b></div></div>`;
     const finished = o.status === "dismantled" || o.status === "closed";
     $("#tr-extend").disabled = finished;
     $("#tr-pickup").disabled = o.status !== "erected";
@@ -416,13 +431,13 @@
   }
   function bindTrack() {
     $("#tr-form").addEventListener("submit", (ev) => { ev.preventDefault(); findOrder(); });
-    $("#tr-extend").addEventListener("click", () => trackAction("extend", {}, (o) => `Rental extended to ${o.schedule.days} days. New total ${EUR.format(o.quote.total)}.`));
-    $("#tr-pickup").addEventListener("click", () => trackAction("pickup", {}, "Pickup requested. We'll confirm a time."));
+    $("#tr-extend").addEventListener("click", () => trackAction("extend", {}, (o) => t("tr.extended", { days: o.schedule.days, price: EUR.format(o.quote.total) })));
+    $("#tr-pickup").addEventListener("click", () => trackAction("pickup", {}, () => t("tr.pickupDone")));
     $("#tr-msg-form").addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const text = $("#tr-msg").value.trim();
       if (!text) return;
-      if (await trackAction("message", { text }, "Message sent to the office.")) $("#tr-msg").value = "";
+      if (await trackAction("message", { text }, () => t("tr.msgSent"))) $("#tr-msg").value = "";
     });
   }
 
@@ -441,7 +456,13 @@
   $$(".tab[data-view]").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
   $("#addr-find").addEventListener("click", findHouse);
   $("#f-address").addEventListener("keydown", (ev) => { if (ev.key === "Enter") { ev.preventDefault(); findHouse(); } });
-  bindForm(); bindAI(); bindTrack();
+  function renderDone() {
+    const o = S.lastOrder;
+    if (!o) return;
+    $("#q-done-text").textContent = t("q.done.text", { price: EUR.format(o.quote.total), date: fmtDate(o.schedule.start) });
+  }
+
+  bindForm(); bindAI(); bindTrack(); showFiles();
   syncStartMin(); renderZoneOptions(); renderUrgency(); renderForm(); recalc();
   setView((location.hash || "").replace("#", "") || "quote");
 
@@ -450,5 +471,13 @@
     S.features = cfg.features || {};
     $("#ai-box").hidden = !S.features.ai;
     renderZoneOptions(); renderUrgency(); renderForm(); recalc();
-  }).catch(() => toast("Couldn't load current prices. Showing default prices."));
+  }).catch(() => toast(t("cfg.failed")));
+
+  // Redraw everything that is built in script when the language changes.
+  I.onChange(() => {
+    renderZoneOptions(); renderUrgency(); renderForm(); recalc(); renderFound(); showFiles(); renderDone();
+    if (S.track.order) renderTrack();
+    const msg = $("#ai-msg"); if (msg.textContent) msg.textContent = "";
+    $("#q-err").textContent = ""; $("#tr-err").textContent = "";
+  });
 })();

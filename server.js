@@ -165,7 +165,7 @@ route("POST", /^\/api\/ai\/drawing$/, async (req) => {
     }
   }
   try {
-    return { ok: true, house: await ai.readDrawing(images) };
+    return { ok: true, house: await ai.readDrawing(images, { lang: body.lang === "fi" ? "fi" : "en" }) };
   } catch (e) {
     console.error("[ai]", e.code, e.message);
     const msg = {
@@ -315,7 +315,7 @@ const server = http.createServer(async (req, res) => {
     if ((req.method === "GET" || req.method === "HEAD") && serveStatic(req, res, pathname)) return;
     send(res, 404, "Not found");
   } catch (e) {
-    if (e instanceof HttpError) return send(res, e.status, { error: e.code, message: e.message });
+    if (e instanceof HttpError) return send(res, e.status, { error: e.code, message: e.message, ...(e.info ? { info: e.info } : {}) });
     console.error("[error]", req.method, pathname, e);
     send(res, 500, { error: "server_error", message: "Something went wrong on the server." });
   }

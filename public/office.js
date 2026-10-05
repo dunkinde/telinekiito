@@ -1,16 +1,17 @@
 // Office page: login, order list, status updates, load lists, messages, pricing.
 (function () {
   "use strict";
-  const { E, $, $$, EUR, NUM, esc, clone, fmtDate, fmtStamp, STATUS_BY_KEY, chip, toast, api, mergePricing, renderMsgs } = window.TK;
+  const { E, I, t, $, $$, EUR, NUM, esc, clone, fmtDate, fmtStamp, fmtTime, STATUS_BY_KEY, statusLabel, chip,
+    jobLabel, roofLabel, zoneLabel, urgLabel, partName, sideName, lineLabel, toast, api, mergePricing, renderMsgs } = window.TK;
 
   const S = { orders: [], loaded: false, selected: null, filter: "all", search: "", pricing: clone(E.DEFAULT_PRICING), timer: null, lastSync: 0 };
 
   const FILTERS = [
-    { key: "all", label: "All", test: () => true },
-    { key: "new", label: "To confirm", test: (o) => o.status === "received" },
-    { key: "upcoming", label: "To deliver", test: (o) => ["confirmed", "loading", "en_route"].includes(o.status) },
-    { key: "onsite", label: "On site", test: (o) => o.status === "erected" || o.status === "pickup_requested" },
-    { key: "done", label: "Finished", test: (o) => o.status === "dismantled" || o.status === "closed" }
+    { key: "all", test: () => true },
+    { key: "new", test: (o) => o.status === "received" },
+    { key: "upcoming", test: (o) => ["confirmed", "loading", "en_route"].includes(o.status) },
+    { key: "onsite", test: (o) => o.status === "erected" || o.status === "pickup_requested" },
+    { key: "done", test: (o) => o.status === "dismantled" || o.status === "closed" }
   ];
 
   /* ---------- Login ---------- */
@@ -51,7 +52,7 @@
     }
   }
   function renderSync() {
-    $("#sync-text").textContent = "Updated " + new Date(S.lastSync).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+    if (S.lastSync) $("#sync-text").textContent = t("o.updated", { time: fmtTime(S.lastSync) });
   }
   function replaceOrder(o) {
     const i = S.orders.findIndex((x) => x.ref === o.ref);
@@ -62,7 +63,7 @@
     try {
       const r = await api("PATCH", `/api/office/orders/${encodeURIComponent(ref)}`, body);
       replaceOrder(r.order);
-      if (okMsg) toast(okMsg);
+      if (okMsg) toast(typeof okMsg === "function" ? okMsg() : okMsg);
       return true;
     } catch (e) {
       if (!handleAuthError(e)) toast(e.message);
@@ -82,14 +83,14 @@
     const weekAhead = E.toISODate(new Date(Date.now() + 7 * 864e5));
     const dispatch = os.filter((o) => ["confirmed", "loading", "en_route"].includes(o.status) && o.schedule && o.schedule.start <= weekAhead).length;
     $("#stats").innerHTML =
-      `<div class="stat"><b>${toConfirm}</b><span>orders to confirm</span></div>` +
-      `<div class="stat"><b>${dispatch}</b><span>deliveries in the next 7 days</span></div>` +
-      `<div class="stat"><b>${Math.round(m2)} m²</b><span>on hire now</span></div>` +
-      `<div class="stat"><b>${EUR.format(open)}</b><span>open orders, excl. VAT</span></div>`;
+      `<div class="stat"><b>${toConfirm}</b><span>${esc(t("o.stat.toConfirm"))}</span></div>` +
+      `<div class="stat"><b>${dispatch}</b><span>${esc(t("o.stat.deliveries"))}</span></div>` +
+      `<div class="stat"><b>${Math.round(m2)} m²</b><span>${esc(t("o.stat.onHire"))}</span></div>` +
+      `<div class="stat"><b>${EUR.format(open)}</b><span>${esc(t("o.stat.open"))}</span></div>`;
   }
   function renderFilters() {
     $("#filters").innerHTML = FILTERS.map((f) =>
-      `<button type="button" class="chip-btn" data-filter="${f.key}" aria-pressed="${S.filter === f.key}">${esc(f.label)} <span class="num muted">${S.orders.filter(f.test).length}</span></button>`
+      `<button type="button" class="chip-btn" data-filter="${f.key}" aria-pressed="${S.filter === f.key}">${esc(t("o.f." + f.key))} <span class="num muted">${S.orders.filter(f.test).length}</span></button>`
     ).join("");
   }
   function visibleOrders() {
@@ -102,47 +103,46 @@
     const rows = visibleOrders();
     $("#o-rows").innerHTML = rows.map((o) =>
       `<tr data-ref="${esc(o.ref)}" tabindex="0" aria-selected="${S.selected === o.ref}">` +
-      `<td class="mono nowrap">${esc(o.ref)}${o.example ? '<br><span class="ex">Example</span>' : ""}</td>` +
+      `<td class="mono nowrap">${esc(o.ref)}${o.example ? `<br><span class="ex">${esc(t("o.example"))}</span>` : ""}</td>` +
       `<td>${esc(o.customer && o.customer.name)}<br><span class="small muted">${esc(o.site && o.site.address)}</span></td>` +
       `<td class="nowrap">${esc(fmtDate(o.schedule && o.schedule.start))}</td>` +
       `<td class="r">${esc(o.estimate && o.estimate.area)}</td>` +
-      `<td>${chip(o.status)}${o.schedule && o.schedule.urgency !== "standard" ? ` <span class="chip st-warn">${esc((S.pricing.urgency[o.schedule.urgency] || {}).label || "")}</span>` : ""}</td>` +
+      `<td>${chip(o.status)}${o.schedule && o.schedule.urgency !== "standard" ? ` <span class="chip st-warn">${esc(urgLabel(o.schedule.urgency))}</span>` : ""}</td>` +
       `<td class="r nowrap">${o.quote ? EUR.format(o.quote.total) : "—"}</td></tr>`
     ).join("");
     const empty = $("#o-empty");
-    if (!S.loaded) { empty.hidden = false; empty.innerHTML = "<p>Loading orders…</p>"; }
-    else if (!S.orders.length) { empty.hidden = false; empty.innerHTML = '<p><b>No orders yet.</b> Orders placed on the customer site appear here.</p><a class="btn" href="/">Make a test order</a>'; }
-    else if (!rows.length) { empty.hidden = false; empty.innerHTML = "<p>No orders match this filter.</p>"; }
+    if (!S.loaded) { empty.hidden = false; empty.innerHTML = `<p>${esc(t("o.loading"))}</p>`; }
+    else if (!S.orders.length) { empty.hidden = false; empty.innerHTML = `<p><b>${esc(t("o.none"))}</b> ${esc(t("o.noneText"))}</p><a class="btn" href="/">${esc(t("o.testOrder"))}</a>`; }
+    else if (!rows.length) { empty.hidden = false; empty.innerHTML = `<p>${esc(t("o.noMatch"))}</p>`; }
     else empty.hidden = true;
   }
   function renderDetail(full) {
     const o = selected();
     $("#d-none").hidden = !!o; $("#d-card").hidden = !o;
     if (!o) return;
-    const zone = S.pricing.zones[o.site && o.site.zone] || {};
-    const urg = S.pricing.urgency[o.schedule && o.schedule.urgency] || {};
     const h = o.house || {};
+    const floors = h.floors === "1.5" ? "1½" : h.floors;
     $("#d-head").innerHTML =
-      `<div class="card-head"><div><div class="eyebrow">${esc(o.ref)}${o.example ? " · example" : ""}</div><h2>${esc(o.customer && o.customer.name)}</h2><p class="muted">${esc(o.site && o.site.address)}</p></div>${chip(o.status)}</div>` +
+      `<div class="card-head"><div><div class="eyebrow">${esc(o.ref)}${o.example ? " · " + esc(t("tr.example")) : ""}</div><h2>${esc(o.customer && o.customer.name)}</h2><p class="muted">${esc(o.site && o.site.address)}</p></div>${chip(o.status)}</div>` +
       `<div class="kv">` +
-      `<div><span>Phone</span><b class="mono">${esc(o.customer && o.customer.phone)}</b></div>` +
-      (o.customer && o.customer.email ? `<div><span>Email</span><b>${esc(o.customer.email)}</b></div>` : "") +
-      `<div><span>Start</span><b>${esc(fmtDate(o.schedule && o.schedule.start))} · ${esc(urg.label || "")}</b></div>` +
-      `<div><span>Rental</span><b>${esc(o.quote && o.quote.rentDays)} days</b></div>` +
-      `<div><span>Zone</span><b>${esc(zone.label || "")}</b></div>` +
-      `<div><span>House</span><b>${esc(NUM.format(h.length) + " × " + NUM.format(h.width) + " m, " + h.floors + "-storey, " + String(E.ROOF_TYPES[h.roofType] || "").toLowerCase() + ", eave " + NUM.format(h.eave) + " m")}</b></div>` +
-      `<div><span>Job</span><b>${esc(E.JOB_TYPES[h.jobType] || "")}${o.source === "ai" ? " · AI-measured" : o.source === "address" ? " · from address" : ""}</b></div>` +
+      `<div><span>${esc(t("o.phone"))}</span><b class="mono">${esc(o.customer && o.customer.phone)}</b></div>` +
+      (o.customer && o.customer.email ? `<div><span>${esc(t("o.email"))}</span><b>${esc(o.customer.email)}</b></div>` : "") +
+      `<div><span>${esc(t("o.start"))}</span><b>${esc(fmtDate(o.schedule && o.schedule.start))} · ${esc(urgLabel(o.schedule && o.schedule.urgency))}</b></div>` +
+      `<div><span>${esc(t("o.rental"))}</span><b>${esc(t("tr.days", { n: o.quote && o.quote.rentDays }))}</b></div>` +
+      `<div><span>${esc(t("o.zone"))}</span><b>${esc(zoneLabel(o.site && o.site.zone))}</b></div>` +
+      `<div><span>${esc(t("o.house"))}</span><b>${esc(t("o.houseDesc", { l: NUM.format(h.length), w: NUM.format(h.width), floors, roof: roofLabel(h.roofType).toLowerCase(), eave: NUM.format(h.eave) }))}</b></div>` +
+      `<div><span>${esc(t("o.job"))}</span><b>${esc(jobLabel(h.jobType))}${o.source === "ai" ? " · " + esc(t("o.ai")) : o.source === "address" ? " · " + esc(t("o.fromAddress")) : ""}</b></div>` +
       `</div>` + (o.notes ? `<p class="note">${esc(o.notes)}</p>` : "");
 
     const sel = $("#d-status");
     if (full || document.activeElement !== sel) {
-      sel.innerHTML = E.STATUSES.map((s) => `<option value="${s.key}"${s.key === o.status ? " selected" : ""}>${esc(s.label)}</option>`).join("");
+      sel.innerHTML = E.STATUSES.map((s) => `<option value="${s.key}"${s.key === o.status ? " selected" : ""}>${esc(statusLabel(s.key))}</option>`).join("");
     }
     const idx = (STATUS_BY_KEY[o.status] || { i: 0 }).i;
     let next = E.STATUSES[idx + 1];
     if (next && next.key === "pickup_requested") next = E.STATUSES[idx + 2];
     $("#d-next").hidden = !next;
-    if (next) { $("#d-next").textContent = "Mark " + next.label.toLowerCase(); $("#d-next").dataset.next = next.key; }
+    if (next) { $("#d-next").textContent = t("o.next", { label: statusLabel(next.key) }); $("#d-next").dataset.next = next.key; }
     if (full) {
       $("#d-crew").value = o.crew || ""; $("#d-eta").value = o.eta || ""; $("#d-reply").value = "";
       $("#d-delete-confirm").hidden = true; $("#d-delete").hidden = false;
@@ -150,62 +150,64 @@
 
     const parts = (o.estimate && o.estimate.parts) || {};
     const rows = E.PARTS.filter((p) => parts[p.key] > 0).map((p) =>
-      `<tr><td>${esc(p.name)}</td><td class="r">${parts[p.key]}</td><td class="r">${NUM.format(parts[p.key] * p.kg)}</td></tr>`
+      `<tr><td>${esc(partName(p.key))}</td><td class="r">${parts[p.key]}</td><td class="r">${NUM.format(parts[p.key] * p.kg)}</td></tr>`
     ).join("");
     const trucks = (o.quote && o.quote.trucks) || 1;
     $("#d-load").innerHTML =
-      `<div class="card-head"><h3>Load list</h3><button class="btn" type="button" id="d-copy">Copy for crew</button></div>` +
-      `<p class="small muted">${esc(o.estimate && o.estimate.area)} m² · ${NUM.format(((o.estimate && o.estimate.weightKg) || 0) / 1000)} t · ${trucks} truck load${trucks > 1 ? "s" : ""}</p>` +
-      `<div class="tbl-wrap"><table><thead><tr><th>Part</th><th class="r">Qty</th><th class="r">kg</th></tr></thead><tbody>${rows}</tbody></table></div>` +
-      `<div class="tbl-wrap"><table><thead><tr><th>Side</th><th class="r">Bays</th><th class="r">Levels</th><th class="r">Work h.</th></tr></thead><tbody>` +
-      ((o.estimate && o.estimate.sides) || []).map((s) => `<tr><td>${esc(s.name)}${s.catchOn ? ' <span class="small muted">+ catch</span>' : ""}</td><td class="r">${s.bays}</td><td class="r">${s.lifts}</td><td class="r">${NUM.format(s.workH)} m</td></tr>`).join("") +
+      `<div class="card-head"><h3>${esc(t("o.loadList"))}</h3><button class="btn" type="button" id="d-copy">${esc(t("o.copy"))}</button></div>` +
+      `<p class="small muted">${esc(o.estimate && o.estimate.area)} m² · ${NUM.format(((o.estimate && o.estimate.weightKg) || 0) / 1000)} t · ${esc(t("o.loads", { n: trucks }))}</p>` +
+      `<div class="tbl-wrap"><table><thead><tr><th>${esc(t("o.part"))}</th><th class="r">${esc(t("o.qty"))}</th><th class="r">kg</th></tr></thead><tbody>${rows}</tbody></table></div>` +
+      `<div class="tbl-wrap"><table><thead><tr><th>${esc(t("t.side"))}</th><th class="r">${esc(t("t.bays"))}</th><th class="r">${esc(t("t.levels"))}</th><th class="r">${esc(t("t.workH"))}</th></tr></thead><tbody>` +
+      ((o.estimate && o.estimate.sides) || []).map((s) => `<tr><td>${esc(sideName(s.name))}${s.catchOn ? ` <span class="small muted">${esc(t("t.plusCatch"))}</span>` : ""}</td><td class="r">${s.bays}</td><td class="r">${s.lifts}</td><td class="r">${NUM.format(s.workH)} m</td></tr>`).join("") +
       `</tbody></table></div>`;
     const q = o.quote;
     $("#d-quote").innerHTML = q
-      ? `<h3>Price</h3><table class="lines"><tbody>${q.lines.map((l) => `<tr><td>${esc(l.label)}</td><td class="r">${EUR.format(l.amount)}</td></tr>`).join("")}` +
-        `<tr class="sum"><td>Total excl. VAT</td><td class="r">${EUR.format(q.net)}</td></tr><tr class="grand"><td>Total incl. VAT</td><td class="r">${EUR.format(q.total)}</td></tr></tbody></table>`
+      ? `<h3>${esc(t("o.price"))}</h3><table class="lines"><tbody>${q.lines.map((l) => `<tr><td>${esc(lineLabel(l, q))}</td><td class="r">${EUR.format(l.amount)}</td></tr>`).join("")}` +
+        `<tr class="sum"><td>${esc(t("t.net"))}</td><td class="r">${EUR.format(q.net)}</td></tr><tr class="grand"><td>${esc(t("t.totalVat"))}</td><td class="r">${EUR.format(q.total)}</td></tr></tbody></table>`
       : "";
     renderMsgs($("#d-msgs"), o);
-    $("#d-hist").innerHTML = `<h3>History</h3><ul class="hist">${(o.history || []).slice().reverse().map((x) => {
-      const what = x.status ? (STATUS_BY_KEY[x.status] || { label: x.status }).label : x.event;
-      return `<li><span>${esc(what)} <span class="muted">· ${esc(x.by || "")}</span></span><span>${esc(fmtStamp(x.at))}</span></li>`;
+    $("#d-hist").innerHTML = `<h3>${esc(t("o.history"))}</h3><ul class="hist">${(o.history || []).slice().reverse().map((x) => {
+      const ext = x.code === "extended" ? x.days : (/^Rental extended to (\d+) days/.exec(x.event || "") || [])[1];
+      const what = x.status ? statusLabel(x.status) : ext ? t("hist.extended", { days: ext }) : x.event;
+      const by = x.by ? (I.has("by." + x.by) ? t("by." + x.by) : x.by) : "";
+      return `<li><span>${esc(what)} <span class="muted">· ${esc(by)}</span></span><span>${esc(fmtStamp(x.at))}</span></li>`;
     }).join("")}</ul>`;
   }
   function loadListText(o) {
     const parts = (o.estimate && o.estimate.parts) || {};
     const lines = [
       `${o.ref} · ${o.site && o.site.address}`,
-      `Start ${fmtDate(o.schedule && o.schedule.start)}${o.eta ? " · arrival " + o.eta : ""}`,
+      t("o.copyStart", { date: fmtDate(o.schedule && o.schedule.start) }) + (o.eta ? " · " + t("o.copyArrival", { eta: o.eta }) : ""),
       `${o.estimate && o.estimate.area} m², ${NUM.format(((o.estimate && o.estimate.weightKg) || 0) / 1000)} t`,
       ""
     ];
-    E.PARTS.forEach((p) => { if (parts[p.key] > 0) lines.push(`${parts[p.key]} × ${p.name}`); });
-    if (o.notes) lines.push("", "Notes: " + o.notes);
+    E.PARTS.forEach((p) => { if (parts[p.key] > 0) lines.push(`${parts[p.key]} × ${partName(p.key)}`); });
+    if (o.notes) lines.push("", t("o.copyNotes", { notes: o.notes }));
     return lines.join("\n");
   }
 
   /* ---------- Settings ---------- */
   const SET_FIELDS = [
-    { id: "rentPerM2Day", label: "Rent", unit: "€ per m² per day", step: 0.01 },
-    { id: "minRentDays", label: "Minimum rental", unit: "days", step: 1 },
-    { id: "erectPerM2", label: "Erection", unit: "€ per m²", step: 0.1 },
-    { id: "dismantlePerM2", label: "Dismantling", unit: "€ per m²", step: 0.1 },
-    { id: "catchPerMetre", label: "Roof-catch guard", unit: "€ per running m", step: 0.5 },
-    { id: "extraLevelPerM", label: "Extra working level", unit: "€ per running m per level", step: 0.5 },
-    { id: "truckCapacityKg", label: "Truck load", unit: "kg per load", step: 50 },
-    { id: "zA", label: "Zone A trip", unit: "€", step: 5, get: (p) => p.zones.A.trip, set: (p, v) => { p.zones.A.trip = v; } },
-    { id: "zB", label: "Zone B trip", unit: "€", step: 5, get: (p) => p.zones.B.trip, set: (p, v) => { p.zones.B.trip = v; } },
-    { id: "zC", label: "Zone C trip", unit: "€", step: 5, get: (p) => p.zones.C.trip, set: (p, v) => { p.zones.C.trip = v; } },
-    { id: "uX", label: "Express premium", unit: "% on service", step: 1, get: (p) => p.urgency.express.pct, set: (p, v) => { p.urgency.express.pct = v; } },
-    { id: "uE", label: "Emergency premium", unit: "% on service", step: 1, get: (p) => p.urgency.emergency.pct, set: (p, v) => { p.urgency.emergency.pct = v; } },
-    { id: "minOrder", label: "Minimum order", unit: "€ excl. VAT", step: 10 },
-    { id: "vat", label: "VAT", unit: "%", step: 0.1 },
-    { id: "rangePct", label: "Quote range", unit: "± %", step: 1 }
+    { id: "rentPerM2Day", step: 0.01 },
+    { id: "minRentDays", step: 1 },
+    { id: "erectPerM2", step: 0.1 },
+    { id: "dismantlePerM2", step: 0.1 },
+    { id: "catchPerMetre", step: 0.5 },
+    { id: "extraLevelPerM", step: 0.5 },
+    { id: "truckCapacityKg", step: 50 },
+    { id: "zA", step: 5, get: (p) => p.zones.A.trip, set: (p, v) => { p.zones.A.trip = v; } },
+    { id: "zB", step: 5, get: (p) => p.zones.B.trip, set: (p, v) => { p.zones.B.trip = v; } },
+    { id: "zC", step: 5, get: (p) => p.zones.C.trip, set: (p, v) => { p.zones.C.trip = v; } },
+    { id: "uX", step: 1, get: (p) => p.urgency.express.pct, set: (p, v) => { p.urgency.express.pct = v; } },
+    { id: "uE", step: 1, get: (p) => p.urgency.emergency.pct, set: (p, v) => { p.urgency.emergency.pct = v; } },
+    { id: "minOrder", step: 10 },
+    { id: "vat", step: 0.1 },
+    { id: "rangePct", step: 1 }
   ];
   function renderSettings(p) {
     $("#set-grid").innerHTML = SET_FIELDS.map((f) => {
       const v = f.get ? f.get(p) : p[f.id];
-      return `<label class="field"><span>${esc(f.label)} <span class="hint">${esc(f.unit)}</span></span><input type="number" id="set-${f.id}" step="${f.step}" min="0" value="${esc(v)}"></label>`;
+      return `<label class="field"><span>${esc(t("set." + f.id))} <span class="hint">${esc(t("setU." + f.id))}</span></span><input type="number" id="set-${f.id}" step="${f.step}" min="0" value="${esc(v)}"></label>`;
     }).join("");
   }
 
@@ -237,28 +239,28 @@
     $("#o-rows").addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); pick(ev.target.closest("tr[data-ref]")); } });
     $("#d-status-save").addEventListener("click", () => {
       const o = selected(), status = $("#d-status").value;
-      if (o && status !== o.status) patch(o.ref, { status }, `${o.ref}: ${STATUS_BY_KEY[status].label}`);
+      if (o && status !== o.status) patch(o.ref, { status }, () => `${o.ref}: ${statusLabel(status)}`);
     });
     $("#d-next").addEventListener("click", (ev) => {
       const o = selected(), status = ev.currentTarget.dataset.next;
-      if (o && status) patch(o.ref, { status }, `${o.ref}: ${STATUS_BY_KEY[status].label}`);
+      if (o && status) patch(o.ref, { status }, () => `${o.ref}: ${statusLabel(status)}`);
     });
     $("#d-save").addEventListener("click", () => {
       const o = selected();
-      if (o) patch(o.ref, { crew: $("#d-crew").value.trim(), eta: $("#d-eta").value.trim() }, "Crew and arrival saved. The customer sees the arrival window.");
+      if (o) patch(o.ref, { crew: $("#d-crew").value.trim(), eta: $("#d-eta").value.trim() }, t("o.toast.crew"));
     });
     $("#d-reply-form").addEventListener("submit", async (ev) => {
       ev.preventDefault();
       const o = selected(), text = $("#d-reply").value.trim();
       if (!o || !text) return;
-      if (await patch(o.ref, { message: text }, "Reply sent. The customer sees it on the tracking page.")) $("#d-reply").value = "";
+      if (await patch(o.ref, { message: text }, t("o.toast.reply"))) $("#d-reply").value = "";
     });
     $("#d-load").addEventListener("click", (ev) => {
       if (!ev.target.closest("#d-copy")) return;
       const o = selected();
       if (!o) return;
       const p = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(loadListText(o)) : Promise.reject();
-      p.then(() => toast("Load list copied.")).catch(() => toast("Copy isn't available in this browser. Select the table and copy it."));
+      p.then(() => toast(t("o.toast.copied"))).catch(() => toast(t("o.toast.noCopy")));
     });
     $("#d-delete").addEventListener("click", () => { $("#d-delete").hidden = true; $("#d-delete-confirm").hidden = false; });
     $("#d-delete-no").addEventListener("click", () => { $("#d-delete").hidden = false; $("#d-delete-confirm").hidden = true; });
@@ -269,7 +271,7 @@
         await api("DELETE", `/api/office/orders/${encodeURIComponent(o.ref)}`);
         S.orders = S.orders.filter((x) => x.ref !== o.ref); S.selected = null;
         renderList(); renderDetail(true);
-        toast(`${o.ref} deleted.`);
+        toast(t("o.toast.deleted", { ref: o.ref }));
       } catch (e) {
         if (!handleAuthError(e)) toast(e.message);
       }
@@ -278,22 +280,34 @@
       const p = clone(S.pricing);
       for (const f of SET_FIELDS) {
         const v = Number($("#set-" + f.id).value);
-        if (!Number.isFinite(v) || v < 0) { toast("Use zero or a positive number in every field."); return; }
+        if (!Number.isFinite(v) || v < 0) { toast(t("o.toast.badNumber")); return; }
         if (f.set) f.set(p, v); else p[f.id] = v;
       }
       try {
         const r = await api("PUT", "/api/office/pricing", { pricing: p });
         S.pricing = mergePricing(r.pricing); renderSettings(S.pricing);
-        toast("Pricing saved. New quotes use these numbers.");
+        toast(t("o.toast.saved"));
       } catch (e) {
         if (!handleAuthError(e)) toast(e.message);
       }
     });
-    $("#set-reset").addEventListener("click", () => { renderSettings(clone(E.DEFAULT_PRICING)); toast("Defaults filled in. Save to apply them."); });
+    $("#set-reset").addEventListener("click", () => { renderSettings(clone(E.DEFAULT_PRICING)); toast(t("o.toast.defaults")); });
   }
 
   bind();
   renderList();
+  // Redraw script-built parts when the language changes. Unsaved pricing edits are kept.
+  I.onChange(() => {
+    renderList(); renderDetail(false); renderSync();
+    if (!$("#set-grid").children.length || !$("#settings").open) renderSettings(S.pricing);
+    else {
+      SET_FIELDS.forEach((f) => {
+        const el = $("#set-" + f.id);
+        const span = el && el.parentElement.querySelector("span");
+        if (span) span.innerHTML = `${esc(t("set." + f.id))} <span class="hint">${esc(t("setU." + f.id))}</span>`;
+      });
+    }
+  });
   api("GET", "/api/office/me").then(showOffice).catch((e) => {
     showLogin();
     if (e.status !== 401) $("#login-err").textContent = e.message;

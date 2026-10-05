@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="fi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -13,44 +13,47 @@
 <body>
 <header class="bar">
   <div class="bar-in">
-    <div class="brand"><span class="mark" aria-hidden="true"></span><span class="brand-name">Telinekiito</span><span class="proto">Office</span></div>
-    <nav class="tabs" aria-label="Links">
-      <a class="tab" href="/">Customer site</a>
-      <button class="tab" type="button" id="logout" hidden>Log out</button>
+    <div class="brand"><span class="mark" aria-hidden="true"></span><span class="brand-name">Telinekiito</span><span class="proto" data-i18n="brand.office">Office</span></div>
+    <nav class="tabs">
+      <a class="tab" href="/" data-i18n="nav.customerSite">Customer site</a>
+      <button class="tab" type="button" id="logout" hidden data-i18n="nav.logout">Log out</button>
     </nav>
+    <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Language">
+      <button type="button" data-lang="fi" lang="fi">FI</button><button type="button" data-lang="en" lang="en">EN</button>
+    </div>
   </div>
 </header>
 
 <main>
   <section class="wrap" id="login-view" hidden>
     <form class="card login" id="login-form" novalidate>
-      <h1>Office login</h1>
-      <label class="field"><span>Password</span><input type="password" id="login-pw" autocomplete="current-password"></label>
+      <h1 data-i18n="o.loginTitle">Office login</h1>
+      <label class="field"><span data-i18n="o.password">Password</span><input type="password" id="login-pw" autocomplete="current-password"></label>
       <p class="err" id="login-err" aria-live="polite"></p>
-      <button class="btn primary big" type="submit">Log in</button>
+      <button class="btn primary big" type="submit" data-i18n="o.login">Log in</button>
     </form>
   </section>
 
   <section class="wrap" id="office-view" hidden aria-labelledby="h-office">
     <div class="view-head">
       <div>
-        <h1 id="h-office">Orders and dispatch</h1>
-        <p>Confirm new orders, move them through delivery, and give the crew a load list.</p>
+        <h1 id="h-office" data-i18n="o.title">Orders and dispatch</h1>
+        <p data-i18n="o.intro"></p>
       </div>
-      <div class="mode live"><i></i><span id="sync-text">Updated just now</span></div>
+      <div class="mode live"><i></i><span id="sync-text" data-i18n="o.updatedNow">Updated just now</span></div>
     </div>
 
     <div class="stats" id="stats"></div>
     <div class="toolbar">
       <div class="chips" id="filters"></div>
-      <input type="text" id="o-search" placeholder="Search reference, name or address" aria-label="Search orders">
+      <input type="text" id="o-search" data-i18n-ph="o.search" data-i18n-aria="o.searchAria" placeholder="Search reference, name or address" aria-label="Search orders">
     </div>
 
     <div class="o-grid">
       <div class="olist">
         <div class="tbl-wrap">
           <table>
-            <thead><tr><th>Reference</th><th>Customer and site</th><th>Start</th><th class="r">m²</th><th>Status</th><th class="r">Total</th></tr></thead>
+            <thead><tr><th data-i18n="o.col.ref">Reference</th><th data-i18n="o.col.customer">Customer and site</th><th data-i18n="o.col.start">Start</th><th class="r">m²</th><th data-i18n="o.col.status">Status</th><th class="r" data-i18n="o.col.total">Total</th></tr></thead>
             <tbody id="o-rows"></tbody>
           </table>
         </div>
@@ -58,47 +61,47 @@
       </div>
 
       <aside class="detail">
-        <div class="card" id="d-none"><p class="muted">Select an order to see its load list, price and history.</p></div>
+        <div class="card" id="d-none"><p class="muted" data-i18n="o.select">Select an order to see its load list, price and history.</p></div>
         <div class="card" id="d-card" hidden>
           <div id="d-head"></div>
           <div class="field">
-            <span>Status</span>
+            <span data-i18n="o.status">Status</span>
             <div class="status-row">
-              <select id="d-status" aria-label="Order status"></select>
-              <button class="btn" type="button" id="d-status-save">Update</button>
+              <select id="d-status" data-i18n-aria="o.statusAria" aria-label="Order status"></select>
+              <button class="btn" type="button" id="d-status-save" data-i18n="o.update">Update</button>
               <button class="btn primary" type="button" id="d-next">Next</button>
             </div>
           </div>
           <div class="row">
-            <label class="field"><span>Crew</span><input type="text" id="d-crew" placeholder="e.g. Team 2: Mikko, Ari"></label>
-            <label class="field"><span>Arrival window</span><input type="text" id="d-eta" placeholder="e.g. Thu 8 Oct, 8–10"></label>
+            <label class="field"><span data-i18n="o.crew">Crew</span><input type="text" id="d-crew" data-i18n-ph="o.crew.ph"></label>
+            <label class="field"><span data-i18n="o.eta">Arrival window</span><input type="text" id="d-eta" data-i18n-ph="o.eta.ph"></label>
           </div>
-          <div class="actions"><button class="btn" type="button" id="d-save">Save crew and arrival</button></div>
+          <div class="actions"><button class="btn" type="button" id="d-save" data-i18n="o.saveCrew">Save crew and arrival</button></div>
           <div id="d-load"></div>
           <div id="d-quote"></div>
           <div class="msgs" id="d-msgs"></div>
           <form class="field" id="d-reply-form" novalidate>
-            <span>Reply to customer</span>
+            <span data-i18n="o.reply">Reply to customer</span>
             <textarea id="d-reply"></textarea>
-            <div class="actions"><button class="btn" type="submit">Send reply</button></div>
+            <div class="actions"><button class="btn" type="submit" data-i18n="o.sendReply">Send reply</button></div>
           </form>
           <div id="d-hist"></div>
           <div class="confirm-row" id="d-delete-row">
-            <button class="btn danger" type="button" id="d-delete">Delete order</button>
-            <span id="d-delete-confirm" hidden>Delete permanently? <button class="btn danger" type="button" id="d-delete-yes">Yes, delete</button> <button class="btn" type="button" id="d-delete-no">Cancel</button></span>
+            <button class="btn danger" type="button" id="d-delete" data-i18n="o.delete">Delete order</button>
+            <span id="d-delete-confirm" hidden><span data-i18n="o.deleteConfirm">Delete permanently?</span> <button class="btn danger" type="button" id="d-delete-yes" data-i18n="o.deleteYes">Yes, delete</button> <button class="btn" type="button" id="d-delete-no" data-i18n="o.cancel">Cancel</button></span>
           </div>
         </div>
       </aside>
     </div>
 
     <details class="settings" id="settings">
-      <summary>Pricing settings</summary>
+      <summary data-i18n="o.settings">Pricing settings</summary>
       <div class="settings-body">
-        <p class="small muted">These numbers drive every new quote. They are assumptions to replace with your own costs and a real rental quote.</p>
+        <p class="small muted" data-i18n="o.settingsText"></p>
         <div class="set-grid" id="set-grid"></div>
         <div class="actions">
-          <button class="btn primary" type="button" id="set-save">Save pricing</button>
-          <button class="btn" type="button" id="set-reset">Fill in defaults</button>
+          <button class="btn primary" type="button" id="set-save" data-i18n="o.savePricing">Save pricing</button>
+          <button class="btn" type="button" id="set-reset" data-i18n="o.defaults">Fill in defaults</button>
         </div>
       </div>
     </details>
@@ -106,6 +109,7 @@
 </main>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="/i18n.js"></script>
 <script src="/engine.js"></script>
 <script src="/common.js"></script>
 <script src="/office.js"></script>

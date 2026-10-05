@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="fi">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Telinekiito</title>
-<meta name="description" content="Scaffolding for your house, priced in seconds. Instant quotes, fast delivery and order tracking.">
+<meta name="description" content="Rakennusteline talollesi, hinta heti. Scaffolding for your house, priced in seconds.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
@@ -13,11 +13,14 @@
 <body>
 <header class="bar">
   <div class="bar-in">
-    <div class="brand"><span class="mark" aria-hidden="true"></span><span class="brand-name">Telinekiito</span><span class="proto">MVP</span></div>
-    <nav class="tabs" aria-label="Views">
-      <button class="tab" type="button" data-view="quote" id="tab-quote">Get a quote</button>
-      <button class="tab" type="button" data-view="track" id="tab-track">Track order</button>
+    <div class="brand"><span class="mark" aria-hidden="true"></span><span class="brand-name">Telinekiito</span><span class="proto" data-i18n="brand.mvp">MVP</span></div>
+    <nav class="tabs" data-i18n-aria="nav.views" aria-label="Views">
+      <button class="tab" type="button" data-view="quote" id="tab-quote" data-i18n="nav.quote">Get a quote</button>
+      <button class="tab" type="button" data-view="track" id="tab-track" data-i18n="nav.track">Track order</button>
     </nav>
+    <div class="lang" role="group" data-i18n-aria="lang.label" aria-label="Language">
+      <button type="button" data-lang="fi" lang="fi">FI</button><button type="button" data-lang="en" lang="en">EN</button>
+    </div>
   </div>
 </header>
 
@@ -25,131 +28,131 @@
   <section class="wrap" id="view-quote" aria-labelledby="h-quote">
     <div class="view-head">
       <div>
-        <h1 id="h-quote">Scaffolding for your house, priced now</h1>
-        <p>Type your address and we look up the house. The estimate updates as you go, built from standard 3.07 m bays and 2 m levels.</p>
+        <h1 id="h-quote" data-i18n="q.title">Scaffolding for your house, priced now</h1>
+        <p data-i18n="q.intro">Type your address and we look up the house.</p>
       </div>
     </div>
 
     <div class="q-grid">
       <div class="steps">
         <div class="done-box" id="q-done" hidden>
-          <div class="eyebrow">Order received</div>
+          <div class="eyebrow" data-i18n="q.done.eyebrow">Order received</div>
           <div class="ref" id="q-done-ref">TK-</div>
-          <p id="q-done-text">We check the details and confirm the price and start date.</p>
+          <p id="q-done-text"></p>
           <div class="actions">
-            <button class="btn primary" type="button" id="q-done-track">Track this order</button>
-            <button class="btn" type="button" id="q-done-new">Start a new quote</button>
+            <button class="btn primary" type="button" id="q-done-track" data-i18n="q.done.track">Track this order</button>
+            <button class="btn" type="button" id="q-done-new" data-i18n="q.done.new">Start a new quote</button>
           </div>
         </div>
 
         <form id="q-form" class="steps" novalidate>
           <fieldset class="step">
-            <legend><span class="n">1</span>House</legend>
+            <legend><span class="n">1</span><span data-i18n="q.step.house">House</span></legend>
             <div class="field">
-              <span>Site address</span>
+              <span data-i18n="q.address">Site address</span>
               <div class="addr-row">
-                <input type="text" id="f-address" data-f="address" autocomplete="street-address" placeholder="Street and number, city">
-                <button class="btn primary" type="button" id="addr-find">Find my house</button>
+                <input type="text" id="f-address" data-f="address" autocomplete="street-address" data-i18n-ph="q.address.ph" placeholder="Street and number, city">
+                <button class="btn primary" type="button" id="addr-find" data-i18n="q.find">Find my house</button>
               </div>
-              <span class="hint">We read the building outline from OpenStreetMap and the number of floors from the national building register.</span>
+              <span class="hint" data-i18n="q.address.hint"></span>
             </div>
             <div class="found" id="addr-result" hidden aria-live="polite"></div>
 
             <div class="ai" id="ai-box" hidden>
-              <div><b>Or upload a drawing or photo</b><span class="ai-flag">AI</span>
-                <p class="small muted">A floor plan, an elevation drawing or a photo of the house. AI reads it and fills in the size, floors and roof.</p>
+              <div><b data-i18n="ai.title">Or upload a drawing or photo</b><span class="ai-flag">AI</span>
+                <p class="small muted" data-i18n="ai.text"></p>
               </div>
               <label class="drop" id="ai-drop">
                 <input type="file" id="ai-file" accept="image/jpeg,image/png,image/webp" multiple>
-                <span class="drop-btn">Choose images</span>
-                <span class="drop-text" id="ai-files">or drop them here · up to 3 images</span>
+                <span class="drop-btn" data-i18n="ai.choose">Choose images</span>
+                <span class="drop-text" id="ai-files"></span>
               </label>
               <div class="ai-row">
-                <button class="btn" type="button" id="ai-go">Read measurements</button>
+                <button class="btn" type="button" id="ai-go" data-i18n="ai.go">Read measurements</button>
               </div>
               <p class="ai-msg" id="ai-msg" aria-live="polite"></p>
             </div>
 
             <div class="field">
-              <span>Or start from a typical house</span>
+              <span data-i18n="q.presets">Or start from a typical house</span>
               <div class="chips" id="presets">
-                <button type="button" class="chip-btn" data-preset="p1">1-storey, 10 × 15 m</button>
-                <button type="button" class="chip-btn" data-preset="p2">1½-storey, 9 × 12 m</button>
-                <button type="button" class="chip-btn" data-preset="p3">2-storey, 8 × 10 m</button>
+                <button type="button" class="chip-btn" data-preset="p1" data-i18n="q.preset.p1">1-storey, 10 × 15 m</button>
+                <button type="button" class="chip-btn" data-preset="p2" data-i18n="q.preset.p2">1½-storey, 9 × 12 m</button>
+                <button type="button" class="chip-btn" data-preset="p3" data-i18n="q.preset.p3">2-storey, 8 × 10 m</button>
               </div>
             </div>
 
             <div class="row">
-              <label class="field"><span>Length <span class="hint">gutter side, along the ridge</span></span>
+              <label class="field"><span><span data-i18n="q.length">Length</span> <span class="hint" data-i18n="q.length.hint"></span></span>
                 <span class="unit" data-unit="m"><input type="number" id="f-length" data-f="length" min="3" max="60" step="0.1" inputmode="decimal"></span></label>
-              <label class="field"><span>Width <span class="hint">gable side</span></span>
+              <label class="field"><span><span data-i18n="q.width">Width</span> <span class="hint" data-i18n="q.width.hint"></span></span>
                 <span class="unit" data-unit="m"><input type="number" id="f-width" data-f="width" min="3" max="40" step="0.1" inputmode="decimal"></span></label>
             </div>
             <div class="field">
-              <span>Floors</span>
-              <div class="seg" role="radiogroup" aria-label="Floors">
+              <span data-i18n="q.floors">Floors</span>
+              <div class="seg" role="radiogroup" data-i18n-aria="q.floors" aria-label="Floors">
                 <label><input type="radio" name="floors" value="1" id="f-floors-1"><span>1</span></label>
                 <label><input type="radio" name="floors" value="1.5" id="f-floors-15"><span>1½</span></label>
                 <label><input type="radio" name="floors" value="2" id="f-floors-2"><span>2</span></label>
               </div>
             </div>
             <div class="row">
-              <label class="field"><span>Eave height <span class="hint" id="eave-hint">from ground, set from floors</span></span>
+              <label class="field"><span><span data-i18n="q.eave">Eave height</span> <span class="hint" id="eave-hint"></span></span>
                 <span class="unit" data-unit="m"><input type="number" id="f-eave" data-f="eave" min="2" max="12" step="0.1" inputmode="decimal"></span></label>
-              <label class="field" id="pitch-field"><span>Roof pitch</span>
+              <label class="field" id="pitch-field"><span data-i18n="q.pitch">Roof pitch</span>
                 <span class="unit" data-unit="°"><input type="number" id="f-pitch" data-f="pitch" min="0" max="60" step="1" inputmode="numeric"></span></label>
             </div>
             <div class="field">
-              <span>Roof type</span>
-              <div class="seg" role="radiogroup" aria-label="Roof type">
-                <label><input type="radio" name="roofType" value="gable" id="f-roof-gable"><span>Gable</span></label>
-                <label><input type="radio" name="roofType" value="hip" id="f-roof-hip"><span>Hip</span></label>
-                <label><input type="radio" name="roofType" value="flat" id="f-roof-flat"><span>Flat or mono-pitch</span></label>
+              <span data-i18n="q.roof">Roof type</span>
+              <div class="seg" role="radiogroup" data-i18n-aria="q.roof" aria-label="Roof type">
+                <label><input type="radio" name="roofType" value="gable" id="f-roof-gable"><span data-i18n="q.roof.gable">Gable</span></label>
+                <label><input type="radio" name="roofType" value="hip" id="f-roof-hip"><span data-i18n="q.roof.hip">Hip</span></label>
+                <label><input type="radio" name="roofType" value="flat" id="f-roof-flat"><span data-i18n="q.roof.flat">Flat or mono-pitch</span></label>
               </div>
             </div>
           </fieldset>
 
           <fieldset class="step">
-            <legend><span class="n">2</span>Job</legend>
-            <div class="opts opts-2" role="radiogroup" aria-label="Job type">
-              <label class="opt"><input type="radio" name="jobType" value="roof" id="f-job-roof"><span class="oc"><b>Roof renovation</b><small>Eaves scaffolding with roof-catch guard</small></span></label>
-              <label class="opt"><input type="radio" name="jobType" value="facade" id="f-job-facade"><span class="oc"><b>Facade work</b><small>All sides, every level decked</small></span></label>
-              <label class="opt"><input type="radio" name="jobType" value="roof_facade" id="f-job-both"><span class="oc"><b>Roof and facade</b><small>All sides, every level decked, roof-catch guard on the eaves</small></span></label>
-              <label class="opt"><input type="radio" name="jobType" value="gutters" id="f-job-gutters"><span class="oc"><b>Gutters and eaves</b><small>Gutter sides, one working level</small></span></label>
+            <legend><span class="n">2</span><span data-i18n="q.step.job">Job</span></legend>
+            <div class="opts opts-2" role="radiogroup" data-i18n-aria="q.jobType" aria-label="Job type">
+              <label class="opt"><input type="radio" name="jobType" value="roof" id="f-job-roof"><span class="oc"><b data-i18n="job.roof">Roof renovation</b><small data-i18n="job.roof.desc"></small></span></label>
+              <label class="opt"><input type="radio" name="jobType" value="facade" id="f-job-facade"><span class="oc"><b data-i18n="job.facade">Facade work</b><small data-i18n="job.facade.desc"></small></span></label>
+              <label class="opt"><input type="radio" name="jobType" value="roof_facade" id="f-job-both"><span class="oc"><b data-i18n="job.roof_facade">Roof and facade</b><small data-i18n="job.roof_facade.desc"></small></span></label>
+              <label class="opt"><input type="radio" name="jobType" value="gutters" id="f-job-gutters"><span class="oc"><b data-i18n="job.gutters">Gutters and eaves</b><small data-i18n="job.gutters.desc"></small></span></label>
             </div>
-            <label class="check" id="gables-row"><input type="checkbox" id="f-gables" data-f="gables"><span><b>Include gable ends</b><br><span class="small muted">Edge protection along the roof verges, up to near the ridge.</span></span></label>
+            <label class="check" id="gables-row"><input type="checkbox" id="f-gables" data-f="gables"><span><b data-i18n="q.gables">Include gable ends</b><br><span class="small muted" data-i18n="q.gables.desc"></span></span></label>
           </fieldset>
 
           <fieldset class="step">
-            <legend><span class="n">3</span>Delivery and timing</legend>
-            <label class="field"><span>Delivery zone <span class="hint" id="zone-hint"></span></span><select id="f-zone" data-f="zone"></select></label>
+            <legend><span class="n">3</span><span data-i18n="q.step.delivery">Delivery and timing</span></legend>
+            <label class="field"><span><span data-i18n="q.zone">Delivery zone</span> <span class="hint" id="zone-hint"></span></span><select id="f-zone" data-f="zone"></select></label>
             <div class="field">
-              <span>How fast do you need it?</span>
-              <div class="opts" id="urgency-opts" role="radiogroup" aria-label="Urgency"></div>
+              <span data-i18n="q.speed">How fast do you need it?</span>
+              <div class="opts" id="urgency-opts" role="radiogroup" data-i18n-aria="q.urgency" aria-label="Urgency"></div>
             </div>
             <div class="row">
-              <label class="field"><span>Start date</span><input type="date" id="f-start" data-f="start"></label>
-              <label class="field"><span>Rental period <span class="hint" id="days-hint"></span></span>
-                <span class="unit" data-unit="days"><input type="number" id="f-days" data-f="days" min="1" max="365" step="1" inputmode="numeric"></span></label>
+              <label class="field"><span data-i18n="q.start">Start date</span><input type="date" id="f-start" data-f="start"></label>
+              <label class="field"><span><span data-i18n="q.days">Rental period</span> <span class="hint" id="days-hint"></span></span>
+                <span class="unit" data-unit="days" data-i18n-unit="unit.days"><input type="number" id="f-days" data-f="days" min="1" max="365" step="1" inputmode="numeric"></span></label>
             </div>
             <div class="chips" id="days-chips">
-              <button type="button" class="chip-btn" data-days="14">2 weeks</button>
-              <button type="button" class="chip-btn" data-days="28">4 weeks</button>
-              <button type="button" class="chip-btn" data-days="42">6 weeks</button>
+              <button type="button" class="chip-btn" data-days="14" data-i18n="q.weeks2">2 weeks</button>
+              <button type="button" class="chip-btn" data-days="28" data-i18n="q.weeks4">4 weeks</button>
+              <button type="button" class="chip-btn" data-days="42" data-i18n="q.weeks6">6 weeks</button>
             </div>
           </fieldset>
 
           <fieldset class="step">
-            <legend><span class="n">4</span>Contact</legend>
+            <legend><span class="n">4</span><span data-i18n="q.step.contact">Contact</span></legend>
             <div class="row">
-              <label class="field"><span>Name</span><input type="text" id="f-name" data-f="name" autocomplete="name"></label>
-              <label class="field"><span>Phone</span><input type="tel" id="f-phone" data-f="phone" autocomplete="tel" placeholder="040 123 4567"></label>
+              <label class="field"><span data-i18n="q.name">Name</span><input type="text" id="f-name" data-f="name" autocomplete="name"></label>
+              <label class="field"><span data-i18n="q.phone">Phone</span><input type="tel" id="f-phone" data-f="phone" autocomplete="tel" placeholder="040 123 4567"></label>
             </div>
-            <label class="field"><span>Email <span class="hint">optional</span></span><input type="email" id="f-email" data-f="email" autocomplete="email"></label>
-            <label class="field"><span>Notes for the crew <span class="hint">gate code, obstacles, terrace, sloping ground</span></span><textarea id="f-notes" data-f="notes"></textarea></label>
+            <label class="field"><span><span data-i18n="q.email">Email</span> <span class="hint" data-i18n="q.optional">optional</span></span><input type="email" id="f-email" data-f="email" autocomplete="email"></label>
+            <label class="field"><span><span data-i18n="q.notes">Notes for the crew</span> <span class="hint" data-i18n="q.notes.hint"></span></span><textarea id="f-notes" data-f="notes"></textarea></label>
             <p class="err" id="q-err" aria-live="polite"></p>
-            <div class="actions"><button class="btn primary big" type="submit" id="q-submit">Place order</button></div>
-            <p class="small muted">You pay nothing now. We confirm the final price after checking the details.</p>
+            <div class="actions"><button class="btn primary big" type="submit" id="q-submit" data-i18n="q.submit">Place order</button></div>
+            <p class="small muted" data-i18n="q.payNothing"></p>
           </fieldset>
         </form>
       </div>
@@ -157,7 +160,7 @@
       <aside class="ticket" aria-labelledby="t-title">
         <div class="ticket-top" aria-hidden="true"></div>
         <div class="ticket-body" id="ticket">
-          <div><div class="eyebrow" id="t-title">Scaffold estimate</div><div class="total">—</div><div class="range">Loading prices…</div></div>
+          <div><div class="eyebrow" id="t-title" data-i18n="t.estimate">Scaffold estimate</div><div class="total">—</div><div class="range" data-i18n="t.loading">Loading prices…</div></div>
         </div>
       </aside>
     </div>
@@ -166,28 +169,28 @@
   <section class="wrap" id="view-track" aria-labelledby="h-track" hidden>
     <div class="view-head">
       <div>
-        <h1 id="h-track">Track your scaffolding order</h1>
-        <p>Enter your order reference and the last four digits of the phone number on the order.</p>
+        <h1 id="h-track" data-i18n="tr.title">Track your scaffolding order</h1>
+        <p data-i18n="tr.intro"></p>
       </div>
     </div>
     <div class="track">
       <form class="lookup" id="tr-form" novalidate>
-        <label class="field"><span>Order reference</span><input type="text" id="tr-ref" placeholder="TK-XXXXXX" autocomplete="off" spellcheck="false"></label>
-        <label class="field"><span>Phone, last 4 digits</span><input type="tel" id="tr-phone" inputmode="numeric" maxlength="4" placeholder="4567" autocomplete="off"></label>
-        <button class="btn primary" type="submit" id="tr-go">Find order</button>
+        <label class="field"><span data-i18n="tr.ref">Order reference</span><input type="text" id="tr-ref" placeholder="TK-XXXXXX" autocomplete="off" spellcheck="false"></label>
+        <label class="field"><span data-i18n="tr.phone">Phone, last 4 digits</span><input type="tel" id="tr-phone" inputmode="numeric" maxlength="4" placeholder="4567" autocomplete="off"></label>
+        <button class="btn primary" type="submit" id="tr-go" data-i18n="tr.find">Find order</button>
       </form>
       <p class="err" id="tr-err" aria-live="polite"></p>
       <div class="card" id="tr-card" hidden>
         <div id="tr-body"></div>
         <div class="actions">
-          <button class="btn" type="button" id="tr-extend">Extend by 7 days</button>
-          <button class="btn" type="button" id="tr-pickup">Request pickup</button>
+          <button class="btn" type="button" id="tr-extend" data-i18n="tr.extend">Extend by 7 days</button>
+          <button class="btn" type="button" id="tr-pickup" data-i18n="tr.pickup">Request pickup</button>
         </div>
         <div class="msgs" id="tr-msgs"></div>
         <form class="field" id="tr-msg-form" novalidate>
-          <span>Message the office</span>
-          <textarea id="tr-msg" placeholder="For example: can the crew come after 9:00?"></textarea>
-          <div class="actions"><button class="btn" type="submit">Send message</button></div>
+          <span data-i18n="tr.msg">Message the office</span>
+          <textarea id="tr-msg" data-i18n-ph="tr.msg.ph"></textarea>
+          <div class="actions"><button class="btn" type="submit" data-i18n="tr.send">Send message</button></div>
         </form>
       </div>
     </div>
@@ -195,11 +198,12 @@
 </main>
 
 <footer class="wrap foot">
-  <span>Telinekiito · test version. Prices are estimates until confirmed.</span>
-  <a href="/office">Office login</a>
+  <span data-i18n="foot.text">Telinekiito · test version.</span>
+  <a href="/office" data-i18n="foot.office">Office login</a>
 </footer>
 
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script src="/i18n.js"></script>
 <script src="/engine.js"></script>
 <script src="/common.js"></script>
 <script src="/quote.js"></script>
