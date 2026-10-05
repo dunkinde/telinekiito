@@ -1,0 +1,14 @@
+{
+  "name": "telinekiito",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scaffolding rental MVP: instant quotes from house data, order tracking and an office dispatch view.",
+  "main": "server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning server.js",
+    "test": "node --disable-warning=ExperimentalWarning --test test/*.test.js"
+  }
+}

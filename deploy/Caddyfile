@@ -1,0 +1,7 @@
+# Caddy gets a free HTTPS certificate for SITE_ADDRESS automatically.
+# Without a domain, setup.sh uses <server-ip-with-dashes>.sslip.io, which points at the server's IP.
+{$SITE_ADDRESS} {
+	encode gzip
+	header Strict-Transport-Security "max-age=31536000"
+	reverse_proxy app:3000
+}
