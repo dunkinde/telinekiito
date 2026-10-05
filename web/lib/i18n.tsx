@@ -62,6 +62,16 @@ const en = {
   "sec.contact.title": "Talk to us",
   "sec.contact.intro": "Questions about a site, a business account or a bigger project? Send a message and we'll get back to you.",
 
+  "build.eyebrow": "Installation day",
+  "build.title": "Up in a day, ready to work on",
+  "build.intro": "A typical two-storey house: delivered in the morning, installed level by level, inspected and tagged by the afternoon. Scroll to watch it go up.",
+  "build.clock": "installation day",
+  "cov.eyebrow": "Delivery area",
+  "cov.title": "Fastest close by, all of Finland by arrangement",
+  "cov.intro": "We work from the Helsinki region. The closer the site, the faster the scaffold is up – every quote shows the delivery zone and price.",
+  "cov.rest": "Further away? Ask us – we deliver elsewhere in Finland by arrangement.",
+  "cov.mapLabel": "Map of Finland with delivery rings around Helsinki",
+  "nav.coverage": "Delivery area",
   "svc.cta": "Get a price",
   "svc.contact": "Contact us",
 
@@ -391,6 +401,16 @@ const fi: Record<Key, Entry> = {
   "sec.contact.title": "Ota yhteyttä",
   "sec.contact.intro": "Kysyttävää kohteesta, yritysasiakkuudesta tai isommasta projektista? Lähetä viesti, niin palaamme asiaan.",
 
+  "build.eyebrow": "Pystytyspäivä",
+  "build.title": "Pystyssä päivässä, valmiina työhön",
+  "build.intro": "Tyypillinen kaksikerroksinen talo: toimitus aamulla, pystytys taso kerrallaan, tarkastus ja merkintä iltapäivällä. Vieritä ja katso, miten teline nousee.",
+  "build.clock": "pystytyspäivä",
+  "cov.eyebrow": "Toimitusalue",
+  "cov.title": "Nopeimmin lähellä, koko Suomeen sopimuksella",
+  "cov.intro": "Toimimme pääkaupunkiseudulta käsin. Mitä lähempänä kohde on, sitä nopeammin telineet ovat pystyssä – jokainen tarjous näyttää toimitusalueen ja hinnan.",
+  "cov.rest": "Kauempana? Kysy meiltä – toimitamme muualle Suomeen sopimuksen mukaan.",
+  "cov.mapLabel": "Suomen kartta, jossa toimitusrenkaat Helsingin ympärillä",
+  "nav.coverage": "Toimitusalue",
   "svc.cta": "Laske hinta",
   "svc.contact": "Ota yhteyttä",
 

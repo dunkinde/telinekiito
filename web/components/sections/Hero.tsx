@@ -11,6 +11,7 @@ import { Button } from "../ui/Button";
 import { CountUp } from "../ui/CountUp";
 import { IconArrow, IconCheck, IconPin } from "../ui/Icons";
 import { EASE_OUT } from "../ui/motion";
+import { HouseModel } from "../HouseModel";
 import { HeroBackground } from "./HeroBackground";
 
 const container: Variants = {
@@ -46,16 +47,23 @@ function Line({ text }: { text: string }) {
 function AddressBar() {
   const { t } = useI18n();
   const { openQuote } = useSite();
+  const reduce = useReducedMotion();
   const [value, setValue] = useState("");
   return (
     <form
       className="mt-9 max-w-xl"
       onSubmit={(e) => {
         e.preventDefault();
-        openQuote({ address: value.trim() || undefined });
+        // Near the top of the page the bar itself grows into the quote window (shared layout animation).
+        const morph = !reduce && window.scrollY < 400;
+        openQuote({ address: value.trim() || undefined, origin: morph ? "hero" : undefined });
       }}
     >
-      <div className="flex flex-col gap-2 rounded-3xl bg-white p-2 shadow-[0_20px_60px_-20px_rgba(14,18,23,0.35)] ring-1 ring-line sm:flex-row sm:items-center sm:rounded-full">
+      <motion.div
+        layoutId="quote-shell"
+        style={{ borderRadius: 28 }}
+        className="flex flex-col gap-2 bg-white p-2 shadow-[0_20px_60px_-20px_rgba(14,18,23,0.35)] ring-1 ring-line sm:flex-row sm:items-center"
+      >
         <label className="flex flex-1 items-center gap-3 px-3 sm:pl-5">
           <IconPin className="h-5 w-5 shrink-0 text-ink-soft" />
           <span className="sr-only">{t("hero.addressLabel")}</span>
@@ -71,10 +79,12 @@ function AddressBar() {
           {t("hero.cta")}
           <IconArrow className="h-5 w-5 transition-transform duration-300 group-hover:translate-x-1" />
         </Button>
-      </div>
+      </motion.div>
     </form>
   );
 }
+
+const EXAMPLE_HOUSE = { length: 15, width: 10, eave: 3, roofType: "gable" as const, pitch: 30, jobType: "roof" as const, gables: true };
 
 /** Example quote for a typical house, priced live by the API, floating on the right. */
 function ExampleCard() {
@@ -83,12 +93,12 @@ function ExampleCard() {
   const { config } = useSite();
   const [quote, setQuote] = useState<Quote | null>(null);
   useEffect(() => {
-    getQuote({ length: 15, width: 10, eave: 3, roofType: "gable", pitch: 30, jobType: "roof", gables: true, days: 28, zone: "A", urgency: "standard" })
+    getQuote({ ...EXAMPLE_HOUSE, days: 28, zone: "A", urgency: "standard" })
       .then((r) => setQuote(r.quote))
       .catch(() => {});
   }, []);
   const total = quote?.total ?? config?.examples.totals.standard ?? 0;
-  const lines = quote?.lines.filter((l) => l.key !== "min").slice(0, 5) ?? [];
+  const lines = quote?.lines.filter((l) => l.key !== "min").slice(0, 4) ?? [];
 
   return (
     <div className="relative rounded-[28px] bg-white/90 p-6 shadow-[0_40px_80px_-30px_rgba(14,18,23,0.4)] ring-1 ring-line backdrop-blur sm:p-7">
@@ -98,22 +108,13 @@ function ExampleCard() {
           <IconCheck className="h-3.5 w-3.5" /> {t("hero.card.ready")}
         </span>
       </div>
-      <div className="mt-5 flex items-center gap-4">
-        {/* Plan view: house with scaffold on the long sides and the roof-catch line. */}
-        <svg viewBox="0 0 120 84" className="h-20 w-28 shrink-0" aria-hidden>
-          <rect x="18" y="20" width="84" height="44" rx="2" fill="#f3f4f1" stroke="#0e1217" strokeWidth="1.5" />
-          <path d="M18 42h84" stroke="#5d6773" strokeDasharray="4 3" />
-          <rect x="12" y="11" width="96" height="6" fill="#ffc20e" stroke="#0e1217" strokeWidth=".8" />
-          <rect x="12" y="67" width="96" height="6" fill="#ffc20e" stroke="#0e1217" strokeWidth=".8" />
-          <rect x="9" y="17" width="6" height="50" fill="#ffc20e" stroke="#0e1217" strokeWidth=".8" />
-          <rect x="105" y="17" width="6" height="50" fill="#ffc20e" stroke="#0e1217" strokeWidth=".8" />
-          <path d="M12 7h96M12 77h96" stroke="#e5484d" strokeWidth="1.6" strokeDasharray="4 3" />
-        </svg>
-        <div className="text-sm">
-          <p className="font-semibold text-ink">{t("hero.card.house")}</p>
-          <p className="text-muted">{t("hero.card.job")}</p>
-          <p className="text-muted">{config ? `${config.examples.area} m²` : "319 m²"}</p>
-        </div>
+      {/* 3D model of the example house; the scaffold assembles level by level. */}
+      <HouseModel shape={EXAMPLE_HOUSE} className="mt-3 h-40 w-full sm:h-44" label={t("hero.card.house")} />
+      <div className="flex flex-wrap items-baseline justify-between gap-x-3 text-sm">
+        <p className="font-semibold text-ink">{t("hero.card.house")}</p>
+        <p className="text-muted">
+          {t("hero.card.job")} · {config ? `${config.examples.area} m²` : "319 m²"}
+        </p>
       </div>
       <ul className="mt-5 space-y-2.5 text-sm">
         {lines.length
@@ -123,7 +124,7 @@ function ExampleCard() {
                 <span className="font-medium tabular-nums">{eur(l.amount)}</span>
               </li>
             ))
-          : [0, 1, 2, 3, 4].map((k) => <li key={k} className="h-5 rounded bg-mist" />)}
+          : [0, 1, 2, 3].map((k) => <li key={k} className="h-5 rounded bg-mist" />)}
       </ul>
       <div className="mt-5 flex items-end justify-between rounded-2xl bg-ink px-5 py-4 text-white">
         <span className="text-sm text-white/70">{t("hero.card.total")}</span>
@@ -135,7 +136,8 @@ function ExampleCard() {
 
 export function Hero() {
   const { t, lang } = useI18n();
-  const { introDone, openTrack } = useSite();
+  const { introDone, openTrack, quote } = useSite();
+  const morphing = quote.open && quote.start.origin === "hero";
   const reduce = useReducedMotion();
   const { scrollY } = useScroll();
   // Gentle parallax: the text column moves a little slower than the page, the card a little more.
@@ -218,11 +220,14 @@ export function Hero() {
           animate={introDone ? { opacity: 1, y: 0 } : undefined}
           transition={{ duration: 1, delay: 0.45, ease: EASE_OUT }}
         >
-          <motion.div
-            animate={reduce ? undefined : { y: [0, -10, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-          >
-            <ExampleCard />
+          {/* While the hero bar grows into the quote window, the example card steps back towards it. */}
+          <motion.div animate={morphing ? { opacity: 0, scale: 0.9, x: -60 } : { opacity: 1, scale: 1, x: 0 }} transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}>
+            <motion.div
+              animate={reduce ? undefined : { y: [0, -10, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <ExampleCard />
+            </motion.div>
           </motion.div>
           <motion.div
             className="absolute -bottom-6 -left-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-xl sm:-left-8"

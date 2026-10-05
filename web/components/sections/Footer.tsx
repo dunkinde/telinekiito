@@ -46,6 +46,7 @@ export function Footer() {
                 <li><a href="#how" className={linkCls}>{t("nav.how")}</a></li>
                 <li><a href="#projects" className={linkCls}>{t("nav.projects")}</a></li>
                 <li><a href="#pricing" className={linkCls}>{t("nav.pricing")}</a></li>
+                <li><a href="#coverage" className={linkCls}>{t("nav.coverage")}</a></li>
                 <li><a href="#faq" className={linkCls}>{t("nav.faq")}</a></li>
                 <li><a href="#contact" className={linkCls}>{t("nav.contact")}</a></li>
               </ul>

@@ -7,7 +7,9 @@ import { Header } from "./Header";
 import { Intro } from "./Intro";
 import { QuoteWizard } from "./quote/QuoteWizard";
 import { TrackOrder } from "./quote/TrackOrder";
+import { BuildUp } from "./sections/BuildUp";
 import { Contact } from "./sections/Contact";
+import { Coverage } from "./sections/Coverage";
 import { Faq } from "./sections/Faq";
 import { Footer } from "./sections/Footer";
 import { Hero } from "./sections/Hero";
@@ -30,8 +32,10 @@ export default function Site() {
               <Hero />
               <Services />
               <HowItWorks />
+              <BuildUp />
               <Projects />
               <Pricing />
+              <Coverage />
               <Faq />
               <Contact />
             </main>

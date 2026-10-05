@@ -7,6 +7,8 @@ export interface QuoteStart {
   address?: string;
   jobType?: JobType;
   urgency?: Urgency;
+  /** "hero": opened from the hero address bar, which then morphs into the quote window. */
+  origin?: "hero";
 }
 
 interface SiteState {

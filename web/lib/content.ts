@@ -133,6 +133,11 @@ export interface Project {
   spec: L;
   /** Grid size on large screens. */
   tall?: boolean;
+  /**
+   * Your own photo of the job, e.g. "/projects/espoo-roof.jpg" (put the file in web/public/projects/).
+   * When set, the photo replaces the drawing and gets the same parallax and hover zoom.
+   */
+  photo?: string;
 }
 export const PROJECTS: Project[] = [
   {
@@ -235,4 +240,20 @@ export const FAQ: Faq[] = [
       en: "Yes. Housing companies, property managers and roofing contractors get partner pricing and invoicing. Get in touch."
     }
   }
+];
+
+/** Milestones of the scroll "timelapse" (installation day). `at` is the scroll position 0–1 where it starts. */
+export const BUILD_STEPS: { at: number; time: string; label: L }[] = [
+  { at: 0, time: "07:30", label: { fi: "Kuorma saapuu, osat puretaan", en: "Truck arrives, parts unloaded" } },
+  { at: 0.18, time: "08:15", label: { fi: "Säätöjalat ja ensimmäinen taso", en: "Base jacks and first level" } },
+  { at: 0.42, time: "10:00", label: { fi: "Toinen taso ja kaiteet", en: "Second level and guardrails" } },
+  { at: 0.66, time: "12:15", label: { fi: "Päädyt ja räystässuoja", en: "Gable ends and roof-catch guard" } },
+  { at: 0.9, time: "14:00", label: { fi: "Tarkastettu ja merkitty – valmis käyttöön", en: "Inspected and tagged – ready to use" } }
+];
+
+/** Delivery rings on the map, measured from Helsinki. */
+export const COVERAGE: { km: number; speed: L; text: L }[] = [
+  { km: 50, speed: { fi: "24 h", en: "24 h" }, text: { fi: "Kiirepystytys pääkaupunkiseudulla", en: "Emergency setup in the Helsinki region" } },
+  { km: 100, speed: { fi: "48 h", en: "48 h" }, text: { fi: "Pikatoimitus Uudellamaalla", en: "Express delivery across Uusimaa" } },
+  { km: 150, speed: { fi: "3 pv", en: "3 d" }, text: { fi: "Normaali toimitus 3 arkipäivässä", en: "Standard delivery in 3 working days" } }
 ];

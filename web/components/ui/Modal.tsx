@@ -4,6 +4,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef } from "react";
 import { IconClose } from "./Icons";
+import { useMedia } from "./useMedia";
 
 export function Modal({
   open,
@@ -11,6 +12,7 @@ export function Modal({
   label,
   closeLabel,
   size = "lg",
+  layoutId,
   children
 }: {
   open: boolean;
@@ -18,9 +20,12 @@ export function Modal({
   label: string;
   closeLabel: string;
   size?: "md" | "lg";
+  /** Shared-layout id: the panel grows out of the element with the same layoutId (e.g. the hero address bar). */
+  layoutId?: string;
   children: React.ReactNode;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  const roundCorners = useMedia("(min-width: 640px)");
 
   useEffect(() => {
     if (!open) return;
@@ -81,10 +86,12 @@ export function Modal({
             className={`relative flex w-full flex-col overflow-hidden bg-white shadow-2xl outline-none sm:rounded-3xl ${
               size === "lg" ? "sm:h-[min(880px,94vh)] sm:max-w-6xl" : "sm:max-h-[90vh] sm:max-w-2xl"
             }`}
-            initial={{ opacity: 0, y: 40, scale: 0.98 }}
+            layoutId={layoutId}
+            style={layoutId ? { borderRadius: roundCorners ? 24 : 0 } : undefined}
+            initial={layoutId ? false : { opacity: 0, y: 40, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 24, scale: 0.98 }}
-            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            exit={layoutId ? { opacity: 0, transition: { duration: 0.15 } } : { opacity: 0, y: 24, scale: 0.98 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1], layout: { duration: 0.55, ease: [0.16, 1, 0.3, 1] } }}
           >
             <button
               type="button"
@@ -95,7 +102,15 @@ export function Modal({
             >
               <IconClose />
             </button>
-            {children}
+            {/* While the panel grows out of another element, its content waits and then fades in. */}
+            <motion.div
+              className="flex min-h-0 flex-1 flex-col"
+              initial={layoutId ? { opacity: 0 } : false}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, delay: layoutId ? 0.35 : 0 }}
+            >
+              {children}
+            </motion.div>
           </motion.div>
         </div>
       ) : null}

@@ -25,6 +25,7 @@ import { useSite, type QuoteStart } from "../SiteContext";
 import { Button } from "../ui/Button";
 import { IconArrow, IconCheck, IconChevron, IconPin, IconUpload } from "../ui/Icons";
 import { Modal } from "../ui/Modal";
+import { HouseModel } from "../HouseModel";
 
 interface Form {
   address: string;
@@ -271,16 +272,16 @@ function PriceDetails({ quote, estimate, vat }: { quote: Quote; estimate: Estima
         {quote.lines.map((l) => (
           <li key={l.key} className="flex justify-between gap-3">
             <span className="text-ink-soft">{lineLabel(i18n, l, quote)}</span>
-            <span className="tabular-nums">{eur(l.amount)}</span>
+            <AnimatedEur value={l.amount} className="tabular-nums" />
           </li>
         ))}
         <li className="flex justify-between gap-3 border-t border-line pt-2 font-semibold">
           <span>{t("q.priceNet")}</span>
-          <span className="tabular-nums">{eur(quote.net)}</span>
+          <AnimatedEur value={quote.net} className="tabular-nums" />
         </li>
         <li className="flex justify-between gap-3">
           <span className="text-ink-soft">{t("q.priceVat", { vat: num(vat) })}</span>
-          <span className="tabular-nums">{eur(quote.vat)}</span>
+          <AnimatedEur value={quote.vat} className="tabular-nums" />
         </li>
       </ul>
       <p className="mt-4 rounded-xl bg-sun-soft px-3 py-2 text-xs text-ink-soft">{t("q.priceLabour", { amount: eur(quote.labourGross) })}</p>
@@ -293,7 +294,7 @@ export function QuoteWizard() {
   const { quote: q, closeQuote } = useSite();
   const { t } = useI18n();
   return (
-    <Modal open={q.open} onClose={closeQuote} label={t("q.title")} closeLabel={t("q.close")}>
+    <Modal open={q.open} onClose={closeQuote} label={t("q.title")} closeLabel={t("q.close")} layoutId={q.start.origin === "hero" ? "quote-shell" : undefined}>
       <WizardBody key={q.key} start={q.start} />
     </Modal>
   );
@@ -356,6 +357,24 @@ function WizardBody({ start }: { start: QuoteStart }) {
     const ok = L >= 3 && L <= 60 && W >= 3 && W <= 40 && !!form.floors && eave >= 2 && eave <= 12 && pitch >= 0 && pitch <= 60;
     return { ok, L, W, eave, pitch };
   }, [form.length, form.width, form.eave, form.pitch, form.roofType, form.floors]);
+
+  // The house as the 3D model draws it (same scaffold rules as the price).
+  const modelShape = useMemo(
+    () =>
+      house.ok
+        ? { length: house.L, width: house.W, eave: house.eave, roofType: form.roofType, pitch: house.pitch || 30, jobType: form.jobType, gables: form.roofType === "gable" && form.jobType === "roof" && form.gables }
+        : null,
+    [house, form.roofType, form.jobType, form.gables]
+  );
+
+  // Rebuild the model only once typing pauses, so it doesn't restart on every digit.
+  const modelKey = JSON.stringify(modelShape);
+  const [shownShape, setShownShape] = useState<typeof modelShape>(null);
+  useEffect(() => {
+    const id = window.setTimeout(() => setShownShape(modelShape), 400);
+    return () => window.clearTimeout(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modelKey]);
 
   const reqId = useRef(0);
   useEffect(() => {
@@ -807,7 +826,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
         <div className="border-t border-line bg-mist px-5 py-3 lg:hidden">
           <AnimatePresence initial={false}>
             {showBreakdown && price.quote ? (
-              <motion.div key="bd" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="mb-3 max-h-[40vh] overflow-y-auto">
+              <motion.div key="bd" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="mb-3 max-h-[45vh] overflow-y-auto">
+                {shownShape ? <HouseModel shape={shownShape} className="mb-3 h-36 w-full" label={t("q.title")} /> : null}
                 <PriceDetails quote={price.quote} estimate={price.estimate} vat={vat} />
               </motion.div>
             ) : null}
@@ -855,6 +875,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
 
       {/* Desktop: live price panel */}
       <aside className="hidden w-[360px] shrink-0 flex-col overflow-y-auto border-l border-line bg-mist p-7 lg:flex xl:w-[400px]">
+        {shownShape ? <HouseModel shape={shownShape} className="-mx-2 mb-4 h-44 w-[calc(100%+1rem)]" label={t("q.title")} /> : null}
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{t("q.price")}</p>
         <p className="mt-2 font-display text-5xl font-extrabold tracking-[-0.02em] tabular-nums">{price.quote ? <AnimatedEur value={total} /> : eur(0)}</p>
         <p className="mt-1 text-sm text-muted">

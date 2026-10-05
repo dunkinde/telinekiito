@@ -1,6 +1,6 @@
 "use client";
 // Buttons with a hover scale and a yellow glow (the glow is a blurred layer whose opacity changes).
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
 
 type Variant = "primary" | "dark" | "ghost" | "light";
 const styles: Record<Variant, string> = {
@@ -37,6 +37,23 @@ export function Button({
   onClick?: (e: React.MouseEvent) => void;
   ariaLabel?: string;
 }) {
+  const reduce = useReducedMotion();
+  const mx = useMotionValue(0), my = useMotionValue(0);
+  const x = useSpring(mx, { stiffness: 260, damping: 18, mass: 0.4 });
+  const y = useSpring(my, { stiffness: 260, damping: 18, mass: 0.4 });
+  const magnet = {
+    onPointerMove: (e: React.PointerEvent<HTMLElement>) => {
+      if (reduce || disabled || e.pointerType !== "mouse") return;
+      const r = e.currentTarget.getBoundingClientRect();
+      mx.set(Math.max(-8, Math.min(8, (e.clientX - r.left - r.width / 2) * 0.18)));
+      my.set(Math.max(-6, Math.min(6, (e.clientY - r.top - r.height / 2) * 0.3)));
+    },
+    onPointerLeave: () => {
+      mx.set(0);
+      my.set(0);
+    },
+    style: { x, y }
+  };
   const pad = size === "lg" ? "h-14 px-7 text-base" : size === "sm" ? "h-10 px-4 text-sm" : "h-12 px-6 text-[15px]";
   const inner = (
     <>
@@ -52,13 +69,13 @@ export function Button({
   };
   if (href) {
     return (
-      <motion.a href={href} className={cls} onClick={onClick} aria-label={ariaLabel} {...motionProps}>
+      <motion.a href={href} className={cls} onClick={onClick} aria-label={ariaLabel} {...motionProps} {...magnet}>
         {inner}
       </motion.a>
     );
   }
   return (
-    <motion.button type={type} className={cls} onClick={onClick} disabled={disabled} aria-label={ariaLabel} {...motionProps}>
+    <motion.button type={type} className={cls} onClick={onClick} disabled={disabled} aria-label={ariaLabel} {...motionProps} {...magnet}>
       {inner}
     </motion.button>
   );

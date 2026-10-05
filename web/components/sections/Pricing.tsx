@@ -1,7 +1,8 @@
 "use client";
 // Pricing: three delivery speeds with a live example price for a typical house, plus the unit prices.
 // All numbers come from the server's pricing settings (the same ones the office edits).
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
+import { useState } from "react";
 import type { Urgency } from "@/lib/api";
 import { PRICE_EXTRA, PRICE_FEATURES } from "@/lib/content";
 import { eur, num2d } from "@/lib/format";
@@ -19,6 +20,18 @@ export function Pricing() {
   const { t, pick } = useI18n();
   const { config, openQuote } = useSite();
   const p = config?.pricing;
+  // Soft yellow spotlight that follows the mouse across the section (transform + opacity only).
+  const reduce = useReducedMotion();
+  const sx = useSpring(useMotionValue(0), { stiffness: 120, damping: 20 });
+  const sy = useSpring(useMotionValue(0), { stiffness: 120, damping: 20 });
+  const [lit, setLit] = useState(false);
+  function onMove(e: React.PointerEvent<HTMLElement>) {
+    if (reduce || e.pointerType !== "mouse") return;
+    const r = e.currentTarget.getBoundingClientRect();
+    sx.set(e.clientX - r.left - 300);
+    sy.set(e.clientY - r.top - 300);
+    if (!lit) setLit(true);
+  }
 
   const rates = p
     ? [
@@ -35,7 +48,14 @@ export function Pricing() {
     : [];
 
   return (
-    <section id="pricing" className="relative overflow-hidden bg-ink py-24 text-white sm:py-32">
+    <section id="pricing" onPointerMove={onMove} onPointerLeave={() => setLit(false)} className="relative overflow-hidden bg-ink py-24 text-white sm:py-32">
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute top-0 left-0 h-[600px] w-[600px] rounded-full"
+        style={{ x: sx, y: sy, background: "radial-gradient(circle, rgba(255,194,14,0.16) 0%, rgba(255,194,14,0.05) 35%, transparent 65%)" }}
+        animate={{ opacity: lit ? 1 : 0 }}
+        transition={{ duration: 0.4 }}
+      />
       {/* A faint yellow glow behind the cards. */}
       <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 h-[36rem] w-[60rem] -translate-x-1/2 rounded-full bg-sun/10 blur-3xl" />
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

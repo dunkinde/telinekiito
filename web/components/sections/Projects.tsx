@@ -21,7 +21,12 @@ function ProjectCard({ p }: { p: Project }) {
       {/* The image layer is taller than the frame so it can move without showing edges. */}
       <motion.div className="absolute inset-x-0 -top-[8%] -bottom-[8%]" style={{ y }}>
         <div className="h-full w-full transition-transform duration-700 ease-out group-hover:scale-[1.04]">
-          <ScaffoldScene kind={p.scene} title={title} />
+          {p.photo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={p.photo} alt={title} loading="lazy" className="h-full w-full object-cover" />
+          ) : (
+            <ScaffoldScene kind={p.scene} title={title} />
+          )}
         </div>
       </motion.div>
       <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-ink/90 via-ink/55 to-transparent p-6 pt-14">
