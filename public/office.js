@@ -191,6 +191,7 @@
     { id: "erectPerM2", label: "Erection", unit: "€ per m²", step: 0.1 },
     { id: "dismantlePerM2", label: "Dismantling", unit: "€ per m²", step: 0.1 },
     { id: "catchPerMetre", label: "Roof-catch guard", unit: "€ per running m", step: 0.5 },
+    { id: "extraLevelPerM", label: "Extra working level", unit: "€ per running m per level", step: 0.5 },
     { id: "truckCapacityKg", label: "Truck load", unit: "kg per load", step: 50 },
     { id: "zA", label: "Zone A trip", unit: "€", step: 5, get: (p) => p.zones.A.trip, set: (p, v) => { p.zones.A.trip = v; } },
     { id: "zB", label: "Zone B trip", unit: "€", step: 5, get: (p) => p.zones.B.trip, set: (p, v) => { p.zones.B.trip = v; } },

@@ -126,3 +126,22 @@ test("orders: validation, masking and phone check", () => {
   assert.throws(() => O.parseOrderInput({ ...base, start: "2020-01-01" }), { code: "start_too_early" });
   assert.throws(() => O.parseOrderInput({ ...base, length: 500 }), { code: "invalid_fields" });
 });
+
+test("engine: roof and facade = facade scaffold plus roof-catch on the eaves", () => {
+  const h = { length: 12, width: 9, eave: 4.3, roofType: "gable", pitch: 35, gables: false };
+  const facade = E.estimate({ ...h, jobType: "facade" });
+  const both = E.estimate({ ...h, jobType: "roof_facade" });
+  const roof = E.estimate({ ...h, jobType: "roof", gables: true });
+  assert.equal(both.totals.area, facade.totals.area);
+  assert.equal(facade.totals.catchRunM, 0);
+  assert.equal(both.totals.catchRunM, roof.totals.catchRunM);
+  assert.equal(both.totals.area, roof.totals.area);
+  assert.ok(both.totals.extraLevelM > 0 && roof.totals.extraLevelM === 0);
+  const hip = E.estimate({ ...h, roofType: "hip", jobType: "roof_facade" });
+  assert.equal(hip.sides.filter((s) => s.catchOn).length, 4);
+  const P = E.DEFAULT_PRICING, opt = { days: 28, zone: "A", urgency: "standard" };
+  const qBoth = E.quote(both, opt, P), qRoof = E.quote(roof, opt, P);
+  assert.ok(qBoth.total > E.quote(facade, opt, P).total);
+  assert.ok(qBoth.total > qRoof.total);
+  assert.ok(qBoth.lines.some((l) => l.key === "levels"));
+});
