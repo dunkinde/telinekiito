@@ -197,3 +197,30 @@ test("engine: roof and facade = facade scaffold plus roof-catch on the eaves", (
   assert.ok(qBoth.total > qRoof.total);
   assert.ok(qBoth.lines.some((l) => l.key === "levels"));
 });
+
+test("platform helpers: reference numbers, phones, mail format, weather, stock", () => {
+  const P = require("../lib/platform");
+  const { toE164, fill } = require("../lib/notify");
+  const { buildMessage } = require("../lib/smtp");
+  const W = require("../lib/weather");
+  const S = require("../lib/stock");
+  // The classic Finnish example: base 123456 -> 1234561.
+  assert.equal(P.finnishReference("123456"), "1234561");
+  assert.equal(P.finnishReference("1001"), "10016");
+  assert.equal(toE164("040 123 4567"), "+358401234567");
+  assert.equal(toE164("+358 50 765 4321"), "+358507654321");
+  assert.equal(toE164("12"), null);
+  assert.equal(fill("Hei {name}, {missing}", { name: "Anna" }), "Hei Anna, –");
+  const msg = buildMessage({ from: "a@b.fi", fromName: "TelineKiito", to: "c@d.fi", subject: "Tilaus vahvistettu – ä", text: "Hei\nRivi 2" });
+  assert.match(msg, /Subject: =\?UTF-8\?B\?/);
+  assert.match(msg, /Content-Transfer-Encoding: base64/);
+  const xml = `<wfs:member><BsWfs:BsWfsElement><BsWfs:Time>2026-10-05T12:00:00Z</BsWfs:Time><BsWfs:ParameterName>WindSpeedMS</BsWfs:ParameterName><BsWfs:ParameterValue>6.1</BsWfs:ParameterValue></BsWfs:BsWfsElement></wfs:member>
+    <wfs:member><BsWfs:BsWfsElement><BsWfs:Time>2026-10-05T12:00:00Z</BsWfs:Time><BsWfs:ParameterName>WindGust</BsWfs:ParameterName><BsWfs:ParameterValue>14.2</BsWfs:ParameterValue></BsWfs:BsWfsElement></wfs:member>`;
+  assert.deepEqual(W.parse(xml), [{ time: "2026-10-05T12:00:00Z", wind: 6.1, gust: 14.2 }]);
+  // Stock: an order holds its parts from delivery to return plus the buffer day.
+  const st = S.mergeStock({ enabled: true, owned: { frames: 10 }, bufferDays: 1 });
+  const o = { ref: "TK-A", status: "confirmed", schedule: { start: "2026-11-02", days: 7 }, estimate: { parts: { frames: 8 } } };
+  assert.equal(S.check([o], st, { frames: 4 }, "2026-11-05", "2026-11-06").ok, false);
+  assert.equal(S.check([o], st, { frames: 4 }, "2026-11-11", "2026-11-12").ok, true, "free again after return + 1 day");
+  assert.equal(S.check([{ ...o, status: "cancelled" }], st, { frames: 10 }, "2026-11-05", "2026-11-06").ok, true);
+});

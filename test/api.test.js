@@ -43,6 +43,8 @@ test.before(async () => {
   fs.mkdirSync(path.join(siteDir, "_next", "static"), { recursive: true });
   fs.writeFileSync(path.join(siteDir, "index.html"), "<!doctype html><title>site</title>");
   fs.writeFileSync(path.join(siteDir, "404.html"), "<!doctype html><title>missing</title>");
+  fs.writeFileSync(path.join(siteDir, "office.html"), "<!doctype html><title>office</title>");
+  fs.writeFileSync(path.join(siteDir, "crew.html"), "<!doctype html><title>crew</title>");
   fs.writeFileSync(path.join(siteDir, "_next", "static", "app.js"), "console.log(1)");
   const port = await freePort();
   base = `http://127.0.0.1:${port}`;
@@ -68,7 +70,7 @@ test.after(() => {
 });
 
 test("pages and config", async () => {
-  for (const p of ["/", "/office", "/engine.js", "/common.js", "/quote.js", "/office.js", "/app.css"]) {
+  for (const p of ["/", "/office", "/crew", "/engine.js", "/common.js", "/quote.js", "/app.css"]) {
     const r = await req("GET", p);
     assert.equal(r.status, 200, p);
   }
@@ -107,11 +109,15 @@ test("order, tracking and customer actions", async () => {
   assert.equal(t.status, 200);
   assert.equal(t.json.status, "received");
 
+  // A longer rental is a request the office approves; the customer sees the new price first.
   const ext = await req("POST", `/api/orders/${ref}/extend`, { phone: "4321" });
-  assert.equal(ext.json.schedule.days, 35);
-  assert.equal(ext.json.history.at(-1).code, "extended");
-  assert.deepEqual(ext.json.quote.lines.find((l) => l.key === "rent").vars, { days: 35 });
-  assert.ok(ext.json.quote.total > t.json.quote.total);
+  assert.equal(ext.status, 200, ext.text);
+  assert.equal(ext.json.schedule.days, 28);
+  const ch = ext.json.changes.find((c) => c.status === "pending");
+  assert.equal(ch.proposed.days, 35);
+  assert.ok(ch.after.total > t.json.quote.total);
+  assert.equal((await req("POST", `/api/orders/${ref}/extend`, { phone: "4321" })).json.error, "change_pending");
+  assert.ok(ext.json.access, "signed link key for documents");
 
   const pick = await req("POST", `/api/orders/${ref}/pickup`, { phone: "4321" });
   assert.equal(pick.status, 409);
