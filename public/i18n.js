@@ -85,6 +85,7 @@
     "q.done.track": "Track this order",
     "q.done.new": "Start a new quote",
     "q.err.size": "Check the house size before ordering.",
+    "q.err.floors": "Choose the number of floors in step 1.",
     "q.err.address": "Add the site address in step 1.",
     "q.err.name": "Add your name.",
     "q.err.phone": "Add a phone number the crew can call.",
@@ -93,6 +94,7 @@
     // Ticket
     "t.estimate": "Scaffold estimate",
     "t.badSize": "Check the house size: length 3–60 m, width 3–40 m, eave height 2–12 m.",
+    "t.start": "Enter your address, or the size and floors of your house, to see the price.",
     "t.loading": "Loading prices…",
     "t.range": "incl. VAT {vat} % · likely range {low}–{high} until we check the details",
     "t.m2": "m² scaffold",
@@ -468,6 +470,7 @@
     "q.done.track": "Seuraa tilausta",
     "q.done.new": "Laske uusi hinta",
     "q.err.size": "Tarkista talon mitat ennen tilaamista.",
+    "q.err.floors": "Valitse kerrosluku vaiheessa 1.",
     "q.err.address": "Lisää kohteen osoite vaiheessa 1.",
     "q.err.name": "Lisää nimesi.",
     "q.err.phone": "Lisää puhelinnumero, johon asentajat voivat soittaa.",
@@ -475,6 +478,7 @@
 
     "t.estimate": "Telinearvio",
     "t.badSize": "Tarkista talon mitat: pituus 3–60 m, leveys 3–40 m, räystäskorkeus 2–12 m.",
+    "t.start": "Syötä osoitteesi tai talon mitat ja kerrokset, niin näet hinnan.",
     "t.loading": "Ladataan hintoja…",
     "t.range": "sis. ALV {vat} % · todennäköinen hintahaarukka {low}–{high}, kunnes tarkistamme tiedot",
     "t.m2": "m² telinettä",

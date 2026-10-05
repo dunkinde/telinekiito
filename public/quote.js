@@ -15,7 +15,8 @@
     pricing: clone(E.DEFAULT_PRICING),
     features: { ai: false },
     form: {
-      preset: "p1", length: 15, width: 10, floors: "1", eave: 3.0, eaveAuto: true, roofType: "gable", pitch: 30,
+      // Starts empty: no price until the customer gives an address, a drawing or the house size.
+      preset: "", length: "", width: "", floors: "", eave: "", eaveAuto: true, roofType: "gable", pitch: 30,
       jobType: "roof", gables: true, address: "", zone: "A", urgency: "standard", start: "", days: 28,
       name: "", phone: "", email: "", notes: ""
     },
@@ -119,7 +120,8 @@
   function renderTicket() {
     const box = $("#ticket");
     if (!S.est || !S.q) {
-      box.innerHTML = `<div><div class="eyebrow">${esc(t("t.estimate"))}</div><div class="total">—</div><div class="range">${esc(t("t.badSize"))}</div></div>`;
+      const f = S.form, empty = !f.length || !f.width || !f.eave;
+      box.innerHTML = `<div><div class="eyebrow">${esc(t("t.estimate"))}</div><div class="total">${EUR.format(0)}</div><div class="range">${esc(t(empty ? "t.start" : "t.badSize"))}</div></div>`;
       return;
     }
     const est = S.est, q = S.q, tot = est.totals, h = houseFromForm(S.form);
@@ -172,10 +174,11 @@
     $("#q-form").addEventListener("submit", (ev) => { ev.preventDefault(); placeOrder(); });
     $("#q-done-new").addEventListener("click", () => {
       $("#q-done").hidden = true; $("#q-form").hidden = false;
-      Object.assign(S.form, { name: "", phone: "", email: "", notes: "", address: "" });
+      Object.assign(S.form, { name: "", phone: "", email: "", notes: "", address: "", preset: "", length: "", width: "", floors: "", eave: "", eaveAuto: true });
+      S.source = "form";
       S.found = null; S.lastOrder = null;
       $("#addr-result").hidden = true; $("#zone-hint").textContent = "";
-      renderForm(); window.scrollTo(0, 0);
+      renderForm(); recalc(); window.scrollTo(0, 0);
     });
     $("#q-done-track").addEventListener("click", () => {
       $("#tr-ref").value = S.lastRef || ""; $("#tr-phone").value = S.lastPhone4 || "";
@@ -187,6 +190,7 @@
     const f = S.form, err = $("#q-err");
     err.textContent = "";
     if (!S.est) { err.textContent = t("q.err.size"); return; }
+    if (!f.floors) { err.textContent = t("q.err.floors"); return; }
     if (!f.address.trim()) { err.textContent = t("q.err.address"); $("#f-address").focus(); return; }
     if (!f.name.trim()) { err.textContent = t("q.err.name"); $("#f-name").focus(); return; }
     if (digits(f.phone).length < 6) { err.textContent = t("q.err.phone"); $("#f-phone").focus(); return; }
@@ -249,7 +253,7 @@
       if (hs.roofType) S.form.roofType = hs.roofType;
       if (hs.pitch) S.form.pitch = hs.pitch;
       if (hs.eave) { S.form.eave = hs.eave; S.form.eaveAuto = false; }
-      else { S.form.eave = E.EAVE_BY_FLOORS[S.form.floors]; S.form.eaveAuto = true; }
+      else { S.form.eave = E.EAVE_BY_FLOORS[S.form.floors] || ""; S.form.eaveAuto = true; }
       if (r.zone) S.form.zone = r.zone;
       S.source = "address";
       S.found = r;
