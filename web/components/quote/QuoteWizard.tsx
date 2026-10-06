@@ -281,6 +281,7 @@ function PriceDetails({ quote, estimate, vat }: { quote: Quote; estimate: Estima
         </li>
       </ul>
       <p className="mt-4 rounded-xl bg-sun-soft px-3 py-2 text-xs text-ink-soft">{t("q.priceLabour", { amount: eur(quote.labourGross) })}</p>
+      <p className="mt-3 text-xs leading-relaxed text-muted">{t("q.priceNote", { low: eur(quote.low), high: eur(quote.high) })}</p>
     </div>
   );
 }
