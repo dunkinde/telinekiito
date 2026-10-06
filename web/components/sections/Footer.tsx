@@ -11,6 +11,12 @@ export function Footer() {
   const { t, pick } = useI18n();
   const { openQuote, openTrack } = useSite();
   const linkCls = "nav-link text-white/70 transition-colors hover:text-white";
+  // Only real profiles are shown (fill them in lib/site.ts).
+  const social = [
+    { href: SITE.social.linkedin, label: "LinkedIn", Icon: FaLinkedinIn },
+    { href: SITE.social.instagram, label: "Instagram", Icon: FaInstagram },
+    { href: SITE.social.facebook, label: "Facebook", Icon: FaFacebookF }
+  ].filter((s) => s.href);
   return (
     <footer className="snap-end bg-ink text-white">
       <div className="mx-auto max-w-7xl px-4 pt-16 pb-10 sm:px-6 lg:px-8">
@@ -56,15 +62,14 @@ export function Footer() {
               <ul className="mt-4 space-y-3 text-sm">
                 <li><button type="button" onClick={() => openQuote()} className={linkCls}>{t("nav.quote")}</button></li>
                 <li><button type="button" onClick={() => openTrack()} className={linkCls}>{t("nav.track")}</button></li>
+                <li><a href="/privacy" className={linkCls}>{t("privacy.link")}</a></li>
                 <li><a href="/office" className={linkCls}>{t("foot.office")}</a></li>
               </ul>
+              {social.length ? (
+                <>
               <p className="mt-8 text-xs font-semibold uppercase tracking-[0.16em] text-sun">{t("foot.social")}</p>
               <div className="mt-4 flex gap-3">
-                {[
-                  { href: SITE.social.linkedin, label: "LinkedIn", Icon: FaLinkedinIn },
-                  { href: SITE.social.instagram, label: "Instagram", Icon: FaInstagram },
-                  { href: SITE.social.facebook, label: "Facebook", Icon: FaFacebookF }
-                ].map(({ href, label, Icon }) => (
+                {social.map(({ href, label, Icon }) => (
                   <a
                     key={label}
                     href={href}
@@ -77,6 +82,8 @@ export function Footer() {
                   </a>
                 ))}
               </div>
+                </>
+              ) : null}
             </div>
           </div>
         </div>

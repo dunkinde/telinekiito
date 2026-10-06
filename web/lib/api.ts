@@ -24,7 +24,10 @@ export interface Pricing {
 export interface Config {
   pricing: Pricing;
   features: { ai: boolean; address: boolean; office: boolean };
-  earliest: Record<Urgency, string>;
+  /** Delivery speeds the office has switched on (standard is always on). */
+  urgencies?: Record<Urgency, boolean>;
+  /** First possible start per speed; null when that speed is switched off. */
+  earliest: Record<Urgency, string | null>;
   examples: { area: number; days: number; zone: Zone; totals: Record<Urgency, number> };
 }
 
@@ -67,6 +70,15 @@ export interface QuoteInput {
   days: number;
   zone: Zone;
   urgency: Urgency;
+  partnerCode?: string;
+}
+
+export interface QuoteResult {
+  estimate: Estimate;
+  quote: Quote;
+  /** First start date per speed with enough scaffolding and crews for this house; null = speed switched off. */
+  available?: Record<Urgency, string | null>;
+  partner?: { name: string; discountPct: number } | { invalid: true } | null;
 }
 
 export interface AddressResult {
@@ -122,6 +134,38 @@ export interface OrderView {
   crew: string;
   eta: string;
   messages: { from: "customer" | "office"; text: string; at: string }[];
+  lang?: "fi" | "en";
+  plan?: { date: string | null; time: string; pickupDate: string | null; pickupTime: string };
+  rental?: { startedAt?: string; endedAt?: string };
+  cancelled?: boolean;
+  docs?: { confirmation: boolean; inspection: boolean };
+  changes?: OrderChange[];
+  invoices?: { id?: string; no: string | number; date: string; due: string; total: number; status: "sent" | "paid"; reference: string }[];
+  review?: { stars: number; text: string } | null;
+  rentalEnd?: string;
+  /** Signed key for this order's documents (/doc/...?t=). */
+  access?: string | null;
+}
+
+export interface OrderChange {
+  id: string;
+  type: "days" | "pickup_date" | "house" | "other";
+  source: string;
+  status: "pending" | "approved" | "rejected";
+  createdAt: string;
+  note: string;
+  proposed: { days?: number; date?: string };
+  before: { days: number; total: number };
+  after: { total: number; days: number; area: number } | null;
+  by: { role: "customer" | "office" };
+  decidedAt: string | null;
+  reason: string;
+}
+
+export interface SiteContent {
+  faq: { q: { fi: string; en: string }; a: { fi: string; en: string } }[] | null;
+  contact: { phone: string; email: string; hours: { fi: string; en: string }; area: { fi: string; en: string } } | null;
+  reviews: { stars: number; text: string; name: string; lang: string }[];
 }
 
 export class ApiError extends Error {
@@ -163,7 +207,8 @@ export async function api<T>(method: "GET" | "POST", url: string, body?: unknown
 
 export const getConfig = () => api<Config>("GET", "/api/config");
 export const lookupAddress = (address: string) => api<AddressResult>("POST", "/api/address", { address });
-export const getQuote = (input: QuoteInput) => api<{ estimate: Estimate; quote: Quote }>("POST", "/api/quote", input);
+export const getQuote = (input: QuoteInput) => api<QuoteResult>("POST", "/api/quote", input);
+export const getContent = () => api<SiteContent>("GET", "/api/content");
 export const readDrawing = (images: string[], lang: string) =>
   api<{ ok: boolean; house: DrawingResult }>("POST", "/api/ai/drawing", { images, lang });
 export const sendContact = (body: { name: string; email: string; phone: string; message: string; lang: string; website: string }) =>
@@ -171,9 +216,9 @@ export const sendContact = (body: { name: string; email: string; phone: string; 
 
 /** The order endpoints of the app. */
 export const placeOrder = (body: Record<string, unknown>) => api<{ ref: string; order: OrderView }>("POST", "/api/orders", body);
-export const getOrder = (ref: string, phone4: string) =>
-  api<OrderView>("GET", `/api/orders/${encodeURIComponent(ref)}?phone=${encodeURIComponent(phone4)}`);
-export const orderAction = (ref: string, action: "extend" | "pickup" | "message", body: Record<string, unknown>) =>
+// The phone digits go in the request body, never in the web address (they'd end up in logs and history).
+export const getOrder = (ref: string, phone4: string) => api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/view`, { phone: phone4 });
+export const orderAction = (ref: string, action: "extend" | "pickup" | "message" | "change" | "review", body: Record<string, unknown>) =>
   api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/${action}`, body);
 
 /** Default eave height for a number of floors (same values as the quote engine). */

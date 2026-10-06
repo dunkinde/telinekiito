@@ -10,6 +10,8 @@ export const metadata: Metadata = {
   title: "TelineKiito – Rakennustelineet nopeasti | Fast scaffolding in Finland",
   description:
     "Rakennustelineet omakotitaloihin ja yrityksille koko Suomessa. Hinta osoitteella noin minuutissa, kiirepystytys 24 tunnissa. Scaffolding priced online in about a minute.",
+  applicationName: "TelineKiito",
+  robots: { index: true, follow: true },
   openGraph: {
     title: "TelineKiito – Scaffolding up fast. Priced in a minute.",
     description: "Type your address and get a complete scaffolding price for your house.",

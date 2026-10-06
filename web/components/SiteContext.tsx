@@ -1,7 +1,7 @@
 "use client";
-// Shared state for the page: prices from the server, and opening the quote and tracking dialogs from anywhere.
+// Shared state for the page: prices and site content from the server, and opening the quote and tracking dialogs from anywhere.
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
-import { getConfig, type Config, type JobType, type Urgency } from "@/lib/api";
+import { getConfig, getContent, type Config, type JobType, type SiteContent, type Urgency } from "@/lib/api";
 
 export interface QuoteStart {
   address?: string;
@@ -13,6 +13,8 @@ export interface QuoteStart {
 
 interface SiteState {
   config: Config | null;
+  /** FAQ and contact details edited in the office, and published reviews (null until loaded). */
+  content: SiteContent | null;
   introDone: boolean;
   setIntroDone: (v: boolean) => void;
   quote: { open: boolean; start: QuoteStart; key: number };
@@ -27,6 +29,7 @@ const Ctx = createContext<SiteState | null>(null);
 
 export function SiteProvider({ children }: { children: React.ReactNode }) {
   const [config, setConfig] = useState<Config | null>(null);
+  const [content, setContent] = useState<SiteContent | null>(null);
   const [introDone, setIntroDone] = useState(false);
   const [quote, setQuote] = useState<SiteState["quote"]>({ open: false, start: {}, key: 0 });
   const [track, setTrack] = useState<SiteState["track"]>({ open: false });
@@ -37,6 +40,11 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
       .then((c) => alive && setConfig(c))
       .catch(() => {
         /* The page still works; prices load when the wizard asks for them. */
+      });
+    getContent()
+      .then((c) => alive && setContent(c))
+      .catch(() => {
+        /* The built-in FAQ and contact details stay. */
       });
     return () => {
       alive = false;
@@ -49,8 +57,18 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   const openTrack = useCallback((ref?: string, phone4?: string) => setTrack({ open: true, ref, phone4 }), []);
   const closeTrack = useCallback(() => setTrack((t) => ({ ...t, open: false })), []);
 
+  // Links in our emails and texts open the tracking window: /?track=TK-XXXXXX
+  useEffect(() => {
+    const ref = new URLSearchParams(window.location.search).get("track");
+    if (!ref) return;
+    setTrack({ open: true, ref: ref.toUpperCase().slice(0, 20) });
+    const url = new URL(window.location.href);
+    url.searchParams.delete("track");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, []);
+
   return (
-    <Ctx.Provider value={{ config, introDone, setIntroDone, quote, openQuote, closeQuote, track, openTrack, closeTrack }}>
+    <Ctx.Provider value={{ config, content, introDone, setIntroDone, quote, openQuote, closeQuote, track, openTrack, closeTrack }}>
       {children}
     </Ctx.Provider>
   );

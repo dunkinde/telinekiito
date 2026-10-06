@@ -6,6 +6,7 @@ import { sendContact } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
 import { errText, useI18n } from "@/lib/i18n";
 import { SITE } from "@/lib/site";
+import { useSite } from "../SiteContext";
 import { Button } from "../ui/Button";
 import { IconCheck, IconClock, IconMail, IconMap, IconPhone } from "../ui/Icons";
 import { Reveal, SectionHead } from "../ui/motion";
@@ -13,6 +14,13 @@ import { Reveal, SectionHead } from "../ui/motion";
 export function Contact() {
   const i18n = useI18n();
   const { t, lang } = i18n;
+  const { content } = useSite();
+  // Contact details edited in the office replace the built-in ones field by field.
+  const c = content?.contact;
+  const phone = c?.phone || SITE.phone;
+  const email = c?.email || SITE.email;
+  const hours = (c?.hours && (c.hours[lang] || c.hours.fi || c.hours.en)) || t("contact.hours");
+  const area = (c?.area && (c.area[lang] || c.area.fi || c.area.en)) || t("contact.area");
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "", website: "" });
   const [state, setState] = useState<"idle" | "sending" | "sent">("idle");
   const [error, setError] = useState("");
@@ -33,10 +41,10 @@ export function Contact() {
   }
 
   const details = [
-    { icon: IconPhone, label: t("contact.phoneLabel"), value: SITE.phone, href: SITE.phoneHref },
-    { icon: IconMail, label: t("contact.emailLabel"), value: SITE.email, href: `mailto:${SITE.email}` },
-    { icon: IconClock, label: t("contact.hoursLabel"), value: t("contact.hours") },
-    { icon: IconMap, label: t("contact.areaLabel"), value: t("contact.area") }
+    { icon: IconPhone, label: t("contact.phoneLabel"), value: phone, href: c?.phone ? `tel:${c.phone.replace(/[^\d+]/g, "")}` : SITE.phoneHref },
+    { icon: IconMail, label: t("contact.emailLabel"), value: email, href: `mailto:${email}` },
+    { icon: IconClock, label: t("contact.hoursLabel"), value: hours },
+    { icon: IconMap, label: t("contact.areaLabel"), value: area }
   ];
 
   return (
@@ -65,7 +73,11 @@ export function Contact() {
             ))}
           </Reveal>
           <Reveal className="mt-8 flex min-h-56 flex-1 flex-col overflow-hidden rounded-3xl ring-1 ring-line lg:mt-[clamp(1rem,3.5svh,2rem)] lg:min-h-[clamp(6rem,24svh,16rem)]" delay={0.2}>
-            <iframe title={t("contact.map")} src={SITE.mapEmbed} loading="lazy" className="block h-0 min-h-0 w-full grow basis-0 grayscale-[0.4]" />
+            <div className="relative flex min-h-0 grow basis-0 flex-col">
+              {/* Shows through if the map can't load (blocked, offline). */}
+              <p className="absolute inset-0 grid place-items-center bg-mist px-6 text-center text-sm text-muted">{t("contact.mapFallback")}</p>
+              <iframe title={t("contact.map")} src={SITE.mapEmbed} loading="lazy" className="relative block h-0 min-h-0 w-full grow basis-0 grayscale-[0.4]" />
+            </div>
             <a href={SITE.mapLink} target="_blank" rel="noopener" className="block bg-mist px-4 py-2.5 text-sm font-medium text-ink-soft hover:text-ink">
               {t("contact.mapLink")} ↗
             </a>
@@ -99,7 +111,12 @@ export function Contact() {
               <Button type="submit" variant="dark" disabled={state === "sending"}>
                 {state === "sending" ? t("contact.sending") : t("contact.send")}
               </Button>
-              <p className="text-xs text-muted">{t("contact.privacy")}</p>
+              <p className="text-xs text-muted">
+                {t("contact.privacy")}{" "}
+                <a href="/privacy" className="underline underline-offset-2 hover:text-ink">
+                  {t("privacy.link")}
+                </a>
+              </p>
             </div>
             <AnimatePresence>
               {error ? (

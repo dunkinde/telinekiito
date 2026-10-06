@@ -4,12 +4,17 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useState } from "react";
 import { FAQ } from "@/lib/content";
 import { useI18n } from "@/lib/i18n";
+import { useSite } from "../SiteContext";
 import { Button } from "../ui/Button";
 import { IconPlus } from "../ui/Icons";
 import { SectionHead, Stagger, StaggerItem } from "../ui/motion";
 
 export function Faq() {
-  const { t, pick } = useI18n();
+  const { t, lang } = useI18n();
+  const { content } = useSite();
+  // Questions edited in the office replace the built-in ones; a missing translation falls back to the other language.
+  const list = content?.faq?.length ? content.faq : FAQ;
+  const pick = (l: { fi: string; en: string }) => l[lang] || l.fi || l.en;
   const [open, setOpen] = useState<number | null>(0);
   return (
     <section id="faq" className="snap-screen section-pad bg-mist">
@@ -27,10 +32,10 @@ export function Faq() {
           />
         </div>
         <Stagger as="ul" className="space-y-3 lg:col-span-7 short:col-span-8 short:space-y-1.5" stagger={0.06}>
-          {FAQ.map((f, i) => {
+          {list.map((f, i) => {
             const isOpen = open === i;
             return (
-              <StaggerItem as="li" key={f.q.en}>
+              <StaggerItem as="li" key={`${i}-${f.q.en || f.q.fi}`}>
                 <div className={`rounded-2xl bg-white ring-1 transition-colors duration-300 ${isOpen ? "ring-ink/20" : "ring-line hover:ring-ink/15"}`}>
                   <h3>
                     <button

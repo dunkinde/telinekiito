@@ -1,0 +1,6 @@
+User-agent: *
+Disallow: /office
+Disallow: /crew
+Disallow: /doc/
+Disallow: /api/
+Disallow: /mvp

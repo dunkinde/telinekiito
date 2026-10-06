@@ -98,7 +98,12 @@ function ExampleCard() {
       .catch(() => {});
   }, []);
   const total = quote?.total ?? config?.examples.totals.standard ?? 0;
-  const lines = quote?.lines.filter((l) => l.key !== "min").slice(0, 4) ?? [];
+  // The first three lines as priced, then one row with everything else (other lines and VAT), so the rows add up
+  // to the total shown below.
+  const shown = quote?.lines.filter((l) => l.key !== "min").slice(0, 3) ?? [];
+  // Rows show whole euros, so the rest is worked out from the rounded figures to make the column add up exactly.
+  const rest = quote ? Math.round(quote.total) - shown.reduce((s, l) => s + Math.round(l.amount), 0) : 0;
+  const more = quote ? quote.lines.length > shown.length : false;
 
   return (
     <div className="relative rounded-[28px] bg-white/90 p-6 shadow-[0_40px_80px_-30px_rgba(14,18,23,0.4)] ring-1 ring-line backdrop-blur sm:p-7 lg:p-[clamp(1.1rem,3svh,1.75rem)]">
@@ -117,10 +122,10 @@ function ExampleCard() {
         </p>
       </div>
       <ul className="mt-5 space-y-2.5 text-sm lg:mt-[clamp(0.75rem,2.2svh,1.25rem)] lg:space-y-[clamp(0.35rem,1.2svh,0.625rem)]">
-        {lines.length
-          ? lines.map((l) => (
+        {shown.length
+          ? [...shown.map((l) => ({ key: l.key, label: lineLabel(i18n, l, quote ?? undefined), amount: l.amount })), { key: "rest", label: more ? t("hero.card.rest") : t("hero.card.vat"), amount: rest }].map((l) => (
               <li key={l.key} className="flex justify-between gap-4 border-b border-line pb-2.5 last:border-0 lg:pb-[clamp(0.35rem,1.2svh,0.625rem)]">
-                <span className="text-ink-soft">{lineLabel(i18n, l, quote ?? undefined)}</span>
+                <span className="text-ink-soft">{l.label}</span>
                 <span className="font-medium tabular-nums">{eur(l.amount)}</span>
               </li>
             ))

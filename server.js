@@ -199,7 +199,7 @@ function afterStatusChange(o, prev, user) {
 function customerView(o) {
   const changes = store.list("change", { ref: o.ref }).map(P.publicChange).map((c) => ({ ...c, by: c.by && c.by.role === "customer" ? { role: "customer" } : { role: "office" } }));
   const invoices = store.list("invoice", { ref: o.ref }).filter((iv) => iv.status === "sent" || iv.status === "paid")
-    .map((iv) => ({ no: iv.no, date: iv.date, due: iv.due, total: iv.total, status: iv.status, reference: iv.reference }));
+    .map((iv) => ({ id: iv.id, no: iv.no, date: iv.date, due: iv.due, total: iv.total, status: iv.status, reference: iv.reference }));
   const review = store.get("review", `rev_${o.ref}`);
   return O.publicView(o, {
     changes, invoices, review: review ? { stars: review.stars, text: review.text } : null,
@@ -373,10 +373,16 @@ route("POST", /^\/api\/orders$/, async (req) => {
     throw new HttpError(409, parts.ok ? "fully_booked" : "not_enough_stock",
       next ? `That start date is fully booked. The first free date is ${next}.` : "We can't take this job on these dates. Contact us.", { date: next });
   }
+  // Taller than the online price covers (register storeys from the address lookup): the office checks the price.
+  const storeys = Math.round(Number(body.storeys) || 0);
+  if (storeys >= 3 && storeys <= 50) {
+    order.needsReview = true;
+    order.internalNotes = `Check the price: the building register lists ${storeys} storeys (the online price covers up to 2).`;
+  }
   store.insertOrder(order);
   store.bump("orders");
   notify.event(order, "order_received");
-  notify.alert("new_order", order.ref, `New order ${order.ref}: ${order.site.address}, ${order.estimate.area} m², start ${order.schedule.start}`);
+  notify.alert("new_order", order.ref, `New order ${order.ref}: ${order.site.address}, ${order.estimate.area} m², start ${order.schedule.start}${order.needsReview ? ` – check the price (${storeys} storeys)` : ""}`);
   P.audit(store, null, "order_created", order.ref, { total: order.quote.total, partner: account ? account.name : null });
   console.log(`[order] ${order.ref} ${order.estimate.area} m2 ${order.quote.total} EUR`);
   return { ref: order.ref, order: customerView(order) };

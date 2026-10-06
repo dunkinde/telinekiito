@@ -158,3 +158,23 @@
     animation: none !important;
   }
 }
+
+/* "Skip to content": hidden until it gets keyboard focus. */
+.skip-link {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 100;
+  transform: translateY(-200%);
+  border-radius: 9999px;
+  background: var(--color-sun, #ffc20e);
+  color: var(--color-ink, #0e1217);
+  padding: 0.6rem 1.1rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+.skip-link:focus {
+  transform: none;
+  outline: 2px solid var(--color-ink, #0e1217);
+  outline-offset: 2px;
+}

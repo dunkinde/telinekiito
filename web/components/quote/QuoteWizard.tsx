@@ -3,7 +3,7 @@
 // The price on the side (bottom bar on phones) is calculated live by the server's /api/quote,
 // with the same engine and prices the order will use.
 import { AnimatePresence, animate, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   EAVE_BY_FLOORS,
   getQuote,
@@ -15,6 +15,7 @@ import {
   type Floors,
   type JobType,
   type Quote,
+  type QuoteResult,
   type RoofType,
   type Urgency,
   type Zone
@@ -46,6 +47,7 @@ interface Form {
   phone: string;
   email: string;
   notes: string;
+  partnerCode: string;
 }
 
 const JOBS: JobType[] = ["roof", "facade", "roof_facade", "gutters"];
@@ -213,7 +215,7 @@ function AddressCard({ r }: { r: AddressResult }) {
   const mapLink = d.osmWayId
     ? `https://www.openstreetmap.org/${encodeURIComponent(d.osmType || "way")}/${encodeURIComponent(String(d.osmWayId))}`
     : `https://www.openstreetmap.org/?mlat=${r.match.lat}&mlon=${r.match.lon}#map=19/${r.match.lat}/${r.match.lon}`;
-  const ok = Boolean(hs.length) && !estimated && r.match.houseLevel;
+  const ok = Boolean(hs.length && hs.width && hs.floors) && !estimated && r.match.houseLevel;
 
   return (
     <motion.div
@@ -245,7 +247,7 @@ function AddressCard({ r }: { r: AddressResult }) {
           ))}
         </ul>
       ) : null}
-      <p className="mt-3 text-xs text-muted">{t("a.filled")}</p>
+      <p className="mt-3 text-xs text-muted">{ok ? t("a.filled") : t("a.partial")}</p>
     </motion.div>
   );
 }
@@ -304,7 +306,10 @@ function WizardBody({ start }: { start: QuoteStart }) {
   const i18n = useI18n();
   const { t, lang } = i18n;
   const { config, closeQuote, openTrack } = useSite();
-  const earliest = useCallback((u: Urgency) => config?.earliest[u] ?? localEarliest(u), [config]);
+  const [avail, setAvail] = useState<QuoteResult["available"] | null>(null);
+  const earliest = useCallback((u: Urgency) => avail?.[u] ?? config?.earliest[u] ?? localEarliest(u), [config, avail]);
+  // Speeds the office has switched off aren't offered.
+  const urgencies = URGENCIES.filter((u) => u === "standard" || config?.urgencies?.[u] !== false);
 
   const [step, setStep] = useState(0);
   const [dir, setDir] = useState(1);
@@ -328,22 +333,33 @@ function WizardBody({ start }: { start: QuoteStart }) {
       name: "",
       phone: "",
       email: "",
-      notes: ""
+      notes: "",
+      partnerCode: ""
     };
   });
   const [source, setSource] = useState<"form" | "address" | "ai">("form");
   const [zoneAuto, setZoneAuto] = useState(false);
   const [showMore, setShowMore] = useState(false);
-  const [lookup, setLookup] = useState<{ status: "idle" | "loading" | "done" | "notfound" | "error"; result?: AddressResult; message?: string }>({ status: "idle" });
+  const [lookup, setLookup] = useState<{ status: "idle" | "loading" | "done" | "notfound" | "error"; result?: AddressResult; message?: string; query?: string }>({ status: "idle" });
+  // Buildings above the storeys the online price covers go to the office for a price check.
+  const reg = lookup.status === "done" ? lookup.result?.details?.register : undefined;
+  const tooTall = reg?.storeys && reg.storeys >= 3 ? reg.storeys : 0;
   const [ai, setAi] = useState<{ files: File[]; status: "idle" | "reading" | "done" | "error"; message?: string }>({ files: [], status: "idle" });
   const [price, setPrice] = useState<{ quote: Quote | null; estimate: Estimate | null; loading: boolean }>({ quote: null, estimate: null, loading: false });
+  // First free start per speed for this house (from /api/quote), and whether the partner code matched.
+  const [partner, setPartner] = useState<QuoteResult["partner"]>(null);
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<{ ref: string; total: number; phone4: string } | null>(null);
+  const [done, setDone] = useState<{ ref: string; total: number; phone4: string; review: boolean } | null>(null);
+  const addressId = useId();
 
   const set = useCallback(<K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v })), []);
   const fmt = (iso: string) => fmtDate(iso, lang);
+
+  useEffect(() => {
+    if (form.urgency !== "standard" && config?.urgencies?.[form.urgency] === false) setForm((f) => ({ ...f, urgency: "standard" }));
+  }, [config, form.urgency]);
 
   // Start date: the earliest possible one for the chosen speed, never earlier.
   useEffect(() => {
@@ -395,13 +411,19 @@ function WizardBody({ start }: { start: QuoteStart }) {
         gables: form.roofType === "gable" && form.jobType === "roof" && form.gables,
         days: Math.max(1, Math.round(Number(form.days) || 28)),
         zone: form.zone,
-        urgency: form.urgency
+        urgency: form.urgency,
+        partnerCode: form.partnerCode.trim() || undefined
       })
-        .then((r) => id === reqId.current && setPrice({ quote: r.quote, estimate: r.estimate, loading: false }))
+        .then((r) => {
+          if (id !== reqId.current) return;
+          setPrice({ quote: r.quote, estimate: r.estimate, loading: false });
+          setAvail(r.available || null);
+          setPartner(r.partner || null);
+        })
         .catch(() => id === reqId.current && setPrice((p) => ({ ...p, loading: false })));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency]);
+  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode]);
 
   /* ----- address lookup ----- */
   const runLookup = useCallback(
@@ -432,7 +454,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         });
         setZoneAuto(true);
         setSource("address");
-        setLookup({ status: "done", result: r });
+        setLookup({ status: "done", result: r, query: text });
       } catch (e) {
         setLookup({ status: "error", message: errText(i18n, e, fmt) });
       }
@@ -488,6 +510,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
     if (digits(form.phone).length < 6) return setError(t("q.err.phone"));
     if (!form.address.trim()) return setError(t("err.address_required"));
     setSubmitting(true);
+    // The map position only if the address is still the one that was looked up.
+    const found = lookup.status === "done" && lookup.result && lookup.query === form.address.trim() ? lookup.result : null;
     try {
       const r = await placeOrder({
         length: house.L,
@@ -507,10 +531,26 @@ function WizardBody({ start }: { start: QuoteStart }) {
         email: form.email,
         address: form.address,
         notes: form.notes,
-        source
+        source,
+        lang,
+        lat: found?.match.lat,
+        lon: found?.match.lon,
+        partnerCode: form.partnerCode.trim() || undefined,
+        storeys: tooTall || undefined
       });
-      setDone({ ref: r.ref, total: r.order.quote.total, phone4: digits(form.phone).slice(-4) });
+      setDone({ ref: r.ref, total: r.order.quote.total, phone4: digits(form.phone).slice(-4), review: Boolean(tooTall) });
     } catch (e) {
+      const err = e as { code?: string; info?: { date?: string } | null };
+      // Parts or crews are booked on that date: move to the first free date and show the timing step.
+      if ((err.code === "not_enough_stock" || err.code === "fully_booked") && err.info?.date) {
+        const date = err.info.date;
+        setForm((f) => ({ ...f, start: date }));
+        setAvail((a) => (a ? { ...a, [form.urgency]: date } : a));
+        setDir(-1);
+        setStep(2);
+        setError(t("q.moved", { date: fmt(date) }));
+        return;
+      }
       setError(errText(i18n, e, fmt));
     } finally {
       setSubmitting(false);
@@ -540,6 +580,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
             {eur(done.total)} <span className="text-muted">{t("q.priceIncl", { vat: num(vat) })}</span>
           </p>
           <p className="mx-auto mt-4 max-w-md text-muted">{t("q.doneText")}</p>
+          {done.review ? <p className="mx-auto mt-3 max-w-md rounded-xl bg-sun-soft px-4 py-3 text-sm text-ink">{t("q.doneReview")}</p> : null}
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button
               onClick={() => {
@@ -558,6 +599,10 @@ function WizardBody({ start }: { start: QuoteStart }) {
     );
   }
 
+  // Shown when this house's parts push the first possible start past the general earliest date.
+  const free = avail?.[form.urgency], general = config?.earliest[form.urgency];
+  const firstFree = free && general && free > general ? free : null;
+
   /* ----- step content ----- */
   const stepView = [
     // 1. House
@@ -568,11 +613,13 @@ function WizardBody({ start }: { start: QuoteStart }) {
           void runLookup(form.address);
         }}
       >
-        <span className="field-label">{t("q.address")}</span>
+        <label htmlFor={addressId} className="field-label">
+          {t("q.address")}
+        </label>
         <div className="flex gap-2">
           <span className="relative flex-1">
             <IconPin className="pointer-events-none absolute top-1/2 left-3.5 h-5 w-5 -translate-y-1/2 text-muted" />
-            <input className="field-input pl-11" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder={t("hero.addressPh")} autoComplete="street-address" />
+            <input id={addressId} className="field-input pl-11" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder={t("hero.addressPh")} autoComplete="street-address" />
           </span>
           <Button type="submit" variant="dark" disabled={lookup.status === "loading"}>
             {lookup.status === "loading" ? t("q.finding") : t("q.find")}
@@ -615,6 +662,12 @@ function WizardBody({ start }: { start: QuoteStart }) {
               {t("ai.go")}
             </Button>
           </div>
+          <p className="mt-3 text-xs text-muted">
+            {t("ai.privacy")}{" "}
+            <a href="/privacy" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-ink">
+              {t("privacy.link")}
+            </a>
+          </p>
           {ai.message ? <p className={`mt-3 text-sm ${ai.status === "error" ? "text-signal" : ai.status === "done" ? "text-ink" : "text-muted"}`}>{ai.message}</p> : null}
         </div>
       ) : null}
@@ -676,8 +729,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
     <div key="s3" className="space-y-6">
       <div>
         <span className="field-label">{t("q.urgency")}</span>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {URGENCIES.map((u) => {
+        <div className={`grid gap-3 ${urgencies.length === 3 ? "sm:grid-cols-3" : urgencies.length === 2 ? "sm:grid-cols-2" : ""}`}>
+          {urgencies.map((u) => {
             const pct = config?.pricing.urgency[u].pct ?? 0;
             return (
               <Choice
@@ -699,6 +752,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         </label>
         <NumField label={t("q.days")} unit={t("q.daysUnit")} min={1} max={365} step={1} value={form.days} onChange={(v) => set("days", v)} />
       </div>
+      {firstFree ? <p className="rounded-xl bg-sun-soft px-4 py-2.5 text-sm text-ink">{t("q.firstFree", { date: fmt(firstFree) })}</p> : null}
       <div className="flex flex-wrap gap-2">
         {[2, 4, 6, 8].map((w) => (
           <button
@@ -755,6 +809,17 @@ function WizardBody({ start }: { start: QuoteStart }) {
         <input className="field-input" value={form.address} onChange={(e) => set("address", e.target.value)} autoComplete="street-address" placeholder={t("hero.addressPh")} />
       </label>
       <label className="block">
+        <span className="field-label">
+          {t("q.partner")} <span className="font-normal text-muted">· {t("q.partnerHint")}</span>
+        </span>
+        <input className="field-input font-mono uppercase sm:max-w-xs" value={form.partnerCode} onChange={(e) => set("partnerCode", e.target.value.slice(0, 12))} autoComplete="off" spellCheck={false} />
+        {form.partnerCode.trim() && partner ? (
+          <span className={`mt-1.5 block text-sm ${"invalid" in partner ? "text-signal" : "text-ink-soft"}`} role="status">
+            {"invalid" in partner ? t("q.partnerBad") : t("q.partnerOk", { name: partner.name, pct: partner.discountPct })}
+          </span>
+        ) : null}
+      </label>
+      <label className="block">
         <span className="field-label">{t("q.notes")}</span>
         <textarea className="field-input min-h-24" value={form.notes} onChange={(e) => set("notes", e.target.value)} placeholder={t("q.notesPh")} />
       </label>
@@ -767,7 +832,14 @@ function WizardBody({ start }: { start: QuoteStart }) {
         <p className="text-muted">
           {t(`job.${form.jobType}`)} · {t(`urg.${form.urgency}`)} · {fmt(form.start)} · {t("tr.days", { n: Math.round(Number(form.days)) })}
         </p>
+        {tooTall ? <p className="mt-2 rounded-lg bg-sun-soft px-3 py-2 text-ink">{t("q.review", { n: tooTall })}</p> : null}
       </div>
+      <p className="text-xs text-muted">
+        {t("q.privacy")}{" "}
+        <a href="/privacy" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-ink">
+          {t("privacy.link")}
+        </a>
+      </p>
     </div>
   ];
 
