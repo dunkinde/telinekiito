@@ -325,7 +325,7 @@ export function SlippyMap({
       {/* Scale and attribution */}
       <div aria-hidden className="absolute bottom-2 left-3 z-20 rounded bg-white/80 px-1.5 py-0.5 text-[11px] font-medium text-ink-soft">
         <div className="border-x-2 border-b-2 border-ink-soft" style={{ width: Math.round(scale.px), height: 5 }} />
-        {scale.m >= 1000 ? `${new Intl.NumberFormat(lang === "fi" ? "fi-FI" : "en-GB").format(scale.m / 1000)} km` : `${scale.m} m`}
+        {scale.m >= 1000 ? `${new Intl.NumberFormat(lang === "fi" ? "fi-FI" : lang === "ru" ? "ru-RU" : "en-GB").format(scale.m / 1000)} km` : `${scale.m} m`}
       </div>
       <div data-nopan className="absolute right-0 bottom-0 z-20 rounded-tl-lg bg-white/85 px-2 py-0.5 text-[11px] text-ink-soft">
         ©{" "}

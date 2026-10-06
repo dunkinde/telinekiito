@@ -4,7 +4,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import type { OrderStatus } from "@/lib/platform";
 import { Modal } from "../ui/Modal";
 import { useT } from "./context";
-import { errMessage, statusLabel } from "./i18n";
+import { errMessage, statusLabel, type Lang } from "./i18n";
 import { IInfo, IRefresh, IWarn } from "./icons";
 import { parseNum, numText } from "./format";
 
@@ -421,7 +421,7 @@ export function NumInput({
   describedBy,
   className,
   ...rest
-}: { id?: string; value: number | null; onChange: (v: number | null) => void; lang: "fi" | "en"; suffix?: string; describedBy?: string; className?: string; disabled?: boolean; placeholder?: string; "aria-label"?: string }) {
+}: { id?: string; value: number | null; onChange: (v: number | null) => void; lang: Lang; suffix?: string; describedBy?: string; className?: string; disabled?: boolean; placeholder?: string; "aria-label"?: string }) {
   const [text, setText] = useState(numText(value, lang));
   const last = useRef(value);
   useEffect(() => {

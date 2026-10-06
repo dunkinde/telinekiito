@@ -14,7 +14,7 @@ import {
   type Me,
   type StaffUser
 } from "@/lib/platform";
-import { errMessage, hasKey, translate, type Key, type Lang, type T, type Vars } from "./i18n";
+import { errMessage, hasKey, isLang, translate, type Key, type Lang, type T, type Vars } from "./i18n";
 
 /* ---------------- Language ---------------- */
 const LANG_KEY = "tk_office_lang";
@@ -31,7 +31,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const s = window.localStorage.getItem(LANG_KEY);
-      if (s === "fi" || s === "en") {
+      if (isLang(s)) {
         chosen.current = true;
         setLangState(s);
       }
@@ -52,7 +52,7 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
   const preferUserLang = useCallback((l: string) => {
-    if (!chosen.current && (l === "fi" || l === "en")) setLangState(l);
+    if (!chosen.current && isLang(l)) setLangState(l);
   }, []);
   const value = useMemo<I18n>(
     () => ({

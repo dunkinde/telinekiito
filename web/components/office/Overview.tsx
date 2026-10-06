@@ -213,7 +213,7 @@ function Charts({ d }: { d: Dashboard }) {
             highlightLast
             series={[{ name: t("ov.orders"), color: SERIES[0] }]}
             fmt={(v) => number(v, lang, 0)}
-            groups={d.weeks.map((w) => ({ label: `${lang === "fi" ? "vk" : "w"} ${isoWeek(w.week)}`, title: t("ov.weekOf", { n: isoWeek(w.week), date: day(w.week, lang, { weekday: false }) }), values: [w.orders] }))}
+            groups={d.weeks.map((w) => ({ label: `${lang === "fi" ? "vk" : lang === "ru" ? "нед." : "w"} ${isoWeek(w.week)}`, title: t("ov.weekOf", { n: isoWeek(w.week), date: day(w.week, lang, { weekday: false }) }), values: [w.orders] }))}
           />
         </div>
       </Card>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { loginWithPassword, loginWithPin, type Me } from "@/lib/platform";
 import { Logo } from "../Logo";
 import { useT } from "./context";
-import { errMessage } from "./i18n";
+import { errMessage, LANG_NAMES, LANGS } from "./i18n";
 import { IExternal, IHelmet, ILock } from "./icons";
 import { Btn, Callout, Field, Input, Tabs, cx } from "./ui";
 
@@ -12,7 +12,7 @@ export function LangSwitch({ dark = false, className }: { dark?: boolean; classN
   const { lang, setLang, t } = useT();
   return (
     <div role="group" aria-label={t("ui.language")} className={cx("inline-flex rounded-full p-0.5 text-[12.5px] font-bold ring-1 ring-inset", dark ? "ring-white/15" : "ring-line bg-white", className)}>
-      {(["fi", "en"] as const).map((l) => (
+      {LANGS.map((l) => (
         <button
           key={l}
           type="button"
@@ -24,7 +24,7 @@ export function LangSwitch({ dark = false, className }: { dark?: boolean; classN
           )}
         >
           <span aria-hidden>{l}</span>
-          <span className="sr-only">{l === "fi" ? "Suomi" : "English"}</span>
+          <span className="sr-only">{LANG_NAMES[l]}</span>
         </button>
       ))}
     </div>

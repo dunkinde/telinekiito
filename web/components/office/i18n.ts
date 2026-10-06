@@ -1,11 +1,15 @@
-// Office texts in Finnish (default) and English, plus helpers that turn API values into words.
+// Office texts in Finnish (default), English and Russian (i18n.ru.ts), plus helpers that turn API values into words.
 import type { QuoteLine } from "@/lib/api";
 import type { Alert, AuditEntry, ChangeRequest, HistoryEntry } from "@/lib/platform";
 import { day, money } from "./format";
+import { ru } from "./i18n.ru";
 
-export type Lang = "fi" | "en";
+export type Lang = "fi" | "en" | "ru";
+export const LANGS: Lang[] = ["fi", "en", "ru"];
+export const LANG_NAMES: Record<Lang, string> = { fi: "Suomi", en: "English", ru: "Русский" };
+export const isLang = (l: unknown): l is Lang => l === "fi" || l === "en" || l === "ru";
 export type Vars = Record<string, string | number>;
-type Entry = string | ((v: Vars) => string);
+export type Entry = string | ((v: Vars) => string);
 const pl = (n: unknown, one: string, many: string) => (Number(n) === 1 ? one : many);
 
 const en = {
@@ -938,7 +942,7 @@ const en = {
   "team.crew": "Crew",
   "team.noCrew": "No crew",
   "team.lang": "Language",
-  "team.langHint": "Language of the crew app.",
+  "team.langHint": "Language of the crew app and the office.",
   "team.pin": "PIN",
   "team.pinHint": "4–8 digits. Tell it to the person yourself.",
   "team.newPin": "New PIN",
@@ -2092,7 +2096,7 @@ const fi: Record<Key, Entry> = {
   "team.crew": "Tiimi",
   "team.noCrew": "Ei tiimiä",
   "team.lang": "Kieli",
-  "team.langHint": "Työmaasovelluksen kieli.",
+  "team.langHint": "Työmaasovelluksen ja toimiston kieli.",
   "team.pin": "PIN-koodi",
   "team.pinHint": "4–8 numeroa. Kerro koodi henkilölle itse.",
   "team.newPin": "Uusi PIN-koodi",
@@ -2314,7 +2318,7 @@ const fi: Record<Key, Entry> = {
   "set.msg.toOps": "Verkkosivun osoite ja tekstiviestitapahtumat"
 };
 
-const DICT: Record<Lang, Record<Key, Entry>> = { en, fi };
+const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };
 
 export function translate(lang: Lang, key: Key, vars?: Vars): string {
   const e = DICT[lang][key] ?? DICT.en[key];

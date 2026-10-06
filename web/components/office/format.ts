@@ -2,7 +2,7 @@
 import type { Lang } from "./i18n";
 
 export const TZ = "Europe/Helsinki";
-const loc = (l: Lang) => (l === "fi" ? "fi-FI" : "en-GB");
+const loc = (l: Lang) => (l === "fi" ? "fi-FI" : l === "ru" ? "ru-RU" : "en-GB");
 
 const cache = new Map<string, Intl.NumberFormat>();
 function nf(lang: Lang, opts: Intl.NumberFormatOptions) {
@@ -40,7 +40,7 @@ export function day(iso: string | null | undefined, lang: Lang, opts: { weekday?
     const w = weekday ? d.toLocaleDateString("fi-FI", { weekday: "short", timeZone: "UTC" }) + " " : "";
     return `${w}${d.getUTCDate()}.${d.getUTCMonth() + 1}.${year ? d.getUTCFullYear() : ""}`;
   }
-  return d.toLocaleDateString("en-GB", { weekday: weekday ? "short" : undefined, day: "numeric", month: "short", year: year ? "numeric" : undefined, timeZone: "UTC" });
+  return d.toLocaleDateString(loc(lang), { weekday: weekday ? "short" : undefined, day: "numeric", month: "short", year: year ? "numeric" : undefined, timeZone: "UTC" });
 }
 /** Weekday name alone: "ma" / "Mon". */
 export const weekday = (iso: string, lang: Lang, long = false) => dateOf(iso).toLocaleDateString(loc(lang), { weekday: long ? "long" : "short", timeZone: "UTC" });
@@ -94,8 +94,9 @@ export function hoursMin(minutes: number, lang: Lang) {
   const m = Math.max(0, Math.round(minutes));
   const h = Math.floor(m / 60);
   const r = m % 60;
-  if (!h) return `${r} min`;
-  return `${h} h ${String(r).padStart(2, "0")} min`.replace(" 00 min", lang === "fi" ? "" : "");
+  const [hu, mu] = lang === "ru" ? ["ч", "мин"] : ["h", "min"];
+  if (!h) return `${r} ${mu}`;
+  return r ? `${h} ${hu} ${String(r).padStart(2, "0")} ${mu}` : `${h} ${hu}`;
 }
 
 /** Parse a number typed with a comma or a dot. Empty → null. */
@@ -105,8 +106,8 @@ export function parseNum(s: string): number | null {
   const n = Number(v);
   return Number.isFinite(n) ? n : null;
 }
-/** A number shown in an input, in the language's style (comma decimals in Finnish). */
-export const numText = (n: number | null | undefined, lang: Lang) => (n == null || !Number.isFinite(n) ? "" : lang === "fi" ? String(n).replace(".", ",") : String(n));
+/** A number shown in an input, in the language's style (comma decimals in Finnish and Russian). */
+export const numText = (n: number | null | undefined, lang: Lang) => (n == null || !Number.isFinite(n) ? "" : lang === "en" ? String(n) : String(n).replace(".", ","));
 
 /** Phone link: "040 123 4567" → "tel:+358401234567". */
 export function telHref(phone: string) {

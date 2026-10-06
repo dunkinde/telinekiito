@@ -21,7 +21,7 @@ import {
 import { IconPlus } from "../ui/Icons";
 import { useAct, useLoad, useOffice, useT } from "./context";
 import { number } from "./format";
-import { eventLabel } from "./i18n";
+import { eventLabel, type Lang } from "./i18n";
 import { IDown, ITrash, IUp } from "./icons";
 import { MessagingStatus } from "./Messages";
 import { Async, Badge, Btn, Callout, Card, CardHead, Check, Field, IconBtn, Input, NumInput, Switch, Tabs, TextArea, cx } from "./ui";
@@ -50,7 +50,7 @@ function SaveBar({ dirty, busy, onSave, onUndo, error }: { dirty: boolean; busy:
   );
 }
 
-function Def({ v, unit, lang }: { v: number; unit?: string; lang: "fi" | "en" }) {
+function Def({ v, unit, lang }: { v: number; unit?: string; lang: Lang }) {
   const { t } = useT();
   return <>{t("set.default", { v: `${number(v, lang, 2)}${unit ? ` ${unit}` : ""}` })}</>;
 }
@@ -84,7 +84,7 @@ function PricesTab() {
               <Card aria-labelledby="p-rent">
                 <CardHead id="p-rent" title={t("set.prices.rent")} />
                 <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
-                  {f("rentPerM2Day", t("set.prices.rentPerM2Day"), "€/m²/pv".replace("pv", lang === "fi" ? "pv" : "day"))}
+                  {f("rentPerM2Day", t("set.prices.rentPerM2Day"), lang === "fi" ? "€/m²/pv" : lang === "ru" ? "€/м²/день" : "€/m²/day")}
                   {f("minRentDays", t("set.prices.minRentDays"), t("ui.daysUnit"))}
                 </div>
               </Card>
@@ -93,8 +93,8 @@ function PricesTab() {
                 <div className="grid gap-4 px-5 pb-5 sm:grid-cols-2">
                   {f("erectPerM2", t("set.prices.erectPerM2"), "€/m²")}
                   {f("dismantlePerM2", t("set.prices.dismantlePerM2"), "€/m²")}
-                  {f("catchPerMetre", t("set.prices.catchPerMetre"), lang === "fi" ? "€/jm" : "€/m")}
-                  {f("extraLevelPerM", t("set.prices.extraLevelPerM"), lang === "fi" ? "€/jm" : "€/m")}
+                  {f("catchPerMetre", t("set.prices.catchPerMetre"), lang === "fi" ? "€/jm" : lang === "ru" ? "€/пог. м" : "€/m")}
+                  {f("extraLevelPerM", t("set.prices.extraLevelPerM"), lang === "fi" ? "€/jm" : lang === "ru" ? "€/пог. м" : "€/m")}
                 </div>
               </Card>
               <Card aria-labelledby="p-trans">
