@@ -66,7 +66,7 @@ test.before(async () => {
 
 test.after(() => {
   if (proc) proc.kill("SIGTERM");
-  fs.rmSync(dataDir, { recursive: true, force: true });
+  try { fs.rmSync(dataDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); } catch {} // Windows may still hold the db file
 });
 
 test("pages and config", async () => {

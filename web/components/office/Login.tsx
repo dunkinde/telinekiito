@@ -59,7 +59,7 @@ export function Login({ onDone }: { onDone: () => void }) {
   }
 
   return (
-    <div className="relative flex min-h-screen flex-col bg-mist">
+    <div className="relative flex min-h-screen flex-col overflow-hidden bg-mist">
       <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-ink" />
       <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[46rem] -translate-x-1/2 rounded-full bg-sun/10 blur-3xl" />
       <header className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-5 sm:px-6">
