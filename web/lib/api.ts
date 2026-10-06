@@ -250,6 +250,8 @@ export interface AddressSuggestion {
   street: string;
   postcode: string;
   city: string;
+  /** Delivery zone of the address (A, B or C). */
+  zone: Zone | null;
   lat: number | null;
   lon: number | null;
 }

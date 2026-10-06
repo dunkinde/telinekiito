@@ -405,6 +405,14 @@ const REVIEW_CHECKS = {
   street_only: "the address matched only the street, not the house",
   outbuilding: "the matched building may be an outbuilding"
 };
+/** The address is in another delivery zone than the order was priced for: a note for the office (transport price). */
+async function checkZone(order) {
+  const zone = await suggestSvc.zoneOf(order.site.address).catch(() => null);
+  if (!zone || zone === order.site.zone) return;
+  order.zoneCheck = { zone, chosen: order.site.zone };
+  order.internalNotes = [order.internalNotes, `Check the delivery zone: the address is in zone ${zone}, but the order was priced for zone ${order.site.zone}.`].filter(Boolean).join("\n");
+}
+
 function applyReviewFlags(order, body) {
   const reasons = [];
   const storeys = Math.round(Number(body.storeys) || 0);
@@ -435,6 +443,7 @@ route("POST", /^\/api\/orders$/, async (req) => {
   }
   assertAvailable(order, f);
   applyReviewFlags(order, body);
+  await checkZone(order);
   store.insertOrder(order);
   store.bump("orders");
   notify.event(order, "order_received");
@@ -615,6 +624,7 @@ route("POST", /^\/api\/biz\/orders$/, async (req) => {
   order.history[0].by = "customer";
   B.applyBizFields(order, { ...bf, orderedBy: s.user.name, orderedById: s.user.id });
   applyReviewFlags(order, body);
+  await checkZone(order);
   assertAvailable(order, f);
   store.insertOrder(order);
   store.bump("orders");

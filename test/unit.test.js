@@ -235,3 +235,13 @@ test("address suggestions: one line per address, typed postal code and town firs
   assert.equal(typedPostcode("Päätie 39"), null);
   assert.equal(typedPostcode("Päätie 39, 0059"), "0059");
 });
+
+test("delivery zone from the municipality code", () => {
+  const { zoneOfMunicipality, toSuggestions } = require("../lib/suggest");
+  assert.equal(zoneOfMunicipality("091"), "A"); // Helsinki
+  assert.equal(zoneOfMunicipality("638"), "B"); // Porvoo
+  assert.equal(zoneOfMunicipality("075"), "C"); // Hamina
+  assert.equal(zoneOfMunicipality(""), null);
+  const s = toSuggestions([{ properties: { katunimi: "Veneentekijäntie", katunumero: "7", postinumero: "49840", kuntanimiFin: "Hamina", kuntatunnus: "075" }, geometry: { coordinates: [27.2, 60.57] } }], "vene 7");
+  assert.equal(s[0].zone, "C");
+});

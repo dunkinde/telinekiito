@@ -180,6 +180,11 @@ function SummaryTab({ o, crews, reload }: { o: OfficeOrderDetail; crews: Crew[];
       <div className="space-y-4">
         {o.example ? <Callout tone="info" title={t("od.exampleTitle")}>{t("od.exampleText")}</Callout> : null}
         {o.needsReview && ["received", "confirmed"].includes(o.status) ? <ReviewCallout o={o} /> : null}
+        {o.zoneCheck && ["received", "confirmed"].includes(o.status) ? (
+          <Callout tone="warn" title={t("od.zoneCheck.title")}>
+            {t("od.zoneCheck.text", { zone: o.zoneCheck.zone, chosen: o.zoneCheck.chosen })}
+          </Callout>
+        ) : null}
         <StatusCard o={o} reload={reload} />
         <ScheduleCard o={o} crews={crews} reload={reload} />
         {changes.length ? (

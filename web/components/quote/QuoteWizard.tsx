@@ -334,6 +334,13 @@ function WizardBody({ start }: { start: QuoteStart }) {
   });
   const [source, setSource] = useState<"form" | "address" | "ai">("form");
   const [zoneAuto, setZoneAuto] = useState(false);
+  // The customer picked the zone by hand: an address picked later doesn't change it.
+  const zoneManual = useRef(false);
+  const zoneFromAddress = (z: Zone | null) => {
+    if (!z || zoneManual.current) return;
+    set("zone", z);
+    setZoneAuto(true);
+  };
   const [showMore, setShowMore] = useState(false);
   const [lookup, setLookup] = useState<{ status: "idle" | "loading" | "done" | "notfound" | "error"; result?: AddressResult; message?: string; query?: string }>({ status: "idle" });
   // Buildings above the storeys the online price covers go to the office for a price check.
@@ -803,6 +810,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
           onChange={(e) => {
             set("zone", e.target.value as Zone);
             setZoneAuto(false);
+            zoneManual.current = true;
           }}
         >
           {(["A", "B", "C"] as Zone[]).map((z) => (
@@ -833,7 +841,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
       </label>
       <label className="block">
         <span className="field-label">{t("q.address")}</span>
-        <AddressInput className="field-input" value={form.address} onChange={(v) => set("address", v)} listLabel={t("a.suggestions")} placeholder={t("hero.addressPh")} />
+        <AddressInput className="field-input" value={form.address} onChange={(v) => set("address", v)} onPick={(s) => zoneFromAddress(s.zone)} listLabel={t("a.suggestions")} placeholder={t("hero.addressPh")} />
       </label>
       <label className="block">
         <span className="field-label">

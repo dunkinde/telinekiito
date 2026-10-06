@@ -107,6 +107,8 @@ export interface FullOrder {
   /** The size from online data can't be trusted: the office checks it before confirming. */
   needsReview?: boolean;
   sizeCheck?: { reasons: { code: string; n?: number }[]; at: string };
+  /** The address is in another delivery zone than the order was priced for. */
+  zoneCheck?: { zone: string; chosen: string };
   messages: Message[];
   source: string;
   lang?: "fi" | "en";
