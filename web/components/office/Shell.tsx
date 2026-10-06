@@ -134,6 +134,10 @@ function SideLinks() {
   const { t } = useT();
   return (
     <div className="space-y-0.5 border-t border-white/10 pt-3">
+      <div className="flex h-10 items-center justify-between gap-2 px-3 lg:hidden">
+        <span className="text-[13.5px] font-medium text-white/65">{t("ui.language")}</span>
+        <LangSwitch dark />
+      </div>
       <a href="/crew" target="_blank" rel="noopener" className="flex h-9 items-center gap-3 rounded-xl px-3 text-[13.5px] font-medium text-white/65 hover:bg-white/[0.05] hover:text-white focus-visible:outline-sun">
         <IHelmet className="h-[18px] w-[18px]" />
         <span className="flex-1">{t("top.crewApp")}</span>
@@ -360,6 +364,7 @@ export function Shell() {
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
             {!owner ? <span className="mr-1 hidden rounded-full bg-mist px-2.5 py-1 text-[12px] font-semibold text-ink-soft ring-1 ring-line xl:inline">{t("top.leaderView")}</span> : null}
+            <LangSwitch className="hidden sm:inline-flex" />
             <Bell />
             <UserMenu />
           </div>
