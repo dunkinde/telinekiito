@@ -17,13 +17,26 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
 - **Web client contract:** `web/lib/platform.ts` (typed API for office and crew apps).
 - **Office app** `web/components/office/**` (route `/office`) and **crew app** `web/components/crew/**` + `web/public/crew*` (route `/crew`, FI/EN/RU, offline queue, PWA): written by builders, they compile, but **not fully tested** (stopped by a usage limit).
 
-## What's left (in order)
-1. Test office and crew apps locally (owner, leader, worker; FI/EN, crew also RU; 1280×630, 1440×900, phone 390×844), fix bugs.
-2. Website updates: quote wizard sends `lang`, `lat`/`lon` (from address match) and optional partner code, shows `available` dates from `/api/quote`, handles 409 `not_enough_stock`/`fully_booked` (info.date), hides switched-off urgencies (`/api/config` `urgencies`). Tracking page: use `POST /api/orders/:ref/view`, show change requests with price before/after (extend = request, office approves), documents via `/doc/...?t=<access>`, invoices, rating form after pickup; support `/?track=REF` deep link (messages link there). Reviews block (`/api/content`, only published). FAQ/contact overrides from `/api/content`.
-3. Audit fixes (from David's audit file, skip M1 phone): M2 privacy notice (page + links from contact/order/upload; controller details as placeholders until confirmed), M3 label the quote address input, M4 partial address results shouldn't say "form filled"; buildings above supported floors → manual review, m1 remove placeholder social links, m2 robots.txt (block /office, /crew, /doc, /api) + basic meta, m3 contact-map fallback text, m4 skip-to-content link, m5 hero example summary shows all lines or says it's partial.
-4. `npm test`, merge to `main`, push, check `/healthz/deploy` (tsc errors in the build log), verify live.
+## Done in the 6 Oct session (2nd)
+- Office and crew apps tested: owner/leader/worker, FI/EN (crew RU), 1280×630, 1440×900, phone 390×844 (real mobile emulation);
+  every office section and action (schedule+confirm, messages, invoice draft→sent→paid, approvals, stock, team, crews,
+  customers, settings), the full crew job (load → drive → build → inspect+signature → hand over → count → dismantle) and the
+  offline queue. Only bug: office login page was laid out 563px wide on phones (fixed).
+- Website (step 2) and audit fixes (step 3, M1 skipped) are done – see the commit message of "Website: live availability…".
+- Privacy notice `/privacy`: controller name, business ID, address, email and contact person are **placeholders** in
+  `web/lib/privacy.ts` (CONTROLLER) – fill them in, and check the retention times with the accountant.
+- Social links in `web/lib/site.ts` are empty (hidden) until real profiles exist. Phone/email there are still placeholders
+  (M1); the office can override them under Settings → Website.
+- Tall buildings (3+ storeys in the register) are ordered with an office note "Check the price" and an alert.
 
-## Local testing (no npm registry in the sandbox)
+## What's left
+- Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).
+- Company details (M1 phone, privacy controller details), email/SMS keys in `.env`.
+
+## Local testing
+- On a normal machine (Windows too): `cd web && npm install && npm run build`, then run `server.js` with `SITE_DIR=<abs path to web/out>` (use a Windows path on Windows), `DATA_DIR`, `OFFICE_PASSWORD=localpassword`, `SESSION_SECRET=<32+ chars>`. Playwright can drive the installed Edge (`channel: "msedge"`).
+
+### In the old sandbox (no npm registry)
 - Build all pages: `node dev/harness/build.mjs` (or `office`, `crew`, `site`). Uses esbuild + tailwindcss from `/opt/npm-tools/node_modules`; framer-motion is stubbed (final states).
 - Run: `bash dev/serve-at.sh 3995 office` → http://127.0.0.1:3995 (owner password `localpassword`), seed: `node dev/seed.mjs 3995` (crews, staff: leader 040 100 0001/1111, worker RU 040 100 0002/2222, worker 040 100 0003/3333, leader EN 040 100 0004/4444; orders around today; stock; partner code KATTO10).
 - Screenshots with Playwright (python, chromium preinstalled; don't run `playwright install`). `dev/fit.py` checks every website block fits one screen; `dev/snaptest.py` checks block-to-block scrolling.
