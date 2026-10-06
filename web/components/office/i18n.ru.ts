@@ -1308,6 +1308,7 @@ export const ru: Record<Key, Entry> = {
   "biz.new.site": "Объект",
   "biz.new.address": "Адрес объекта",
   "biz.new.addressPh": "Улица, номер и город",
+  "biz.new.suggestions": "Варианты адреса",
   "biz.new.find": "Найти",
   "biz.new.addrShort": "Укажите улицу, номер и город.",
   "biz.new.notFound": "Адрес не найден — укажите размеры вручную.",

@@ -224,3 +224,14 @@ test("platform helpers: reference numbers, phones, mail format, weather, stock",
   assert.equal(S.check([o], st, { frames: 4 }, "2026-11-11", "2026-11-12").ok, true, "free again after return + 1 day");
   assert.equal(S.check([{ ...o, status: "cancelled" }], st, { frames: 10 }, "2026-11-05", "2026-11-06").ok, true);
 });
+
+test("address suggestions: one line per address, typed postal code and town first", () => {
+  const { toSuggestions, typedPostcode } = require("../lib/suggest");
+  const f = (street, no, pc, city) => ({ properties: { katunimi: street, katunumero: no, postinumero: pc, kuntanimiFin: city }, geometry: { coordinates: [25, 60] } });
+  const rows = [f("Mannerheimintie", "1", "49400", "Hamina"), f("Mannerheimintie", "1", "49400", "Hamina"), f("Mannerheimintie", "1", "00100", "Helsinki")];
+  assert.deepEqual(toSuggestions(rows, "Mannerheimintie 1").map((s) => s.label), ["Mannerheimintie 1, 49400 Hamina", "Mannerheimintie 1, 00100 Helsinki"]);
+  assert.equal(toSuggestions(rows, "Mannerheimintie 1, 0010")[0].postcode, "00100");
+  assert.equal(toSuggestions(rows, "mannerheimintie 1 hels")[0].city, "Helsinki");
+  assert.equal(typedPostcode("Päätie 39"), null);
+  assert.equal(typedPostcode("Päätie 39, 0059"), "0059");
+});

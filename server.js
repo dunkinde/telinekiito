@@ -11,6 +11,7 @@ const { makeAuth, MASTER_ID } = require("./lib/auth");
 const { makeLimiter } = require("./lib/ratelimit");
 const { createAddressService } = require("./lib/address");
 const { createNls3d } = require("./lib/nls3d");
+const { createSuggest } = require("./lib/suggest");
 const { createAI } = require("./lib/ai");
 const { createNotifier, mergeTemplates } = require("./lib/notify");
 const { createWeather } = require("./lib/weather");
@@ -38,6 +39,7 @@ const allow = makeLimiter();
 // National Land Survey 3D buildings (needs NLS_API_KEY); map sheets are cached in DATA_DIR/nls3d.
 const nls3d = createNls3d({ apiKey: process.env.NLS_API_KEY, dir: path.join(DATA_DIR, "nls3d"), log: (m) => console.log("[3d] " + m) });
 const addressSvc = createAddressService({ nls3d });
+const suggestSvc = createSuggest({ apiKey: process.env.NLS_API_KEY, log: (m) => console.warn("[suggest] " + m) });
 const ai = createAI({ apiKey: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || "gpt-6-luna" });
 const weather = createWeather();
 
@@ -323,6 +325,13 @@ route("POST", /^\/api\/contact$/, async (req) => {
   const lead = store.insertLead(O.parseLead(body));
   notify.alert("contact", null, `Contact message from ${lead.name}`, { email: lead.email });
   return { ok: true };
+});
+
+// Address suggestions while typing (official addresses with postal codes).
+route("POST", /^\/api\/address\/suggest$/, async (req) => {
+  limit(req, "suggest", 400, 10 * 60e3);
+  const body = await readJson(req, 1024);
+  return { suggestions: await suggestSvc.suggest(body.q) };
 });
 
 route("POST", /^\/api\/address$/, async (req) => {

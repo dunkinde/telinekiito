@@ -27,6 +27,7 @@ import { useSite, type QuoteStart } from "../SiteContext";
 import { Button } from "../ui/Button";
 import { IconArrow, IconCheck, IconChevron, IconPin, IconUpload } from "../ui/Icons";
 import { Modal } from "../ui/Modal";
+import { AddressInput } from "../ui/AddressInput";
 import { HouseModel } from "../HouseModel";
 import { shrinkImage } from "@/lib/image";
 
@@ -629,8 +630,16 @@ function WizardBody({ start }: { start: QuoteStart }) {
         </label>
         <div className="flex gap-2">
           <span className="relative flex-1">
-            <IconPin className="pointer-events-none absolute top-1/2 left-3.5 h-5 w-5 -translate-y-1/2 text-muted" />
-            <input id={addressId} className="field-input pl-11" value={form.address} onChange={(e) => set("address", e.target.value)} placeholder={t("hero.addressPh")} autoComplete="street-address" />
+            <IconPin className="pointer-events-none absolute top-1/2 left-3.5 z-10 h-5 w-5 -translate-y-1/2 text-muted" />
+            <AddressInput
+              id={addressId}
+              className="field-input pl-11"
+              value={form.address}
+              onChange={(v) => set("address", v)}
+              onPick={(s) => void runLookup(s.label)}
+              listLabel={t("a.suggestions")}
+              placeholder={t("hero.addressPh")}
+            />
           </span>
           <Button type="submit" variant="dark" disabled={lookup.status === "loading"}>
             {lookup.status === "loading" ? t("q.finding") : t("q.find")}
@@ -817,7 +826,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
       </label>
       <label className="block">
         <span className="field-label">{t("q.address")}</span>
-        <input className="field-input" value={form.address} onChange={(e) => set("address", e.target.value)} autoComplete="street-address" placeholder={t("hero.addressPh")} />
+        <AddressInput className="field-input" value={form.address} onChange={(v) => set("address", v)} listLabel={t("a.suggestions")} placeholder={t("hero.addressPh")} />
       </label>
       <label className="block">
         <span className="field-label">

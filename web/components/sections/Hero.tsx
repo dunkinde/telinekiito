@@ -7,6 +7,7 @@ import { getQuote, type Quote } from "@/lib/api";
 import { eur } from "@/lib/format";
 import { lineLabel, useI18n } from "@/lib/i18n";
 import { useSite } from "../SiteContext";
+import { AddressInput } from "../ui/AddressInput";
 import { Button } from "../ui/Button";
 import { CountUp } from "../ui/CountUp";
 import { IconArrow, IconCheck, IconPin } from "../ui/Icons";
@@ -49,14 +50,14 @@ function AddressBar() {
   const { openQuote } = useSite();
   const reduce = useReducedMotion();
   const [value, setValue] = useState("");
+  // Near the top of the page the bar itself grows into the quote window (shared layout animation).
+  const start = (address: string) => openQuote({ address: address.trim() || undefined, origin: !reduce && window.scrollY < 400 ? "hero" : undefined });
   return (
     <form
       className="mt-9 max-w-xl lg:mt-[clamp(1rem,3.4svh,2.25rem)]"
       onSubmit={(e) => {
         e.preventDefault();
-        // Near the top of the page the bar itself grows into the quote window (shared layout animation).
-        const morph = !reduce && window.scrollY < 400;
-        openQuote({ address: value.trim() || undefined, origin: morph ? "hero" : undefined });
+        start(value);
       }}
     >
       <motion.div
@@ -67,11 +68,13 @@ function AddressBar() {
         <label className="flex flex-1 items-center gap-3 px-3 sm:pl-5">
           <IconPin className="h-5 w-5 shrink-0 text-ink-soft" />
           <span className="sr-only">{t("hero.addressLabel")}</span>
-          <input
+          <AddressInput
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={setValue}
+            onPick={(s) => start(s.label)}
+            listLabel={t("a.suggestions")}
             placeholder={t("hero.addressPh")}
-            autoComplete="street-address"
+            wrapperClassName="w-full"
             className="h-12 w-full bg-transparent text-base lg:h-[clamp(2.75rem,7svh,3rem)] text-ink placeholder:text-muted focus:outline-none"
           />
         </label>

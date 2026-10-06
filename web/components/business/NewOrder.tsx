@@ -7,7 +7,8 @@ import { bizOrder, bizOrders, bizPlaceOrder, type BizDetails } from "@/lib/busin
 import { useT } from "../office/context";
 import { day, money, numText, parseNum } from "../office/format";
 import { errMessage, jobLabel, lineText, roofLabel, urgLabel } from "../office/i18n";
-import { Btn, Callout, Card, CardHead, Chips, Field, Input, Select, TextArea, cx } from "../office/ui";
+import { Btn, Callout, Card, CardHead, Chips, Field, Input, Select, TextArea, cx, inputCls } from "../office/ui";
+import { AddressInput } from "../ui/AddressInput";
 import { useBiz, useBizAct } from "./context";
 import { BizFields } from "./OrderView";
 import { go } from "./BizApp";
@@ -112,8 +113,8 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
 
   const addressNow = useRef("");
   addressNow.current = f.address.trim();
-  async function find(retry = 0) {
-    const text = f.address.trim() || (retry ? addressNow.current : "");
+  async function find(address?: string, retry = 0) {
+    const text = (address ?? f.address).trim();
     if (text.length < 5) return setLookup({ busy: false, msg: t("biz.new.addrShort"), ok: false });
     setLookup({ busy: true, msg: null, ok: false });
     try {
@@ -137,7 +138,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
       const how = r.model ? t("biz.new.model") : full ? t("biz.new.found") : t("biz.new.partial");
       setLookup({ busy: false, msg: `${r.match.short || r.match.display} – ${how}${r.modelPending ? ` (${t("biz.new.modelPending")})` : ""}`, ok: full });
       // The 3D model for a new area takes a moment to download: look again while the address is unchanged.
-      if (r.modelPending && retry < 3) window.setTimeout(() => addressNow.current === text && void find(retry + 1), 6000);
+      if (r.modelPending && retry < 3) window.setTimeout(() => addressNow.current === text && void find(text, retry + 1), 6000);
     } catch (e) {
       setLookup({ busy: false, msg: errMessage(i, e), ok: false });
     }
@@ -208,7 +209,16 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
               <Field label={t("biz.new.address")}>
                 {(id) => (
                   <div className="flex gap-2">
-                    <Input id={id} value={f.address} onChange={(v) => set("address", v)} placeholder={t("biz.new.addressPh")} autoComplete="street-address" className="flex-1" />
+                    <AddressInput
+                      id={id}
+                      value={f.address}
+                      onChange={(v) => set("address", v)}
+                      onPick={(s) => void find(s.label)}
+                      listLabel={t("biz.new.suggestions")}
+                      placeholder={t("biz.new.addressPh")}
+                      wrapperClassName="flex-1"
+                      className={inputCls}
+                    />
                     <Btn variant="dark" onClick={() => void find()} busy={lookup.busy}>
                       {t("biz.new.find")}
                     </Btn>

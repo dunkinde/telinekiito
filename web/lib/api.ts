@@ -243,6 +243,22 @@ export async function api<T>(method: "GET" | "POST", url: string, body?: unknown
 
 export const getConfig = () => api<Config>("GET", "/api/config");
 export const lookupAddress = (address: string) => api<AddressResult>("POST", "/api/address", { address });
+
+/** An official address with its postal code, suggested while typing. */
+export interface AddressSuggestion {
+  label: string;
+  street: string;
+  postcode: string;
+  city: string;
+  lat: number | null;
+  lon: number | null;
+}
+export async function suggestAddresses(q: string, signal?: AbortSignal): Promise<AddressSuggestion[]> {
+  const r = await fetch("/api/address/suggest", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ q }), signal });
+  if (!r.ok) return [];
+  const j = (await r.json()) as { suggestions?: AddressSuggestion[] };
+  return j.suggestions || [];
+}
 export const getQuote = (input: QuoteInput) => api<QuoteResult>("POST", "/api/quote", input);
 export const getContent = () => api<SiteContent>("GET", "/api/content");
 export const readDrawing = (images: string[], lang: string) =>
