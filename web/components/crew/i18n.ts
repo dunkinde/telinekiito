@@ -142,6 +142,7 @@ const fi = {
   "side.long": (v: Vars) => `Pitkä sivu ${v.x}`,
   "side.short": (v: Vars) => `Lyhyt sivu ${v.x}`,
   "side.gable": (v: Vars) => `Päätyseinä ${v.x}`,
+  "side.wall": (v: Vars) => `Seinä ${v.x}`,
 
   "jv.loading": "Avataan työtä…",
   "jv.loadFailed": "Työtä ei saatu auki.",
@@ -601,6 +602,7 @@ const en: Dict = {
   "side.long": (v) => `Long side ${v.x}`,
   "side.short": (v) => `Short side ${v.x}`,
   "side.gable": (v) => `Gable end ${v.x}`,
+  "side.wall": (v) => `Wall ${v.x}`,
 
   "jv.loading": "Opening the job…",
   "jv.loadFailed": "Couldn't open the job.",
@@ -1057,6 +1059,7 @@ const ru: Dict = {
   "side.long": (v) => `Длинная сторона ${v.x}`,
   "side.short": (v) => `Короткая сторона ${v.x}`,
   "side.gable": (v) => `Фронтон ${v.x}`,
+  "side.wall": (v) => `Стена ${v.x}`,
 
   "jv.loading": "Открываем работу…",
   "jv.loadFailed": "Не удалось открыть работу.",
@@ -1417,9 +1420,9 @@ export const actionLabel = (t: T, a: CrewAction): string =>
 
 /** Side names come from the engine in English ("Long side A"); show them in the user's language. */
 export function sideLabel(t: T, name: string): string {
-  const m = /^(Long side|Short side|Gable end) ([A-Z0-9]+)$/.exec(name);
+  const m = /^(Long side|Short side|Gable end|Wall) ([A-Z0-9]+)$/.exec(name);
   if (!m) return name;
-  return t(m[1] === "Long side" ? "side.long" : m[1] === "Short side" ? "side.short" : "side.gable", { x: m[2] });
+  return t(m[1] === "Long side" ? "side.long" : m[1] === "Short side" ? "side.short" : m[1] === "Wall" ? "side.wall" : "side.gable", { x: m[2] });
 }
 
 /** A server error in plain words. `inspection_incomplete` lists the missing checklist points. */

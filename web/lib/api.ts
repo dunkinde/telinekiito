@@ -73,6 +73,14 @@ export interface QuoteInput {
   zone: Zone;
   urgency: Urgency;
   partnerCode?: string;
+  /** The 3D building from the address lookup: the server prices its measured walls. */
+  model?: ModelRef;
+}
+
+export interface ModelRef {
+  id: string;
+  lat: number;
+  lon: number;
 }
 
 export interface QuoteResult {
@@ -97,7 +105,7 @@ export interface AddressResult {
     eave: number | null;
   };
   details: {
-    sizeSource?: "OpenStreetMap" | "estimate";
+    sizeSource?: "OpenStreetMap" | "estimate" | "NLS 3D model";
     footprintM2?: number;
     outline?: [number, number][];
     osmType?: string;
@@ -107,6 +115,28 @@ export interface AddressResult {
   };
   notes: string[];
   noteCodes?: { code: string; n?: number }[];
+  /** The National Land Survey's 3D model of the building (measured outline and wall heights), where it exists. */
+  model?: ModelRef & {
+    date: string | null;
+    perimeterM: number;
+    corners: number;
+    eaveMin: number | null;
+    eaveMax: number | null;
+    ridge: number | null;
+  };
+  /** The 3D model for this area is still downloading: look the address up again in a few seconds. */
+  modelPending?: boolean;
+}
+
+/** The 3D model prices the house while the size fields still hold what the lookup filled in. */
+export function modelRefFor(
+  r: AddressResult | null | undefined,
+  h: { length: number; width: number; eave: number; pitch: number; roofType: RoofType }
+): ModelRef | undefined {
+  const m = r?.model, s = r?.house;
+  if (!m || !s) return undefined;
+  const same = s.length === h.length && s.width === h.width && s.eave === h.eave && (s.roofType ?? h.roofType) === h.roofType && (h.roofType === "flat" || s.pitch === h.pitch);
+  return same ? { id: m.id, lat: m.lat, lon: m.lon } : undefined;
 }
 
 export interface DrawingResult {

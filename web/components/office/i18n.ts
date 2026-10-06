@@ -200,6 +200,7 @@ const en = {
   "side.long": (v) => `Long side ${v.x}`,
   "side.short": (v) => `Short side ${v.x}`,
   "side.gable": (v) => `Gable end ${v.x}`,
+  "side.wall": (v) => `Wall ${v.x}`,
   "chType.days": "Rental length",
   "chType.pickup_date": "Pickup date",
   "chType.house": "Scaffold size",
@@ -1432,7 +1433,11 @@ const en = {
   "biz.photosAdd": "Add photos",
   "biz.photosUploading": "Sending… {n} left",
   "biz.photosSaved": "Photos saved.",
-  "biz.photoBad": "That file isn't a photo we can read."
+  "biz.photoBad": "That file isn't a photo we can read.",
+  "biz.new.model": "measured from the 3D building model – the price follows each wall",
+  "biz.new.modelPending": "checking the 3D building model…",
+  "od.house.model": "Measured walls",
+  "od.house.modelVal": "3D building model {date}: priced wall by wall"
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -1625,6 +1630,7 @@ const fi: Record<Key, Entry> = {
   "side.long": (v) => `Pitkä sivu ${v.x}`,
   "side.short": (v) => `Lyhyt sivu ${v.x}`,
   "side.gable": (v) => `Pääty ${v.x}`,
+  "side.wall": (v) => `Seinä ${v.x}`,
   "chType.days": "Vuokra-ajan muutos",
   "chType.pickup_date": "Noutopäivä",
   "chType.house": "Telineen koko",
@@ -2855,7 +2861,11 @@ const fi: Record<Key, Entry> = {
   "biz.photosAdd": "Lisää kuvia",
   "biz.photosUploading": "Lähetetään… {n} jäljellä",
   "biz.photosSaved": "Kuvat tallennettu.",
-  "biz.photoBad": "Tiedostoa ei voitu lukea kuvana."
+  "biz.photoBad": "Tiedostoa ei voitu lukea kuvana.",
+  "biz.new.model": "mitattu 3D-rakennusmallista – hinta lasketaan seinä kerrallaan",
+  "biz.new.modelPending": "haetaan 3D-rakennusmallia…",
+  "od.house.model": "Mitatut seinät",
+  "od.house.modelVal": "3D-rakennusmalli {date}: hinnoiteltu seinä kerrallaan"
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };
@@ -2897,9 +2907,9 @@ export function eventLabel(i: T, ev: string) {
 
 /** "Long side A" → "Pitkä sivu A". */
 export function sideText(i: T, name: string) {
-  const m = /^(Long side|Short side|Gable end) (\w+)$/.exec(name || "");
+  const m = /^(Long side|Short side|Gable end|Wall) (\w+)$/.exec(name || "");
   if (!m) return name;
-  const k = m[1] === "Long side" ? "side.long" : m[1] === "Short side" ? "side.short" : "side.gable";
+  const k = m[1] === "Long side" ? "side.long" : m[1] === "Short side" ? "side.short" : m[1] === "Wall" ? "side.wall" : "side.gable";
   return i.t(k, { x: m[2] });
 }
 

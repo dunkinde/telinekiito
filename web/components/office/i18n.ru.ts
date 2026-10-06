@@ -199,6 +199,7 @@ export const ru: Record<Key, Entry> = {
   "side.long": (v: V) => `Длинная сторона ${v.x}`,
   "side.short": (v: V) => `Короткая сторона ${v.x}`,
   "side.gable": (v: V) => `Фронтон ${v.x}`,
+  "side.wall": (v: V) => `Стена ${v.x}`,
   "chType.days": "Срок аренды",
   "chType.pickup_date": "Дата вывоза",
   "chType.house": "Размер лесов",
@@ -1429,5 +1430,9 @@ export const ru: Record<Key, Entry> = {
   "biz.photosAdd": "Добавить фото",
   "biz.photosUploading": "Отправка… осталось {n}",
   "biz.photosSaved": "Фото сохранены.",
-  "biz.photoBad": "Не удалось прочитать файл как фото."
+  "biz.photoBad": "Не удалось прочитать файл как фото.",
+  "biz.new.model": "измерено по 3D-модели здания — цена считается по каждой стене",
+  "biz.new.modelPending": "загружается 3D-модель здания…",
+  "od.house.model": "Измеренные стены",
+  "od.house.modelVal": "3D-модель здания {date}: цена по каждой стене"
 };

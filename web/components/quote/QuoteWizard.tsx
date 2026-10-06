@@ -8,6 +8,7 @@ import {
   EAVE_BY_FLOORS,
   getQuote,
   lookupAddress,
+  modelRefFor,
   placeOrder,
   readDrawing,
   type AddressResult,
@@ -181,11 +182,16 @@ function OutlinePic({ outline, length, width, estimated }: { outline?: [number, 
 }
 
 function AddressCard({ r }: { r: AddressResult }) {
-  const { t, tk } = useI18n();
+  const { t, tk, lang } = useI18n();
   const hs = r.house, d = r.details || {}, reg = d.register;
   const estimated = d.sizeSource === "estimate";
+  const m = r.model;
   const facts: [string, string][] = [];
-  if (hs.length && hs.width) facts.push([`${num(hs.length)} × ${num(hs.width)} m`, estimated ? t("a.estimated") : d.footprintM2 ? t("a.measuredArea", { m2: d.footprintM2 }) : t("a.measured")]);
+  if (m) {
+    facts.push([t("a.walls", { m: num(m.perimeterM), n: m.corners }), t("a.model3d")]);
+    if (m.eaveMin != null && m.eaveMax != null) facts.push([m.eaveMax - m.eaveMin < 0.3 ? t("a.eave", { h: num(m.eaveMax) }) : t("a.eaves", { a: num(m.eaveMin), b: num(m.eaveMax) }), t("a.model3d")]);
+    if (m.ridge) facts.push([t("a.ridge", { h: num(m.ridge) }), hs.pitch ? t("a.roofPitch", { p: hs.pitch }) : t("a.model3d")]);
+  } else if (hs.length && hs.width) facts.push([`${num(hs.length)} × ${num(hs.width)} m`, estimated ? t("a.estimated") : d.footprintM2 ? t("a.measuredArea", { m2: d.footprintM2 }) : t("a.measured")]);
   if (hs.floors) facts.push([t("a.floors", { n: hs.floors === "2" ? 2 : 1 }), d.floorsSource === "OpenStreetMap" ? t("a.fromMap") : t("a.register")]);
   if (reg?.floorArea || reg?.grossFloorArea) facts.push([t("a.floorArea", { m2: num(reg.floorArea || reg.grossFloorArea || 0) }), t("a.register")]);
   if (reg?.completed) facts.push([t("a.built", { year: reg.completed }), t("a.register")]);
@@ -193,7 +199,7 @@ function AddressCard({ r }: { r: AddressResult }) {
   const mapLink = d.osmWayId
     ? `https://www.openstreetmap.org/${encodeURIComponent(d.osmType || "way")}/${encodeURIComponent(String(d.osmWayId))}`
     : `https://www.openstreetmap.org/?mlat=${r.match.lat}&mlon=${r.match.lon}#map=19/${r.match.lat}/${r.match.lon}`;
-  const ok = Boolean(hs.length && hs.width && hs.floors) && !estimated && r.match.houseLevel && !(r.noteCodes || []).some((n) => n.code === "size_mismatch");
+  const ok = Boolean(m) || (Boolean(hs.length && hs.width && hs.floors) && !estimated && r.match.houseLevel && !(r.noteCodes || []).some((n) => n.code === "size_mismatch"));
 
   return (
     <motion.div
@@ -225,7 +231,16 @@ function AddressCard({ r }: { r: AddressResult }) {
           ))}
         </ul>
       ) : null}
-      <p className="mt-3 text-xs text-muted">{ok ? t("a.filled") : t("a.partial")}</p>
+      {r.modelPending ? <p className="mt-3 text-sm text-ink-soft" role="status">{t("a.modelPending")}</p> : null}
+      <p className="mt-3 text-xs text-muted">{m ? t("a.modelFilled") : ok ? t("a.filled") : t("a.partial")}</p>
+      {m ? (
+        <p className="mt-2 text-[11px] leading-snug text-muted">
+          {t("a.modelCredit", { date: m.date ? m.date.split("-").reverse().map(Number).join(lang === "fi" ? "." : "/") : "" })}{" "}
+          <a className="underline" href="https://www.maanmittauslaitos.fi/en/opendata-licence-cc40" target="_blank" rel="noopener">
+            CC BY 4.0
+          </a>
+        </p>
+      ) : null}
     </motion.div>
   );
 }
@@ -352,6 +367,14 @@ function WizardBody({ start }: { start: QuoteStart }) {
     return { ok, L, W, eave, pitch };
   }, [form.length, form.width, form.eave, form.pitch, form.roofType, form.floors]);
 
+  // The measured 3D building prices the house wall by wall, while the size still matches what the lookup found.
+  const looked = lookup.status === "done" && lookup.result && lookup.query === form.address.trim() ? lookup.result : null;
+  const modelRef = useMemo(
+    () => (house.ok ? modelRefFor(looked, { length: house.L, width: house.W, eave: house.eave, pitch: house.pitch, roofType: form.roofType }) : undefined),
+    [looked, house, form.roofType]
+  );
+  const modelId = modelRef ? JSON.stringify(modelRef) : "";
+
   // The house as the 3D model draws it (same scaffold rules as the price).
   const modelShape = useMemo(
     () =>
@@ -390,7 +413,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
         days: Math.max(1, Math.round(Number(form.days) || 28)),
         zone: form.zone,
         urgency: form.urgency,
-        partnerCode: form.partnerCode.trim() || undefined
+        partnerCode: form.partnerCode.trim() || undefined,
+        model: modelRef
       })
         .then((r) => {
           if (id !== reqId.current) return;
@@ -401,11 +425,14 @@ function WizardBody({ start }: { start: QuoteStart }) {
         .catch(() => id === reqId.current && setPrice((p) => ({ ...p, loading: false })));
     }, 250);
     return () => window.clearTimeout(timer);
-  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode, modelId]);
 
   /* ----- address lookup ----- */
+  const addressNow = useRef("");
+  addressNow.current = form.address.trim();
   const runLookup = useCallback(
-    async (address: string) => {
+    async (address: string, retry = 0) => {
       const text = address.trim();
       if (text.length < 5) {
         setLookup({ status: "error", message: t("a.short") });
@@ -433,6 +460,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
         setZoneAuto(true);
         setSource("address");
         setLookup({ status: "done", result: r, query: text });
+        // The 3D model for a new area takes a moment to download: look again while the address is unchanged.
+        if (r.modelPending && retry < 3) window.setTimeout(() => addressNow.current === text && void runLookup(text, retry + 1), 6000);
       } catch (e) {
         setLookup({ status: "error", message: errText(i18n, e, fmt) });
       }
@@ -516,7 +545,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
         lon: found?.match.lon,
         partnerCode: form.partnerCode.trim() || undefined,
         storeys: tooTall || undefined,
-        checks: checks.length ? checks : undefined
+        checks: checks.length ? checks : undefined,
+        model: modelRef
       });
       setDone({ ref: r.ref, total: r.order.quote.total, phone4: digits(form.phone).slice(-4), review: Boolean(tooTall), photos: checks.length > 0 || Boolean(tooTall) });
     } catch (e) {

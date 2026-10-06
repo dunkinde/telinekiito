@@ -422,7 +422,16 @@ const en = {
   "tr.photosSaved": "Photos saved. Thank you!",
   "tr.photoAlt": "Photo of the house",
   "tr.photoBad": "That file isn't a photo we can read.",
-  "err.too_many_photos": "Up to 12 photos per order."
+  "err.too_many_photos": "Up to 12 photos per order.",
+  "a.walls": "{m} m of wall, {n} corners",
+  "a.model3d": "measured, 3D building model",
+  "a.eave": "Eaves {h} m high",
+  "a.eaves": "Eaves {a}–{b} m high",
+  "a.ridge": "Ridge {h} m",
+  "a.roofPitch": "roof pitch {p}°",
+  "a.modelPending": "Checking the 3D building model for this area…",
+  "a.modelFilled": "Measured from the 3D building model: the price follows each wall and its real height. If you change the size below, the price uses a simple box instead.",
+  "a.modelCredit": "Contains data from the National Land Survey of Finland, 3D buildings {date},"
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -835,7 +844,16 @@ const fi: Record<Key, Entry> = {
   "tr.photosSaved": "Kuvat tallennettu. Kiitos!",
   "tr.photoAlt": "Kuva talosta",
   "tr.photoBad": "Tiedostoa ei voitu lukea kuvana.",
-  "err.too_many_photos": "Enintään 12 kuvaa tilausta kohden."
+  "err.too_many_photos": "Enintään 12 kuvaa tilausta kohden.",
+  "a.walls": "{m} m seinää, {n} kulmaa",
+  "a.model3d": "mitattu, 3D-rakennusmalli",
+  "a.eave": "Räystäs {h} m korkealla",
+  "a.eaves": "Räystäät {a}–{b} m korkealla",
+  "a.ridge": "Harja {h} m",
+  "a.roofPitch": "kattokulma {p}°",
+  "a.modelPending": "Haetaan alueen 3D-rakennusmallia…",
+  "a.modelFilled": "Mitattu 3D-rakennusmallista: hinta lasketaan jokaisen seinän ja sen todellisen korkeuden mukaan. Jos muutat mittoja alla, hinta lasketaan yksinkertaisena laatikkona.",
+  "a.modelCredit": "Sisältää Maanmittauslaitoksen 3D-rakennukset-aineistoa {date},"
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi };

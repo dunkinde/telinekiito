@@ -611,6 +611,7 @@ function ScaffoldTab({ o }: { o: OfficeOrderDetail }) {
               items={[
                 { k: t("od.house.job"), v: jobLabel(i, h.jobType) },
                 { k: t("od.house.size"), v: `${number(h.length, lang, 2)} × ${number(h.width, lang, 2)} m` },
+                ...(h.model && h.walls?.length ? [{ k: t("od.house.model"), v: t("od.house.modelVal", { date: h.model.date ? day(h.model.date, lang, { year: true }) : "" }) }] : []),
                 { k: t("od.house.floors"), v: number(Number(h.floors), lang, 1) },
                 { k: t("od.house.eave"), v: `${number(h.eave, lang, 1)} m` },
                 { k: t("od.house.roof"), v: `${roofLabel(i, h.roofType)}${h.roofType !== "flat" ? ` · ${number(h.pitch, lang, 0)}°` : ""}` },

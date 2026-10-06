@@ -35,7 +35,12 @@ export interface Crew { id: string; name: string; color: string; truck?: string;
 export interface Me { user: StaffUser; crews: { id: string; name: string; color: string; active: boolean }[]; company: string; today: string }
 
 export interface Geo { lat: number; lon: number }
-export interface House { length: number; width: number; floors: Floors; eave: number; roofType: RoofType; pitch: number; jobType: JobType; gables: boolean }
+export interface House {
+  length: number; width: number; floors: Floors; eave: number; roofType: RoofType; pitch: number; jobType: JobType; gables: boolean;
+  /** Measured walls from the 3D building model; the price follows them instead of the length × width box. */
+  walls?: { edge: number; len: number; eave: number; top: number; gable?: boolean; ext?: number }[];
+  model?: { id: string; date: string | null };
+}
 export interface Side { name: string; bays: number; lifts: number; workH: number; area: number; catchOn: boolean }
 export interface FullEstimate { area: number; runM: number; catchRunM: number; extraLevelM: number; weightKg: number; parts: Parts; sides: Side[] }
 export interface Assignment { date?: string | null; time?: string; crewId?: string | null; pickupDate?: string | null; pickupTime?: string; pickupCrewId?: string | null }

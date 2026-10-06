@@ -10,6 +10,7 @@ const Store = require("./lib/store");
 const { makeAuth, MASTER_ID } = require("./lib/auth");
 const { makeLimiter } = require("./lib/ratelimit");
 const { createAddressService } = require("./lib/address");
+const { createNls3d } = require("./lib/nls3d");
 const { createAI } = require("./lib/ai");
 const { createNotifier, mergeTemplates } = require("./lib/notify");
 const { createWeather } = require("./lib/weather");
@@ -34,7 +35,9 @@ fs.mkdirSync(FILES_DIR, { recursive: true });
 const store = Store.open(DATA_DIR);
 const auth = makeAuth({ password: process.env.OFFICE_PASSWORD, secret: process.env.SESSION_SECRET });
 const allow = makeLimiter();
-const addressSvc = createAddressService();
+// National Land Survey 3D buildings (needs NLS_API_KEY); map sheets are cached in DATA_DIR/nls3d.
+const nls3d = createNls3d({ apiKey: process.env.NLS_API_KEY, dir: path.join(DATA_DIR, "nls3d"), log: (m) => console.log("[3d] " + m) });
+const addressSvc = createAddressService({ nls3d });
 const ai = createAI({ apiKey: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || "gpt-6-luna" });
 const weather = createWeather();
 
@@ -281,11 +284,28 @@ route("GET", /^\/healthz\/services$/, () => {
   return { weather: weather.health(), email: n.email.connected, sms: n.sms.connected };
 });
 
+/**
+ * The measured walls of a building in the 3D model, when the address lookup found one: the page sends back only the
+ * building id and point, and the walls come from the server's own copy (never priced from walls sent by the page).
+ */
+async function withModel(f, body) {
+  const m = body && body.model;
+  if (!m || typeof m.id !== "string" || !nls3d.enabled) return f;
+  const lat = Number(m.lat), lon = Number(m.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return f;
+  const r = await nls3d.lookup(lat, lon, { waitMs: 0 }).catch(() => null);
+  if (r && r.status === "found" && r.building.id === m.id && r.building.walls && r.building.walls.length) {
+    f.walls = r.building.walls;
+    f.model = { id: r.building.id, date: (r.modelDate || r.building.created || "").slice(0, 10) || null };
+  }
+  return f;
+}
+
 // Live price for the website's quote wizard, with the first dates that have enough scaffolding and crews.
 route("POST", /^\/api\/quote$/, async (req) => {
   limit(req, "quote", 600, 10 * 60e3);
   const body = await readJson(req, 4096);
-  const f = O.parseQuoteInput(body);
+  const f = await withModel(O.parseQuoteInput(body), body);
   const p = pricing();
   const out = O.quoteFor(f, p);
   const account = body.partnerCode ? P.accountByCode(store, body.partnerCode) : null;
@@ -392,7 +412,7 @@ function applyReviewFlags(order, body) {
 route("POST", /^\/api\/orders$/, async (req) => {
   limit(req, "order", 10, 60 * 60e3);
   const body = await readJson(req, 16384);
-  const f = O.parseOrderInput(body);
+  const f = await withModel(O.parseOrderInput(body), body);
   const o0 = ops();
   if (f.urgency !== "standard" && !o0.urgencies[f.urgency]) throw new HttpError(409, "urgency_off", "That delivery speed isn't available right now.");
   if (!o0.zones[f.zone]) throw new HttpError(409, "zone_off", "We don't deliver to that area right now. Contact us.");
@@ -574,7 +594,7 @@ route("POST", /^\/api\/biz\/orders$/, async (req) => {
   const bf = B.parseBizFields(body);
   const contactName = bf.siteContact.name || s.user.name;
   const contactPhone = bf.siteContact.phone || s.user.phone;
-  const f = O.parseOrderInput({ ...body, name: `${s.account.name} / ${contactName}`, phone: contactPhone, email: s.user.email || s.account.email || "", lang: s.user.lang === "en" ? "en" : "fi" });
+  const f = await withModel(O.parseOrderInput({ ...body, name: `${s.account.name} / ${contactName}`, phone: contactPhone, email: s.user.email || s.account.email || "", lang: s.user.lang === "en" ? "en" : "fi" }), body);
   const o0 = ops();
   if (f.urgency !== "standard" && !o0.urgencies[f.urgency]) throw new HttpError(409, "urgency_off", "That delivery speed isn't available right now.");
   if (!o0.zones[f.zone]) throw new HttpError(409, "zone_off", "We don't deliver to that area right now. Contact us.");

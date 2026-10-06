@@ -2,7 +2,7 @@
 // A new site from the portal: address lookup (or the size by hand, or copied from an earlier site), job, timing,
 // and the company's PO / project / site contact. The company's own price and the first free dates update live.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { EAVE_BY_FLOORS, getQuote, lookupAddress, type Floors, type JobType, type QuoteResult, type RoofType, type Urgency, type Zone } from "@/lib/api";
+import { EAVE_BY_FLOORS, getQuote, lookupAddress, modelRefFor, type AddressResult, type Floors, type JobType, type QuoteResult, type RoofType, type Urgency, type Zone } from "@/lib/api";
 import { bizOrder, bizOrders, bizPlaceOrder, type BizDetails } from "@/lib/business";
 import { useT } from "../office/context";
 import { day, money, numText, parseNum } from "../office/format";
@@ -43,7 +43,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
   const [sending, setSending] = useState(false);
   const [f, setF] = useState<Form>(blank);
   const [biz, setBiz] = useState<BizDetails>(blankBiz);
-  const [geo, setGeo] = useState<{ lat: number; lon: number; for: string; checks?: string[] } | null>(null);
+  const [geo, setGeo] = useState<{ lat: number; lon: number; for: string; checks?: string[]; result?: AddressResult } | null>(null);
   const [lookup, setLookup] = useState<{ busy: boolean; msg: string | null; ok: boolean }>({ busy: false, msg: null, ok: false });
   const [price, setPrice] = useState<QuoteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -83,13 +83,19 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
     return { ok, L: L || 0, W: W || 0, E: E || 0, P: P || 0 };
   }, [f.length, f.width, f.eave, f.pitch, f.roofType, f.floors]);
   const days = Math.max(1, Math.round(Number(f.days) || 0));
+  // The measured 3D building prices the walls one by one, while the size still matches what the lookup found.
+  const modelRef = useMemo(() => {
+    const g = geo && geo.for === f.address.trim() ? geo.result : null;
+    return house.ok ? modelRefFor(g, { length: house.L, width: house.W, eave: house.E, pitch: house.P, roofType: f.roofType }) : undefined;
+  }, [geo, f.address, house, f.roofType]);
+  const modelId = modelRef ? modelRef.id : "";
 
   // Live price with the company's discount, and the first free start dates for this house.
   useEffect(() => {
     if (!house.ok) return setPrice(null);
     let alive = true;
     const id = window.setTimeout(() => {
-      getQuote({ length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables, days, zone: f.zone, urgency: f.urgency, partnerCode: me.account.code })
+      getQuote({ length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables, days, zone: f.zone, urgency: f.urgency, partnerCode: me.account.code, model: modelRef })
         .then((r) => alive && setPrice(r))
         .catch(() => alive && setPrice(null));
     }, 300);
@@ -97,14 +103,17 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
       alive = false;
       window.clearTimeout(id);
     };
-  }, [house, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, me.account.code]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [house, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, me.account.code, modelId]);
   const firstFree = price?.available?.[f.urgency] || null;
   useEffect(() => {
     if (firstFree && (!f.start || f.start < firstFree)) setF((x) => ({ ...x, start: firstFree }));
   }, [firstFree, f.start]);
 
-  async function find() {
-    const text = f.address.trim();
+  const addressNow = useRef("");
+  addressNow.current = f.address.trim();
+  async function find(retry = 0) {
+    const text = f.address.trim() || (retry ? addressNow.current : "");
     if (text.length < 5) return setLookup({ busy: false, msg: t("biz.new.addrShort"), ok: false });
     setLookup({ busy: true, msg: null, ok: false });
     try {
@@ -123,9 +132,12 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
           eave: h.eave ? String(h.eave) : floors ? String(EAVE_BY_FLOORS[floors]) : x.eave
         };
       });
-      setGeo({ lat: r.match.lat, lon: r.match.lon, for: text, checks: (r.noteCodes || []).map((n) => n.code).filter((c) => ["size_mismatch", "not_rectangle", "size_estimated", "street_only", "outbuilding"].includes(c)) });
-      const full = Boolean(h.length && h.width && h.floors) && r.match.houseLevel && r.details?.sizeSource !== "estimate" && !(r.noteCodes || []).some((n) => n.code === "size_mismatch");
-      setLookup({ busy: false, msg: `${r.match.short || r.match.display} – ${full ? t("biz.new.found") : t("biz.new.partial")}`, ok: full });
+      setGeo({ lat: r.match.lat, lon: r.match.lon, for: text, result: r, checks: (r.noteCodes || []).map((n) => n.code).filter((c) => ["size_mismatch", "not_rectangle", "size_estimated", "street_only", "outbuilding"].includes(c)) });
+      const full = Boolean(r.model) || Boolean(h.length && h.width && h.floors) && r.match.houseLevel && r.details?.sizeSource !== "estimate" && !(r.noteCodes || []).some((n) => n.code === "size_mismatch");
+      const how = r.model ? t("biz.new.model") : full ? t("biz.new.found") : t("biz.new.partial");
+      setLookup({ busy: false, msg: `${r.match.short || r.match.display} – ${how}${r.modelPending ? ` (${t("biz.new.modelPending")})` : ""}`, ok: full });
+      // The 3D model for a new area takes a moment to download: look again while the address is unchanged.
+      if (r.modelPending && retry < 3) window.setTimeout(() => addressNow.current === text && void find(retry + 1), 6000);
     } catch (e) {
       setLookup({ busy: false, msg: errMessage(i, e), ok: false });
     }
@@ -158,6 +170,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
         lat: g?.lat,
         lon: g?.lon,
         checks: g?.checks?.length ? g.checks : undefined,
+        model: modelRef,
         ...biz
       });
       go(`#/sites/${r.ref}`);
@@ -196,7 +209,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
                 {(id) => (
                   <div className="flex gap-2">
                     <Input id={id} value={f.address} onChange={(v) => set("address", v)} placeholder={t("biz.new.addressPh")} autoComplete="street-address" className="flex-1" />
-                    <Btn variant="dark" onClick={find} busy={lookup.busy}>
+                    <Btn variant="dark" onClick={() => void find()} busy={lookup.busy}>
                       {t("biz.new.find")}
                     </Btn>
                   </div>

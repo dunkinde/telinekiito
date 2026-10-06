@@ -47,7 +47,19 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
   `needsReview` + `sizeCheck.reasons` + an internal note: the office sees a "Check size" badge, a notice with a
   satellite link, and the customer's tracking page / business portal asks for a photo of each side
   (`POST /api/orders/:ref/photos`, `/api/biz/orders/:ref/photos`, max 12, stage "customer").
-- The price engine still models rectangles only; L-shapes need the office's check.
+- Where there's no 3D model, the price engine models a rectangle; L-shapes need the office's check.
+
+## 3D building model (added 6 Oct)
+- `lib/nls3d.js`: National Land Survey 3D buildings (LoD2 CityGML, OGC API Processes, key `NLS_API_KEY`).
+  The address lookup finds the 1:10 000 map sheet (e.g. Päätie 39 → L4133D), downloads it once (a few seconds),
+  keeps a compact index in `DATA_DIR/nls3d/<sheet>.json` ("none" is rechecked after 30 days) and picks the building.
+  Coverage is mostly larger cities (Helsinki yes, Hamina no); elsewhere everything works as before.
+- Each wall on the outline gets its own eave and top height (a wall that drops under a porch roof is split), a
+  `gable` flag (top rises > 5°) and `ext` = outer corners at its ends. `Engine.estimate` prices `house.walls` side by
+  side ("Wall N" / "Gable end N"): 1 m past outer corners only, real run length for the area, whole bays for parts.
+- The page only sends `model: {id, lat, lon}`; the server takes the walls from its own copy (`withModel` in
+  server.js), so walls can't be faked. A size change request drops the walls. Attribution "Contains data from the
+  National Land Survey of Finland, 3D buildings" (CC BY 4.0) shows with the model on the website.
 
 ## What's left
 - Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).

@@ -126,6 +126,7 @@ npm test                                  # unit + API tests
 | `OPENAI_API_KEY` | Empty = drawing upload hidden |
 | `OPENAI_MODEL` | Vision model, default `gpt-6-luna` |
 | `AI_DAILY_LIMIT` | Max drawing readings per day |
+| `NLS_API_KEY` | National Land Survey key: 3D building model in the address lookup (empty = off) |
 | `SEED_EXAMPLES` | `0` = start without the three example orders |
 
 ## Layout
