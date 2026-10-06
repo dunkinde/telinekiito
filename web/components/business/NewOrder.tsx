@@ -147,6 +147,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
   async function submit() {
     setError(null);
     if (!f.address.trim()) return setError(t("biz.new.needAddress"));
+    if ((parseNum(f.length) ?? 0) > 60 || (parseNum(f.width) ?? 0) > 40) return setError(t("biz.new.tooLarge"));
     if (!house.ok) return setError(t("biz.new.needSize"));
     if (!f.start) return setError(t("biz.new.needStart"));
     const g = geo && geo.for === f.address.trim() ? geo : null;

@@ -196,7 +196,7 @@ function AddressCard({ r }: { r: AddressResult }) {
   if (hs.floors) facts.push([t("a.floors", { n: hs.floors === "2" ? 2 : 1 }), d.floorsSource === "OpenStreetMap" ? t("a.fromMap") : t("a.register")]);
   if (reg?.floorArea || reg?.grossFloorArea) facts.push([t("a.floorArea", { m2: num(reg.floorArea || reg.grossFloorArea || 0) }), t("a.register")]);
   if (reg?.completed) facts.push([t("a.built", { year: reg.completed }), t("a.register")]);
-  const notes = (r.noteCodes || []).filter((n) => n.code !== "roof_assumed").map((n) => tk("note." + n.code, { n: n.n ?? "", map: (n as { map?: number }).map ?? "", reg: (n as { reg?: number }).reg ?? "" }));
+  const notes = (r.noteCodes || []).filter((n) => n.code !== "roof_assumed").map((n) => tk("note." + n.code, { n: n.n ?? "", map: (n as { map?: number }).map ?? "", reg: (n as { reg?: number }).reg ?? "", l: (n as { l?: number }).l ?? "", w: (n as { w?: number }).w ?? "" }));
   const mapLink = d.osmWayId
     ? `https://www.openstreetmap.org/${encodeURIComponent(d.osmType || "way")}/${encodeURIComponent(String(d.osmWayId))}`
     : `https://www.openstreetmap.org/?mlat=${r.match.lat}&mlon=${r.match.lon}#map=19/${r.match.lat}/${r.match.lon}`;
@@ -368,6 +368,12 @@ function WizardBody({ start }: { start: QuoteStart }) {
     const ok = L >= 3 && L <= 60 && W >= 3 && W <= 40 && !!form.floors && eave >= 2 && eave <= 12 && pitch >= 0 && pitch <= 60;
     return { ok, L, W, eave, pitch };
   }, [form.length, form.width, form.eave, form.pitch, form.roofType, form.floors]);
+  // Bigger than the online price covers: large buildings are priced by hand.
+  const tooLarge = Number(form.length) > 60 || Number(form.width) > 40;
+  const askOffer = () => {
+    closeQuote();
+    window.setTimeout(() => document.getElementById("contact")?.scrollIntoView({ behavior: "smooth" }), 350);
+  };
 
   // The measured 3D building prices the house wall by wall, while the size still matches what the lookup found.
   const looked = lookup.status === "done" && lookup.result && lookup.query === form.address.trim() ? lookup.result : null;
@@ -928,14 +934,23 @@ function WizardBody({ start }: { start: QuoteStart }) {
           <div className="flex items-center justify-between gap-3">
             <div>
               <p className="text-xs text-muted">{t("q.price")}</p>
-              <p className="font-display text-2xl font-extrabold tabular-nums">{price.quote ? <AnimatedEur value={total} /> : eur(0)}</p>
+              <p className="font-display text-2xl font-extrabold tabular-nums">{price.quote ? <AnimatedEur value={total} /> : tooLarge ? "–" : eur(0)}</p>
             </div>
             {price.quote ? (
               <button type="button" onClick={() => setShowBreakdown((s) => !s)} className="text-sm font-semibold text-ink-soft underline-offset-4 hover:underline">
                 {showBreakdown ? t("q.breakdownHide") : t("q.breakdown")}
               </button>
             ) : (
-              <p className="max-w-[55%] text-right text-xs text-muted">{t("q.priceEmpty")}</p>
+              tooLarge ? (
+                <p className="max-w-[60%] text-right text-xs text-ink-soft">
+                  {t("q.tooLargePrice")}{" "}
+                  <button type="button" className="font-semibold text-ink underline" onClick={askOffer}>
+                    {t("q.tooLargeCta")}
+                  </button>
+                </p>
+              ) : (
+                <p className="max-w-[55%] text-right text-xs text-muted">{t("q.priceEmpty")}</p>
+              )
             )}
           </div>
         </div>
@@ -948,6 +963,13 @@ function WizardBody({ start }: { start: QuoteStart }) {
             {error ? (
               <p className="min-w-0 text-right text-sm font-medium text-signal" role="alert">
                 {error}
+              </p>
+            ) : step === 0 && tooLarge ? (
+              <p className="hidden min-w-0 text-right text-sm text-ink-soft sm:block">
+                {t("q.tooLarge")}{" "}
+                <button type="button" className="font-semibold text-ink underline" onClick={askOffer}>
+                  {t("q.tooLargeCta")}
+                </button>
               </p>
             ) : step === 0 && !house.ok ? (
               <p className="hidden min-w-0 text-right text-sm text-muted sm:block">{t("q.needSize")}</p>
@@ -970,12 +992,14 @@ function WizardBody({ start }: { start: QuoteStart }) {
       <aside className="hidden w-[360px] shrink-0 flex-col overflow-y-auto border-l border-line bg-mist p-7 lg:flex xl:w-[400px]">
         {shownShape ? <HouseModel shape={shownShape} className="-mx-2 mb-4 h-44 w-[calc(100%+1rem)]" label={t("q.title")} /> : null}
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{t("q.price")}</p>
-        <p className="mt-2 font-display text-5xl font-extrabold tracking-[-0.02em] tabular-nums">{price.quote ? <AnimatedEur value={total} /> : eur(0)}</p>
+        <p className="mt-2 font-display text-5xl font-extrabold tracking-[-0.02em] tabular-nums">{price.quote ? <AnimatedEur value={total} /> : tooLarge ? "–" : eur(0)}</p>
         <p className="mt-1 text-sm text-muted">
           {price.quote ? (
             <>
               {t("q.priceIncl", { vat: num(vat) })} · {t("q.priceRange", { low: eur(price.quote.low), high: eur(price.quote.high) })}
             </>
+          ) : tooLarge ? (
+            t("q.tooLargePrice")
           ) : (
             t("q.priceEmpty")
           )}
