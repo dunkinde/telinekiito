@@ -12,6 +12,7 @@ import {
   getOrderDetail,
   invoiceDocUrl,
   mapsUrl,
+  satelliteUrl,
   patchOrder,
   type Crew,
   type OfficeOrderDetail,
@@ -178,6 +179,7 @@ function SummaryTab({ o, crews, reload }: { o: OfficeOrderDetail; crews: Crew[];
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)]">
       <div className="space-y-4">
         {o.example ? <Callout tone="info" title={t("od.exampleTitle")}>{t("od.exampleText")}</Callout> : null}
+        {o.needsReview && ["received", "confirmed"].includes(o.status) ? <ReviewCallout o={o} /> : null}
         <StatusCard o={o} reload={reload} />
         <ScheduleCard o={o} crews={crews} reload={reload} />
         {changes.length ? (
@@ -457,6 +459,9 @@ function CustomerCard({ o }: { o: OfficeOrderDetail }) {
                 </span>
               </span>
             </a>
+            <a href={satelliteUrl(o.site.address, o.geo)} target="_blank" rel="noopener" className="ml-6 inline-flex items-center gap-0.5 text-[12.5px] text-muted hover:text-ink hover:underline">
+              {t("od.cust.satellite")} <IExternal className="h-3 w-3" />
+            </a>
           </li>
         </ul>
         <KV
@@ -476,6 +481,26 @@ function CustomerCard({ o }: { o: OfficeOrderDetail }) {
         ) : null}
       </div>
     </Card>
+  );
+}
+
+/** The size from online data can't be trusted: what to check, a satellite link and the customer's photos. */
+function ReviewCallout({ o }: { o: OfficeOrderDetail }) {
+  const i = useT();
+  const { t } = i;
+  const photos = (o.files || []).filter((f) => f.kind === "photo" && f.stage === "customer").length;
+  return (
+    <Callout tone="warn" title={t("rv.title")}>
+      <ul className="list-disc space-y-0.5 pl-5">
+        {(o.sizeCheck?.reasons || [{ code: "storeys_many" }]).map((r, k) => (
+          <li key={k}>{i.tk(`rv.${r.code}`, { n: r.n ?? "" }, r.code)}</li>
+        ))}
+      </ul>
+      <p className="mt-2">{photos ? t("rv.photos", { n: photos }) : t("rv.noPhotos")}</p>
+      <a href={satelliteUrl(o.site.address, o.geo)} target="_blank" rel="noopener" className="mt-2 inline-flex items-center gap-1 font-semibold underline underline-offset-2">
+        {t("rv.satellite")} <IExternal className="h-3.5 w-3.5" />
+      </a>
+    </Callout>
   );
 }
 

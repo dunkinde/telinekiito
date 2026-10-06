@@ -43,7 +43,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
   const [sending, setSending] = useState(false);
   const [f, setF] = useState<Form>(blank);
   const [biz, setBiz] = useState<BizDetails>(blankBiz);
-  const [geo, setGeo] = useState<{ lat: number; lon: number; for: string } | null>(null);
+  const [geo, setGeo] = useState<{ lat: number; lon: number; for: string; checks?: string[] } | null>(null);
   const [lookup, setLookup] = useState<{ busy: boolean; msg: string | null; ok: boolean }>({ busy: false, msg: null, ok: false });
   const [price, setPrice] = useState<QuoteResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -123,8 +123,8 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
           eave: h.eave ? String(h.eave) : floors ? String(EAVE_BY_FLOORS[floors]) : x.eave
         };
       });
-      setGeo({ lat: r.match.lat, lon: r.match.lon, for: text });
-      const full = Boolean(h.length && h.width && h.floors) && r.match.houseLevel && r.details?.sizeSource !== "estimate";
+      setGeo({ lat: r.match.lat, lon: r.match.lon, for: text, checks: (r.noteCodes || []).map((n) => n.code).filter((c) => ["size_mismatch", "not_rectangle", "size_estimated", "street_only", "outbuilding"].includes(c)) });
+      const full = Boolean(h.length && h.width && h.floors) && r.match.houseLevel && r.details?.sizeSource !== "estimate" && !(r.noteCodes || []).some((n) => n.code === "size_mismatch");
       setLookup({ busy: false, msg: `${r.match.short || r.match.display} – ${full ? t("biz.new.found") : t("biz.new.partial")}`, ok: full });
     } catch (e) {
       setLookup({ busy: false, msg: errMessage(i, e), ok: false });
@@ -157,6 +157,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
         source: g ? "address" : "form",
         lat: g?.lat,
         lon: g?.lon,
+        checks: g?.checks?.length ? g.checks : undefined,
         ...biz
       });
       go(`#/sites/${r.ref}`);

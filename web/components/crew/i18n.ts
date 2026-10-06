@@ -244,6 +244,7 @@ const fi = {
   "stage.pickup": "Purku",
   "stage.problem": "Ongelma",
   "stage.other": "Muu",
+  "stage.customer": "Asiakkaalta",
 
   "insp.title": "Tarkasta ja luovuta",
   "insp.hint": "Käy jokainen kohta läpi telineellä.",
@@ -702,6 +703,7 @@ const en: Dict = {
   "stage.pickup": "Pickup",
   "stage.problem": "Problem",
   "stage.other": "Other",
+  "stage.customer": "From the customer",
 
   "insp.title": "Inspect and hand over",
   "insp.hint": "Check each point on the scaffold.",
@@ -1157,6 +1159,7 @@ const ru: Dict = {
   "stage.pickup": "Демонтаж",
   "stage.problem": "Проблема",
   "stage.other": "Другое",
+  "stage.customer": "От клиента",
 
   "insp.title": "Проверка и сдача",
   "insp.hint": "Проверьте каждый пункт на лесах.",

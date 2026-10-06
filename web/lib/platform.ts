@@ -99,6 +99,9 @@ export interface FullOrder {
   eta: string;
   notes: string;
   internalNotes?: string;
+  /** The size from online data can't be trusted: the office checks it before confirming. */
+  needsReview?: boolean;
+  sizeCheck?: { reasons: { code: string; n?: number }[]; at: string };
   messages: Message[];
   source: string;
   lang?: "fi" | "en";
@@ -508,6 +511,9 @@ export const getAudit = (ref?: string) => call<{ entries: AuditEntry[] }>("GET",
 export const fileUrl = (id: string) => `/api/files/${enc(id)}`;
 export const docUrl = (kind: "confirmation" | "inspection", ref: string) => `/doc/${kind}/${enc(ref)}`;
 export const invoiceDocUrl = (no: string) => `/doc/invoice/${enc(no)}`;
+/** Satellite view of the site, to check the real shape of the house before confirming. */
+export const satelliteUrl = (address: string, geo?: Geo | null) =>
+  geo ? `https://www.google.com/maps/@${geo.lat},${geo.lon},45m/data=!3m1!1e3` : `https://www.google.com/maps/search/?api=1&query=${enc(address)}`;
 export const mapsUrl = (address: string, geo?: Geo | null) =>
   geo ? `https://www.google.com/maps/dir/?api=1&destination=${geo.lat},${geo.lon}` : `https://www.google.com/maps/dir/?api=1&destination=${enc(address)}`;
 

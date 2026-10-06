@@ -33,6 +33,11 @@ export function OrderFlags({ o }: { o: FullOrder }) {
   return (
     <>
       {o.example ? <ExampleBadge /> : null}
+      {o.needsReview && ["received", "confirmed"].includes(o.status) ? (
+        <Badge tone="orange" dot>
+          {t("orders.checkSize")}
+        </Badge>
+      ) : null}
       {o.pendingChanges ? (
         <Badge tone="orange" dot>
           {t("orders.pendingChange")}

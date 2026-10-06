@@ -410,7 +410,19 @@ const en = {
   "hero.card.vat": "VAT",
   "sec.reviews.eyebrow": "Reviews",
   "sec.reviews.title": "What customers say",
-  "sec.reviews.avg": (v) => `${v.avg} / 5 · ${plural(v.n, "1 review", `${v.n} reviews`)}`
+  "sec.reviews.avg": (v) => `${v.avg} / 5 · ${plural(v.n, "1 review", `${v.n} reviews`)}`,
+  "note.size_mismatch": "The map outline (about {map} m²) and the building register (about {reg} m² per floor) disagree, so the house shape may be different. We'll check it before confirming the price.",
+  "q.donePhotos": "We'll check the size of your house before confirming the price. Photos of each side of the house help us do it quickly.",
+  "q.donePhotosBtn": "Add photos of the house",
+  "tr.photos": "Photos of your house",
+  "tr.photosText": "Photos of each side help us plan the scaffolding. Optional.",
+  "tr.photosNeeded": "Please add a photo of each side of the house, including the roof line. We confirm the price once we've checked the size.",
+  "tr.photosAdd": "Add photos",
+  "tr.photosUploading": "Sending… {n} left",
+  "tr.photosSaved": "Photos saved. Thank you!",
+  "tr.photoAlt": "Photo of the house",
+  "tr.photoBad": "That file isn't a photo we can read.",
+  "err.too_many_photos": "Up to 12 photos per order."
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -811,7 +823,19 @@ const fi: Record<Key, Entry> = {
   "hero.card.vat": "ALV",
   "sec.reviews.eyebrow": "Arviot",
   "sec.reviews.title": "Asiakkaat kertovat",
-  "sec.reviews.avg": (v) => `${v.avg} / 5 · ${plural(v.n, "1 arvio", `${v.n} arviota`)}`
+  "sec.reviews.avg": (v) => `${v.avg} / 5 · ${plural(v.n, "1 arvio", `${v.n} arviota`)}`,
+  "note.size_mismatch": "Kartan ääriviiva (noin {map} m²) ja rakennusrekisteri (noin {reg} m² kerrosta kohden) eivät täsmää, joten talon muoto voi olla toinen. Tarkistamme sen ennen hinnan vahvistamista.",
+  "q.donePhotos": "Tarkistamme talosi koon ennen hinnan vahvistamista. Kuvat talon jokaiselta sivulta nopeuttavat tarkistusta.",
+  "q.donePhotosBtn": "Lisää kuvat talosta",
+  "tr.photos": "Kuvat talostasi",
+  "tr.photosText": "Kuvat talon jokaiselta sivulta auttavat suunnittelemaan telineet. Vapaaehtoinen.",
+  "tr.photosNeeded": "Lisää kuva talon jokaiselta sivulta niin, että räystäslinja näkyy. Vahvistamme hinnan, kun olemme tarkistaneet koon.",
+  "tr.photosAdd": "Lisää kuvia",
+  "tr.photosUploading": "Lähetetään… {n} jäljellä",
+  "tr.photosSaved": "Kuvat tallennettu. Kiitos!",
+  "tr.photoAlt": "Kuva talosta",
+  "tr.photoBad": "Tiedostoa ei voitu lukea kuvana.",
+  "err.too_many_photos": "Enintään 12 kuvaa tilausta kohden."
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi };

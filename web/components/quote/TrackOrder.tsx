@@ -4,7 +4,8 @@
 // rate us after pickup). A longer rental is a request the office approves; the new price shows before → after.
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getOrder, orderAction, STATUSES, type OrderChange, type OrderView } from "@/lib/api";
+import { getOrder, orderAction, STATUSES, uploadOrderPhoto, type OrderChange, type OrderView } from "@/lib/api";
+import { shrinkImage } from "@/lib/image";
 import { digits, eur, fmtDate, fmtStamp } from "@/lib/format";
 import { errText, useI18n } from "@/lib/i18n";
 import { useSite } from "../SiteContext";
@@ -56,6 +57,7 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [rating, setRating] = useState({ stars: 0, text: "", consent: true });
+  const [uploading, setUploading] = useState(0);
   const creds = useRef<{ ref: string; phone4: string } | null>(null);
   const phoneInput = useRef<HTMLInputElement>(null);
   const fmt = (iso: string) => fmtDate(iso, lang);
@@ -242,6 +244,56 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
             {t("tr.pickup")}
           </Button>
         </div>
+      ) : null}
+
+      {!finished && !cancelled ? (
+        <section className={`mt-6 rounded-2xl p-4 sm:p-5 ${order.needsPhotos ? "bg-sun-soft" : "bg-mist"}`} aria-labelledby="tr-photos">
+          <h3 id="tr-photos" className="font-display text-lg font-bold text-ink">
+            {t("tr.photos")}
+          </h3>
+          <p className="mt-1 text-sm text-ink-soft">{order.needsPhotos ? t("tr.photosNeeded") : t("tr.photosText")}</p>
+          {order.photos?.length ? (
+            <ul className="mt-3 grid grid-cols-4 gap-2 sm:grid-cols-6">
+              {order.photos.map((p) => (
+                <li key={p.id}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/api/files/${encodeURIComponent(p.id)}${q}`} alt={t("tr.photoAlt")} className="aspect-square w-full rounded-lg object-cover ring-1 ring-line" loading="lazy" />
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-full bg-ink px-4 py-2 text-sm font-semibold text-white hover:bg-ink-soft">
+            {uploading ? t("tr.photosUploading", { n: uploading }) : t("tr.photosAdd")}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="sr-only"
+              disabled={uploading > 0}
+              onChange={async (e) => {
+                const c = creds.current;
+                const files = Array.from(e.target.files || []).slice(0, 12);
+                e.target.value = "";
+                if (!c || !files.length) return;
+                let last: OrderView | null = null;
+                for (let k = 0; k < files.length; k++) {
+                  setUploading(files.length - k);
+                  try {
+                    last = await uploadOrderPhoto(c.ref, c.phone4, await shrinkImage(files[k], t("tr.photoBad")));
+                  } catch (err) {
+                    toast(errText(i18n, err, fmt));
+                    break;
+                  }
+                }
+                setUploading(0);
+                if (last) {
+                  setOrder(last);
+                  toast(t("tr.photosSaved"));
+                }
+              }}
+            />
+          </label>
+        </section>
       ) : null}
 
       {changes.length ? (

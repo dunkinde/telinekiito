@@ -10,6 +10,7 @@ import {
   bizPickup,
   bizPreview,
   bizSaveDetails,
+  bizUploadPhoto,
   docUrl,
   invoiceDocUrl,
   photoUrl,
@@ -26,6 +27,7 @@ import { jobLabel, photoStageLabel, statusLabel, urgLabel } from "../office/i18n
 import { IDoc, IDownload, IEdit, ILeft, IPickup, ISend } from "../office/icons";
 import { Async, Badge, Btn, Callout, Card, CardHead, Chips, Confirm, Dialog, Field, Input, KV, StatusBadge, TextArea, cx } from "../office/ui";
 import { useBiz, useBizAct, useBizLoad } from "./context";
+import { shrinkImage } from "@/lib/image";
 
 export function OrderView({ refNo }: { refNo: string }) {
   const { t } = useT();
@@ -89,6 +91,7 @@ function Body({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void })
           </div>
         ) : null}
         {pending ? <p className="mt-3 text-[13px] text-ink-soft">{t("biz.ch.pendingHint")}</p> : null}
+        {o.needsPhotos && !finished ? <Callout tone="warn" className="mt-4">{t("biz.photosNeeded")}</Callout> : null}
       </Card>
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -107,6 +110,8 @@ function Body({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void })
               />
             </div>
           </Card>
+
+          {canOrder && !finished ? <PhotoUpload o={o} onDone={onChange} /> : null}
 
           <Card>
             <CardHead title={t("biz.work")} sub={t("biz.workSub")} />
@@ -228,6 +233,49 @@ function Body({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void })
         disabled={busy === "pickup"}
       />
     </div>
+  );
+}
+
+/** Photos of the house from the company, so the office can check the size before confirming. */
+function PhotoUpload({ o, onDone }: { o: BizOrder; onDone: (o: BizOrder) => void }) {
+  const { t } = useT();
+  const { fail, notify } = useBiz();
+  const [left, setLeft] = useState(0);
+  const mine = o.photos.filter((p) => p.stage === "customer").length;
+  return (
+    <Card className="p-5">
+      <p className="font-display text-[16px] font-bold text-ink">{t("biz.photosTitle")}</p>
+      <p className="mt-1 text-[13.5px] text-ink-soft">{t("biz.photosText", { n: mine })}</p>
+      <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-full bg-ink px-4 py-2 text-[14px] font-semibold text-white hover:bg-ink-soft">
+        {left ? t("biz.photosUploading", { n: left }) : t("biz.photosAdd")}
+        <input
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          className="sr-only"
+          disabled={left > 0}
+          onChange={async (e) => {
+            const files = Array.from(e.target.files || []).slice(0, 12);
+            e.target.value = "";
+            let last: BizOrder | null = null;
+            for (let k = 0; k < files.length; k++) {
+              setLeft(files.length - k);
+              try {
+                last = (await bizUploadPhoto(o.ref, await shrinkImage(files[k], t("biz.photoBad")))).order;
+              } catch (err) {
+                fail(err);
+                break;
+              }
+            }
+            setLeft(0);
+            if (last) {
+              onDone(last);
+              notify(t("biz.photosSaved"));
+            }
+          }}
+        />
+      </label>
+    </Card>
   );
 }
 

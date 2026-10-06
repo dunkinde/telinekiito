@@ -1411,7 +1411,28 @@ const en = {
   "err.empty_message": "Write a message first.",
   "err.bad_type": "Unknown change type.",
   "err.lookup_failed": "The map service didn't answer. Try again or enter the size yourself.",
-  "err.address_short": "Write the street, number and city."
+  "err.address_short": "Write the street, number and city.",
+  "od.cust.satellite": "satellite view",
+  "orders.checkSize": "Check size",
+  "photo.customer": "From the customer",
+  "rv.title": "Check the size before confirming",
+  "rv.size_mismatch": "The map outline and the building register disagree on the size.",
+  "rv.not_rectangle": "The building is not a simple rectangle (L-shape or extensions).",
+  "rv.size_estimated": "The size is estimated from the register floor area, not measured.",
+  "rv.street_only": "The address matched only the street, not the house.",
+  "rv.outbuilding": "The matched building may be an outbuilding.",
+  "rv.storeys_many": "The building register lists {n} storeys; the online price covers up to 2.",
+  "rv.photos": "Photos from the customer: {n} (Site work tab).",
+  "rv.noPhotos": "No photos from the customer yet – their tracking page asks for a photo of each side.",
+  "rv.satellite": "Open satellite view",
+  "err.too_many_photos": "Up to 12 photos per order.",
+  "biz.photosTitle": "Photos of the house",
+  "biz.photosText": "A photo of each side, with the roof line visible, lets TelineKiito check the size before confirming. Added so far: {n}.",
+  "biz.photosNeeded": "TelineKiito needs to check the size of this building before confirming. Please add a photo of each side below.",
+  "biz.photosAdd": "Add photos",
+  "biz.photosUploading": "Sending… {n} left",
+  "biz.photosSaved": "Photos saved.",
+  "biz.photoBad": "That file isn't a photo we can read."
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -2813,7 +2834,28 @@ const fi: Record<Key, Entry> = {
   "err.empty_message": "Kirjoita ensin viesti.",
   "err.bad_type": "Tuntematon muutostyyppi.",
   "err.lookup_failed": "Karttapalvelu ei vastannut. Yritä uudelleen tai syötä mitat itse.",
-  "err.address_short": "Kirjoita katu, numero ja kaupunki."
+  "err.address_short": "Kirjoita katu, numero ja kaupunki.",
+  "od.cust.satellite": "satelliittikuva",
+  "orders.checkSize": "Tarkista koko",
+  "photo.customer": "Asiakkaalta",
+  "rv.title": "Tarkista koko ennen vahvistamista",
+  "rv.size_mismatch": "Kartan ääriviiva ja rakennusrekisteri eivät täsmää koon osalta.",
+  "rv.not_rectangle": "Rakennus ei ole suorakaide (L-muoto tai laajennuksia).",
+  "rv.size_estimated": "Mitat on arvioitu rekisterin kerrosalasta, ei mitattu.",
+  "rv.street_only": "Osoite löytyi vain kadun tarkkuudella.",
+  "rv.outbuilding": "Löytynyt rakennus voi olla piharakennus.",
+  "rv.storeys_many": "Rakennusrekisterin mukaan kerroksia on {n}; verkkohinta kattaa enintään 2.",
+  "rv.photos": "Asiakkaan kuvia: {n} (Työmaa-välilehti).",
+  "rv.noPhotos": "Asiakkaalta ei ole vielä kuvia – seurantasivu pyytää kuvan jokaiselta sivulta.",
+  "rv.satellite": "Avaa satelliittikuva",
+  "err.too_many_photos": "Enintään 12 kuvaa tilausta kohden.",
+  "biz.photosTitle": "Kuvat talosta",
+  "biz.photosText": "Kuva jokaiselta sivulta räystäslinjoineen auttaa TelineKiitoa tarkistamaan koon ennen vahvistusta. Lisätty: {n}.",
+  "biz.photosNeeded": "TelineKiito tarkistaa rakennuksen koon ennen vahvistusta. Lisää alla kuva jokaiselta sivulta.",
+  "biz.photosAdd": "Lisää kuvia",
+  "biz.photosUploading": "Lähetetään… {n} jäljellä",
+  "biz.photosSaved": "Kuvat tallennettu.",
+  "biz.photoBad": "Tiedostoa ei voitu lukea kuvana."
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };

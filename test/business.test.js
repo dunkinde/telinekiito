@@ -140,3 +140,27 @@ test("business portal: users, own orders only, ordering, changes, invoices, Finv
   await req("PATCH", `/api/office/accounts/${acc.id}/users/${admin.id}`, { active: false }, owner);
   assert.equal((await req("GET", "/api/biz/me", undefined, a)).status, 401);
 });
+
+test("size check: lookup warnings flag the order, the customer adds photos", async () => {
+  const owner = await loginAs({ password: PASSWORD });
+  const PNG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+  const body = { ...house, start: start(), name: "Koko Testi", phone: "040 555 7788", address: "Muototie 3, Hamina" };
+  const flagged = (await req("POST", "/api/orders", { ...body, checks: ["size_mismatch", "made_up_code"] })).json.ref;
+  const plain = (await req("POST", "/api/orders", { ...body, address: "Suora 1, Hamina" })).json.ref;
+  const o = (await req("GET", `/api/office/orders/${flagged}`, undefined, owner)).json.order;
+  assert.equal(o.needsReview, true);
+  assert.deepEqual(o.sizeCheck.reasons.map((r) => r.code), ["size_mismatch"], "only known warnings count");
+  assert.match(o.internalNotes, /satellite/);
+  assert.equal((await req("GET", `/api/office/orders/${plain}`, undefined, owner)).json.order.needsReview, undefined);
+
+  // The tracking page asks for photos until the customer adds one.
+  let view = (await req("POST", `/api/orders/${flagged}/view`, { phone: "7788" })).json;
+  assert.equal(view.needsPhotos, true);
+  assert.equal((await req("POST", `/api/orders/${flagged}/photos`, { phone: "0000", image: PNG })).status, 404, "needs the phone digits");
+  view = (await req("POST", `/api/orders/${flagged}/photos`, { phone: "7788", image: PNG })).json;
+  assert.equal(view.photos.length, 1);
+  assert.equal(view.needsPhotos, false);
+  const files = (await req("GET", `/api/office/orders/${flagged}`, undefined, owner)).json.order.files;
+  assert.ok(files.some((f) => f.kind === "photo" && f.stage === "customer"));
+  assert.equal((await req("POST", `/api/orders/${flagged}/photos`, { phone: "7788", image: "data:text/plain;base64,aGk=" })).json.error, "bad_image");
+});

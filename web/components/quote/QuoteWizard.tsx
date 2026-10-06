@@ -27,6 +27,10 @@ import { Button } from "../ui/Button";
 import { IconArrow, IconCheck, IconChevron, IconPin, IconUpload } from "../ui/Icons";
 import { Modal } from "../ui/Modal";
 import { HouseModel } from "../HouseModel";
+import { shrinkImage } from "@/lib/image";
+
+/** Address lookup warnings that make the office check the size before confirming. */
+const REVIEW_CODES = ["size_mismatch", "not_rectangle", "size_estimated", "street_only", "outbuilding"];
 
 interface Form {
   address: string;
@@ -74,32 +78,6 @@ function localEarliest(u: Urgency): string {
     }
   }
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-/** Shrink a photo or drawing in the browser before upload (max 1600 px, JPEG). */
-function shrink(file: File, badFile: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
-      const s = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
-      const c = document.createElement("canvas");
-      c.width = Math.round(img.naturalWidth * s);
-      c.height = Math.round(img.naturalHeight * s);
-      const ctx = c.getContext("2d");
-      if (!ctx) return reject(new Error(badFile));
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, c.width, c.height);
-      ctx.drawImage(img, 0, 0, c.width, c.height);
-      URL.revokeObjectURL(url);
-      resolve(c.toDataURL("image/jpeg", 0.85));
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      reject(new Error(badFile));
-    };
-    img.src = url;
-  });
 }
 
 /** A number that tweens to its new value (text updated directly, no re-renders per frame). */
@@ -211,11 +189,11 @@ function AddressCard({ r }: { r: AddressResult }) {
   if (hs.floors) facts.push([t("a.floors", { n: hs.floors === "2" ? 2 : 1 }), d.floorsSource === "OpenStreetMap" ? t("a.fromMap") : t("a.register")]);
   if (reg?.floorArea || reg?.grossFloorArea) facts.push([t("a.floorArea", { m2: num(reg.floorArea || reg.grossFloorArea || 0) }), t("a.register")]);
   if (reg?.completed) facts.push([t("a.built", { year: reg.completed }), t("a.register")]);
-  const notes = (r.noteCodes || []).filter((n) => n.code !== "roof_assumed").map((n) => tk("note." + n.code, { n: n.n ?? "" }));
+  const notes = (r.noteCodes || []).filter((n) => n.code !== "roof_assumed").map((n) => tk("note." + n.code, { n: n.n ?? "", map: (n as { map?: number }).map ?? "", reg: (n as { reg?: number }).reg ?? "" }));
   const mapLink = d.osmWayId
     ? `https://www.openstreetmap.org/${encodeURIComponent(d.osmType || "way")}/${encodeURIComponent(String(d.osmWayId))}`
     : `https://www.openstreetmap.org/?mlat=${r.match.lat}&mlon=${r.match.lon}#map=19/${r.match.lat}/${r.match.lon}`;
-  const ok = Boolean(hs.length && hs.width && hs.floors) && !estimated && r.match.houseLevel;
+  const ok = Boolean(hs.length && hs.width && hs.floors) && !estimated && r.match.houseLevel && !(r.noteCodes || []).some((n) => n.code === "size_mismatch");
 
   return (
     <motion.div
@@ -351,7 +329,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
   const [showBreakdown, setShowBreakdown] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [done, setDone] = useState<{ ref: string; total: number; phone4: string; review: boolean } | null>(null);
+  const [done, setDone] = useState<{ ref: string; total: number; phone4: string; review: boolean; photos: boolean } | null>(null);
   const addressId = useId();
 
   const set = useCallback(<K extends keyof Form>(k: K, v: Form[K]) => setForm((f) => ({ ...f, [k]: v })), []);
@@ -476,7 +454,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
     if (!ai.files.length) return;
     setAi((a) => ({ ...a, status: "reading", message: t("ai.reading") }));
     try {
-      const images = await Promise.all(ai.files.slice(0, 3).map((f) => shrink(f, t("ai.badFile"))));
+      const images = await Promise.all(ai.files.slice(0, 3).map((f) => shrinkImage(f, t("ai.badFile"))));
       const r = await readDrawing(images, lang);
       const h = r.house;
       setForm((f) => ({
@@ -512,6 +490,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
     setSubmitting(true);
     // The map position only if the address is still the one that was looked up.
     const found = lookup.status === "done" && lookup.result && lookup.query === form.address.trim() ? lookup.result : null;
+    const checks = (found?.noteCodes || []).map((n) => n.code).filter((c) => REVIEW_CODES.includes(c));
     try {
       const r = await placeOrder({
         length: house.L,
@@ -536,9 +515,10 @@ function WizardBody({ start }: { start: QuoteStart }) {
         lat: found?.match.lat,
         lon: found?.match.lon,
         partnerCode: form.partnerCode.trim() || undefined,
-        storeys: tooTall || undefined
+        storeys: tooTall || undefined,
+        checks: checks.length ? checks : undefined
       });
-      setDone({ ref: r.ref, total: r.order.quote.total, phone4: digits(form.phone).slice(-4), review: Boolean(tooTall) });
+      setDone({ ref: r.ref, total: r.order.quote.total, phone4: digits(form.phone).slice(-4), review: Boolean(tooTall), photos: checks.length > 0 || Boolean(tooTall) });
     } catch (e) {
       const err = e as { code?: string; info?: { date?: string } | null };
       // Parts or crews are booked on that date: move to the first free date and show the timing step.
@@ -581,6 +561,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
           </p>
           <p className="mx-auto mt-4 max-w-md text-muted">{t("q.doneText")}</p>
           {done.review ? <p className="mx-auto mt-3 max-w-md rounded-xl bg-sun-soft px-4 py-3 text-sm text-ink">{t("q.doneReview")}</p> : null}
+          {done.photos && !done.review ? <p className="mx-auto mt-3 max-w-md rounded-xl bg-sun-soft px-4 py-3 text-sm text-ink">{t("q.donePhotos")}</p> : null}
           <div className="mt-8 flex flex-wrap justify-center gap-3">
             <Button
               onClick={() => {
@@ -588,7 +569,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
                 openTrack(done.ref, done.phone4);
               }}
             >
-              {t("q.doneTrack")}
+              {done.photos ? t("q.donePhotosBtn") : t("q.doneTrack")}
             </Button>
             <Button variant="ghost" onClick={closeQuote}>
               {t("q.doneClose")}

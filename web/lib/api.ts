@@ -147,6 +147,10 @@ export interface OrderView {
   rentalEnd?: string;
   /** Signed key for this order's documents (/doc/...?t=). */
   access?: string | null;
+  /** The customer's own photos of the house (for the office's size check). */
+  photos?: { id: string; at: string }[];
+  /** The office needs to check the size: photos of each side are asked for. */
+  needsPhotos?: boolean;
 }
 
 export interface OrderChange {
@@ -220,6 +224,8 @@ export const sendContact = (body: { name: string; email: string; phone: string; 
 export const placeOrder = (body: Record<string, unknown>) => api<{ ref: string; order: OrderView }>("POST", "/api/orders", body);
 // The phone digits go in the request body, never in the web address (they'd end up in logs and history).
 export const getOrder = (ref: string, phone4: string) => api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/view`, { phone: phone4 });
+export const uploadOrderPhoto = (ref: string, phone4: string, image: string) =>
+  api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/photos`, { phone: phone4, image });
 export const orderAction = (ref: string, action: "extend" | "pickup" | "message" | "change" | "review", body: Record<string, unknown>) =>
   api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/${action}`, body);
 

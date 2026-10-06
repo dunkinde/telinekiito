@@ -203,8 +203,9 @@ function customerView(o) {
   const invoices = store.list("invoice", { ref: o.ref }).filter((iv) => iv.status === "sent" || iv.status === "paid")
     .map((iv) => ({ id: iv.id, no: iv.no, date: iv.date, due: iv.due, total: iv.total, status: iv.status, reference: iv.reference }));
   const review = store.get("review", `rev_${o.ref}`);
+  const photos = store.list("file", { ref: o.ref }).filter((f) => f.kind === "photo" && f.stage === "customer").map((f) => ({ id: f.id, at: f.createdAt }));
   return O.publicView(o, {
-    changes, invoices, review: review ? { stars: review.stars, text: review.text } : null,
+    changes, invoices, photos, needsPhotos: Boolean(o.needsReview) && !photos.length, review: review ? { stars: review.stars, text: review.text } : null,
     rentalEnd: P.rentalEnd(o),
     // Signed link key for this order's documents and photos (so phone digits never go into web addresses).
     access: auth.enabled ? auth.issue(`c:${o.ref}`, 0) : null
@@ -364,6 +365,30 @@ function assertAvailable(order, f) {
   }
 }
 
+/**
+ * Orders whose size the online data can't be trusted for go to the office for a check before confirming:
+ * the address lookup's warnings (sent by the website with the order) and buildings taller than the price covers.
+ */
+const REVIEW_CHECKS = {
+  size_mismatch: "the map outline and the building register disagree on the size",
+  not_rectangle: "the building is not a simple rectangle",
+  size_estimated: "the size is estimated from the register floor area, not measured",
+  street_only: "the address matched only the street, not the house",
+  outbuilding: "the matched building may be an outbuilding"
+};
+function applyReviewFlags(order, body) {
+  const reasons = [];
+  const storeys = Math.round(Number(body.storeys) || 0);
+  if (storeys >= 3 && storeys <= 50) reasons.push({ code: "storeys_many", n: storeys });
+  const checks = Array.isArray(body.checks) ? body.checks.filter((c) => typeof c === "string" && REVIEW_CHECKS[c]) : [];
+  for (const code of new Set(checks)) reasons.push({ code });
+  if (!reasons.length) return;
+  order.needsReview = true;
+  order.sizeCheck = { reasons, at: new Date().toISOString() };
+  const words = reasons.map((r) => (r.code === "storeys_many" ? `the building register lists ${r.n} storeys (the online price covers up to 2)` : REVIEW_CHECKS[r.code]));
+  order.internalNotes = `Check the size before confirming: ${words.join("; ")}. Look at the satellite view and ask the customer for photos of each side.`;
+}
+
 route("POST", /^\/api\/orders$/, async (req) => {
   limit(req, "order", 10, 60 * 60e3);
   const body = await readJson(req, 16384);
@@ -380,16 +405,11 @@ route("POST", /^\/api\/orders$/, async (req) => {
     order.quote = P.applyDiscount(order.quote, order.discountPct, p);
   }
   assertAvailable(order, f);
-  // Taller than the online price covers (register storeys from the address lookup): the office checks the price.
-  const storeys = Math.round(Number(body.storeys) || 0);
-  if (storeys >= 3 && storeys <= 50) {
-    order.needsReview = true;
-    order.internalNotes = `Check the price: the building register lists ${storeys} storeys (the online price covers up to 2).`;
-  }
+  applyReviewFlags(order, body);
   store.insertOrder(order);
   store.bump("orders");
   notify.event(order, "order_received");
-  notify.alert("new_order", order.ref, `New order ${order.ref}: ${order.site.address}, ${order.estimate.area} m², start ${order.schedule.start}${order.needsReview ? ` – check the price (${storeys} storeys)` : ""}`);
+  notify.alert("new_order", order.ref, `New order ${order.ref}: ${order.site.address}, ${order.estimate.area} m², start ${order.schedule.start}`);
   P.audit(store, null, "order_created", order.ref, { total: order.quote.total, partner: account ? account.name : null });
   console.log(`[order] ${order.ref} ${order.estimate.area} m2 ${order.quote.total} EUR`);
   return { ref: order.ref, order: customerView(order) };
@@ -434,6 +454,24 @@ route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/(extend|pickup|message|change)$/, a
   O.customerAction(o, "message", body, pricing());
   saveOrder(o);
   notify.alert("customer_message", o.ref, `${o.ref}: message from ${o.customer.name}`, { text: String(body.text || "").slice(0, 200) });
+  return customerView(o);
+});
+
+/** Photos of the house from the customer (each side), so the office can check the size before confirming. */
+const MAX_CUSTOMER_PHOTOS = 12;
+function addCustomerPhoto(o, image) {
+  if (["dismantled", "closed", "cancelled"].includes(o.status)) throw new HttpError(409, "order_finished", "This order is already finished.");
+  const have = store.list("file", { ref: o.ref }).filter((f) => f.kind === "photo" && f.stage === "customer").length;
+  if (have >= MAX_CUSTOMER_PHOTOS) throw new HttpError(409, "too_many_photos", `Up to ${MAX_CUSTOMER_PHOTOS} photos per order.`);
+  saveImage(o.ref, image, { kind: "photo", stage: "customer" });
+  o.updatedAt = new Date().toISOString();
+  saveOrder(o);
+}
+route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/photos$/, async (req, m) => {
+  limit(req, "photos", 30, 10 * 60e3);
+  const body = await readJson(req, 7 * 1024 * 1024);
+  const o = customerOrder(m[1], body.phone);
+  addCustomerPhoto(o, body.image);
   return customerView(o);
 });
 
@@ -547,6 +585,7 @@ route("POST", /^\/api\/biz\/orders$/, async (req) => {
   order.quote = P.applyDiscount(order.quote, order.discountPct, p);
   order.history[0].by = "customer";
   B.applyBizFields(order, { ...bf, orderedBy: s.user.name, orderedById: s.user.id });
+  applyReviewFlags(order, body);
   assertAvailable(order, f);
   store.insertOrder(order);
   store.bump("orders");
@@ -605,6 +644,15 @@ route("POST", /^\/api\/biz\/orders\/([A-Z0-9-]+)\/pickup$/, async (req, m) => {
   o.updatedAt = new Date().toISOString();
   afterStatusChange(o, prev, null);
   saveOrder(o);
+  return { order: bizDetail(o) };
+});
+
+route("POST", /^\/api\/biz\/orders\/([A-Z0-9-]+)\/photos$/, async (req, m) => {
+  const s = requireBiz(req, BIZ_ORDERING);
+  limit(req, "photos", 30, 10 * 60e3);
+  const body = await readJson(req, 7 * 1024 * 1024);
+  const o = bizOrder(s, m[1]);
+  addCustomerPhoto(o, body.image);
   return { order: bizDetail(o) };
 });
 

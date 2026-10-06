@@ -97,6 +97,8 @@ export interface BizOrder extends BizOrderSummary {
   docs: { confirmation: boolean; inspection: boolean };
   access: string | null;
   cancelled: boolean;
+  needsReview?: boolean;
+  needsPhotos?: boolean;
 }
 export interface BizInvoice extends BizInvoiceRef { site: string; po: string; project: string; costCentre: string; access: string }
 export interface ChangePreview { before: { days: number; total: number }; after: { days: number; total: number } | null; stock: { ok: boolean } | null }
@@ -115,6 +117,7 @@ export const bizSaveDetails = (ref: string, body: Partial<BizDetails>) => call<{
 export const bizPreview = (ref: string, body: ChangeBody) => call<ChangePreview>("POST", `/api/biz/orders/${enc(ref)}/preview`, body);
 export const bizChange = (ref: string, body: ChangeBody) => call<{ order: BizOrder }>("POST", `/api/biz/orders/${enc(ref)}/change`, body);
 export const bizPickup = (ref: string) => call<{ order: BizOrder }>("POST", `/api/biz/orders/${enc(ref)}/pickup`, {});
+export const bizUploadPhoto = (ref: string, image: string) => call<{ order: BizOrder }>("POST", `/api/biz/orders/${enc(ref)}/photos`, { image });
 export const bizMessage = (ref: string, text: string) => call<{ order: BizOrder }>("POST", `/api/biz/orders/${enc(ref)}/message`, { text });
 export const bizInvoices = () => call<{ invoices: BizInvoice[] }>("GET", "/api/biz/invoices");
 export const bizFinvoiceUrl = (id: string) => `/api/biz/invoices/${enc(id)}/finvoice`;

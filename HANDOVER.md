@@ -41,6 +41,14 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
   Account fields: e-invoice address (OVT) + operator ID; our own in Settings → Company. **Sending through an operator
   (Maventa, Apix, Netvisor…) is not connected yet** – pick an operator, then add its API like SMTP/SMS.
 
+## Size check (added 6 Oct)
+- The address lookup flags `size_mismatch` when the map outline and the register floor area per storey differ by >20 %
+  (e.g. a rough box drawn on OpenStreetMap). Such warnings travel with the order (`checks`), and the server sets
+  `needsReview` + `sizeCheck.reasons` + an internal note: the office sees a "Check size" badge, a notice with a
+  satellite link, and the customer's tracking page / business portal asks for a photo of each side
+  (`POST /api/orders/:ref/photos`, `/api/biz/orders/:ref/photos`, max 12, stage "customer").
+- The price engine still models rectangles only; L-shapes need the office's check.
+
 ## What's left
 - Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).
 - Company details (M1 phone, privacy controller details), email/SMS keys in `.env`.
