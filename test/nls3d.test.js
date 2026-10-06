@@ -88,3 +88,24 @@ test("price wall by wall from measured walls", () => {
   const jog = E.estimate({ ...house, jobType: "facade", walls: [{ edge: 0, len: 8, eave: 3, top: 3, ext: 1 }, { edge: 1, len: 0.8, eave: 3, top: 3, ext: 0 }, { edge: 2, len: 6, eave: 3, top: 3, ext: 2 }] });
   assert.deepEqual(jog.sides.map((s) => s.len), [8.8, 6]);
 });
+
+test("MonZon Modular Light: same grid as Layher, its own parts", () => {
+  const h = { length: 12.4, width: 9.9, eave: 2.9, roofType: "gable", pitch: 47, jobType: "roof", gables: true };
+  const lay = E.estimate(h), mz = E.estimate({ ...h, system: "monzon" });
+  assert.equal(lay.system, "layher");
+  assert.equal(mz.system, "monzon");
+  assert.equal(mz.totals.area, lay.totals.area); // 3.07 m bays in both
+  assert.ok(Object.keys(mz.totals.parts).every((k) => k.startsWith("mz_")));
+  // A long side: 5 bays, 6 frame lines, one lift, one decked level.
+  const side = mz.sides[0];
+  assert.equal(side.bays, 5);
+  assert.deepEqual(
+    [side.parts.mz_standards, side.parts.mz_transoms, side.parts.mz_ledgers, side.parts.mz_decks, side.parts.mz_guardrails, side.parts.mz_anchors],
+    [12, 12, 15, 8, 5, 6]
+  );
+  // Own rates per system when the office sets them.
+  const P = { ...E.DEFAULT_PRICING, systems: { layher: { enabled: true }, monzon: { enabled: true, rentPerM2Day: 0.2 } } };
+  const sel = { days: 28, zone: "C", urgency: "standard" };
+  assert.ok(E.quote(mz, sel, P).total > E.quote(lay, sel, P).total);
+  assert.equal(E.quote(lay, sel, P).total, E.quote(lay, sel, E.DEFAULT_PRICING).total);
+});

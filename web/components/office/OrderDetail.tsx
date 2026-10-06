@@ -1,6 +1,7 @@
 "use client";
 // Order panel: everything about one order, with status, schedule, messages, crew work, money and history.
 import { useEffect, useMemo, useState } from "react";
+import { SYSTEM_NAMES } from "@/lib/api";
 import {
   INSPECTION_ITEMS,
   ORDER_FLOW,
@@ -615,6 +616,7 @@ function ScaffoldTab({ o }: { o: OfficeOrderDetail }) {
             <KV
               items={[
                 { k: t("od.house.job"), v: jobLabel(i, h.jobType) },
+                { k: t("od.house.system"), v: SYSTEM_NAMES[h.system || "layher"] },
                 { k: t("od.house.size"), v: `${number(h.length, lang, 2)} × ${number(h.width, lang, 2)} m` },
                 ...(h.model && h.walls?.length ? [{ k: t("od.house.model"), v: t("od.house.modelVal", { date: h.model.date ? day(h.model.date, lang, { year: true }) : "" }) }] : []),
                 { k: t("od.house.floors"), v: number(Number(h.floors), lang, 1) },

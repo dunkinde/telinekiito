@@ -245,3 +245,14 @@ test("delivery zone from the municipality code", () => {
   const s = toSuggestions([{ properties: { katunimi: "Veneentekijäntie", katunumero: "7", postinumero: "49840", kuntanimiFin: "Hamina", kuntatunnus: "075" }, geometry: { coordinates: [27.2, 60.57] } }], "vene 7");
   assert.equal(s[0].zone, "C");
 });
+
+test("stock: a scaffold system with no stock entered isn't checked", () => {
+  const S = require("../lib/stock");
+  const st = S.mergeStock({ enabled: true, owned: { frames: 10 } });
+  assert.ok(S.trackedKeys(st).includes("frames"));
+  assert.ok(!S.trackedKeys(st).includes("mz_standards"));
+  assert.equal(S.check([], st, { mz_standards: 80 }, "2027-05-01", "2027-05-29").ok, true);
+  assert.equal(S.check([], st, { frames: 11 }, "2027-05-01", "2027-05-29").ok, false);
+  const both = S.mergeStock({ enabled: true, owned: { frames: 10, mz_standards: 50 } });
+  assert.equal(S.check([], both, { mz_standards: 80 }, "2027-05-01", "2027-05-29").ok, false);
+});

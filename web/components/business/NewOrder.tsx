@@ -2,7 +2,7 @@
 // A new site from the portal: address lookup (or the size by hand, or copied from an earlier site), job, timing,
 // and the company's PO / project / site contact. The company's own price and the first free dates update live.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { EAVE_BY_FLOORS, getQuote, lookupAddress, modelRefFor, type AddressResult, type Floors, type JobType, type QuoteResult, type RoofType, type Urgency, type Zone } from "@/lib/api";
+import { EAVE_BY_FLOORS, getQuote, lookupAddress, modelRefFor, SYSTEM_NAMES, type AddressResult, type SystemKey, type Floors, type JobType, type QuoteResult, type RoofType, type Urgency, type Zone } from "@/lib/api";
 import { bizOrder, bizOrders, bizPlaceOrder, type BizDetails } from "@/lib/business";
 import { useT } from "../office/context";
 import { day, money, numText, parseNum } from "../office/format";
@@ -32,8 +32,9 @@ type Form = {
   start: string;
   days: string;
   notes: string;
+  system: SystemKey;
 };
-const blank: Form = { address: "", length: "", width: "", floors: "", roofType: "gable", pitch: "30", eave: "", jobType: "roof", gables: true, zone: "A", urgency: "standard", start: "", days: "28", notes: "" };
+const blank: Form = { address: "", length: "", width: "", floors: "", roofType: "gable", pitch: "30", eave: "", jobType: "roof", gables: true, zone: "A", urgency: "standard", start: "", days: "28", notes: "", system: "layher" };
 const blankBiz: BizDetails = { po: "", project: "", costCentre: "", siteContact: { name: "", phone: "" }, siteInfo: "" };
 
 export function NewOrder({ copyFrom }: { copyFrom?: string }) {
@@ -62,7 +63,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
     const r = await run("copy", () => bizOrder(ref));
     if (!r) return;
     const o = r.order;
-    setF((x) => ({ ...x, address: o.address, length: String(o.house.length), width: String(o.house.width), floors: o.house.floors, roofType: o.house.roofType, pitch: String(o.house.pitch), eave: String(o.house.eave), jobType: o.house.jobType, gables: o.house.gables, zone: o.zone, days: String(o.days) }));
+    setF((x) => ({ ...x, address: o.address, length: String(o.house.length), width: String(o.house.width), floors: o.house.floors, roofType: o.house.roofType, pitch: String(o.house.pitch), eave: String(o.house.eave), jobType: o.house.jobType, gables: o.house.gables, zone: o.zone, days: String(o.days), system: o.house.system || "layher" }));
     setBiz({ ...blankBiz, project: o.business.project, costCentre: o.business.costCentre, siteContact: { ...o.business.siteContact }, siteInfo: o.business.siteInfo });
     setGeo(o.geo ? { ...o.geo, for: o.address } : null);
   };
@@ -96,7 +97,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
     if (!house.ok) return setPrice(null);
     let alive = true;
     const id = window.setTimeout(() => {
-      getQuote({ length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables, days, zone: f.zone, urgency: f.urgency, partnerCode: me.account.code, model: modelRef })
+      getQuote({ length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables, days, zone: f.zone, urgency: f.urgency, partnerCode: me.account.code, model: modelRef, system: f.system })
         .then((r) => alive && setPrice(r))
         .catch(() => alive && setPrice(null));
     }, 300);
@@ -105,7 +106,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
       window.clearTimeout(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [house, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, me.account.code, modelId]);
+  }, [house, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, me.account.code, modelId, f.system]);
   const firstFree = price?.available?.[f.urgency] || null;
   useEffect(() => {
     if (firstFree && (!f.start || f.start < firstFree)) setF((x) => ({ ...x, start: firstFree }));
@@ -173,6 +174,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
         lon: g?.lon,
         checks: g?.checks?.length ? g.checks : undefined,
         model: modelRef,
+        system: f.system,
         ...biz
       });
       go(`#/sites/${r.ref}`);
@@ -255,6 +257,14 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
                 <label className="flex items-center gap-2 text-[14px] text-ink-soft">
                   <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.gables} onChange={(e) => set("gables", e.target.checked)} /> {t("biz.new.gables")}
                 </label>
+              ) : null}
+              {(price?.options?.length || 0) > 1 ? (
+                <Chips
+                  label={t("biz.new.system")}
+                  value={f.system}
+                  onChange={(v) => set("system", v)}
+                  options={(price?.options || []).map((o) => ({ key: o.system, label: `${SYSTEM_NAMES[o.system]} · ${money(o.total, lang)}` }))}
+                />
               ) : null}
               <Chips label={t("biz.new.speed")} value={f.urgency} onChange={(v) => set("urgency", v)} options={urgencies.map((u) => ({ key: u, label: urgLabel(i, u) }))} />
               <div className="grid gap-4 sm:grid-cols-3">

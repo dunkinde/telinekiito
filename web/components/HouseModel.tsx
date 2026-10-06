@@ -4,7 +4,7 @@
 // "progress" mode ties the assembly to a 0–1 value, e.g. scroll position. Only opacity and transform animate.
 import { motion, useMotionValue, useReducedMotion, useTransform, type MotionValue } from "framer-motion";
 import { useMemo } from "react";
-import { BAY, FRAME, GAP, JACK, LIFT, iso, roofRise, scaffoldSides, type HouseShape, type ScaffoldSide, type SidePos } from "@/lib/geometry";
+import { FRAME, GAP, JACK, LIFT, iso, roofRise, scaffoldSides, type HouseShape, type ScaffoldSide, type SidePos } from "@/lib/geometry";
 
 type P3 = [number, number, number];
 interface Piece {
@@ -20,7 +20,7 @@ const COL = { tube: "#7d8996", brace: "#a6b0ba", guard: "#5d6773", catch: "#e548
 
 /** A point on a scaffold side: t along the side, outer = outer row of standards, z = height. */
 function sidePoint(h: HouseShape, s: ScaffoldSide, t: number, outer: boolean, z: number): P3 {
-  const run = s.bays * BAY;
+  const run = s.bays * s.bay;
   const d = GAP + (outer ? FRAME : 0);
   switch (s.pos) {
     case "front":
@@ -43,7 +43,7 @@ function buildPieces(h: HouseShape): Piece[] {
       const zHi = JACK + LIFT * k;
       const top = k === s.lifts;
       for (let b = 0; b < s.bays; b++) {
-        const t0 = b * BAY, t1 = (b + 1) * BAY, last = b === s.bays - 1;
+        const t0 = b * s.bay, t1 = (b + 1) * s.bay, last = b === s.bays - 1;
         const P = (t: number, outer: boolean, z: number) => sidePoint(h, s, t, outer, z);
         const lines: Piece["lines"] = [];
         for (const t of last ? [t0, t1] : [t0]) {

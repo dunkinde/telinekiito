@@ -1,7 +1,7 @@
 "use client";
 // Settings (head of company): prices, operations, company details, message templates, website content, messaging.
 import { useEffect, useMemo, useState } from "react";
-import type { Pricing } from "@/lib/api";
+import { SYSTEM_KEYS, SYSTEM_NAMES, type Pricing, type SystemKey } from "@/lib/api";
 import { FAQ as SITE_FAQ } from "@/lib/content";
 import { SITE } from "@/lib/site";
 import {
@@ -128,6 +128,42 @@ function PricesTab() {
                   {f("minOrder", t("set.prices.minOrder"), "€", t("set.prices.minOrderHint"))}
                   {f("vat", t("set.prices.vat"), "%")}
                   {f("rangePct", t("set.prices.rangePct"), "%", t("set.prices.rangeHint"))}
+                </div>
+              </Card>
+              <Card aria-labelledby="p-sys" className="xl:col-span-2">
+                <CardHead id="p-sys" title={t("set.sys.title")} sub={t("set.sys.sub")} />
+                <div className="space-y-5 px-5 pb-5">
+                  {SYSTEM_KEYS.map((k) => {
+                    const sys = d.systems?.[k] || { enabled: true };
+                    const setSys = (patch: Partial<NonNullable<Pricing["systems"]>[SystemKey]>) =>
+                      setD({ ...d, systems: { ...(d.systems || { layher: { enabled: true }, monzon: { enabled: true } }), [k]: { ...sys, ...patch } } });
+                    const onCount = SYSTEM_KEYS.filter((x) => d.systems?.[x]?.enabled !== false).length;
+                    const rate = (r: "rentPerM2Day" | "erectPerM2" | "dismantlePerM2", label: string, unit: string) => (
+                      <Field label={label} hint={<>{t("set.sys.general")}: {number(d[r], lang, 2)} {unit}</>}>
+                        {(id, h) => (
+                          <NumInput id={id} lang={lang} value={sys[r] ?? null} onChange={(v) => setSys({ [r]: v && v > 0 ? v : undefined })} suffix={unit} describedBy={h} placeholder={number(d[r], lang, 2)} />
+                        )}
+                      </Field>
+                    );
+                    return (
+                      <div key={k} className="rounded-xl p-4 ring-1 ring-line">
+                        <p className="font-semibold text-ink">{SYSTEM_NAMES[k]}</p>
+                        <Switch
+                          className="mt-3"
+                          checked={sys.enabled !== false}
+                          onChange={(v) => setSys({ enabled: v })}
+                          disabled={sys.enabled !== false && onCount <= 1}
+                          label={t("set.sys.on")}
+                          hint={sys.enabled !== false && onCount <= 1 ? t("set.sys.oneOn") : undefined}
+                        />
+                        <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                          {rate("rentPerM2Day", t("set.prices.rentPerM2Day"), lang === "fi" ? "€/m²/pv" : lang === "ru" ? "€/м²/день" : "€/m²/day")}
+                          {rate("erectPerM2", t("set.prices.erectPerM2"), "€/m²")}
+                          {rate("dismantlePerM2", t("set.prices.dismantlePerM2"), "€/m²")}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </Card>
             </div>

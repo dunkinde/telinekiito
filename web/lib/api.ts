@@ -5,6 +5,12 @@ export type Zone = "A" | "B" | "C";
 export type RoofType = "gable" | "hip" | "flat";
 export type JobType = "roof" | "facade" | "roof_facade" | "gutters";
 export type Floors = "1" | "1.5" | "2";
+/** Scaffold systems the price engine knows (lib/engine.js SYSTEMS). */
+export type SystemKey = "layher" | "monzon";
+export const SYSTEM_KEYS: SystemKey[] = ["layher", "monzon"];
+export const SYSTEM_NAMES: Record<SystemKey, string> = { layher: "Layher Blitz 70 Alu", monzon: "MonZon Modular Light" };
+/** Bay length of each system, m (same as lib/engine.js). */
+export const SYSTEM_BAY: Record<SystemKey, number> = { layher: 3.07, monzon: 3.07 };
 
 export interface Pricing {
   rentPerM2Day: number;
@@ -19,6 +25,8 @@ export interface Pricing {
   minOrder: number;
   vat: number;
   rangePct: number;
+  /** Per scaffold system: on/off and its own rates (missing = the general rate). */
+  systems?: Record<SystemKey, { enabled: boolean; rentPerM2Day?: number; erectPerM2?: number; dismantlePerM2?: number }>;
 }
 
 export interface Config {
@@ -29,6 +37,8 @@ export interface Config {
   /** First possible start per speed; null when that speed is switched off. */
   earliest: Record<Urgency, string | null>;
   examples: { area: number; days: number; zone: Zone; totals: Record<Urgency, number> };
+  /** Scaffold systems the customer can choose from. */
+  systems?: { key: SystemKey; name: string; enabled: boolean }[];
 }
 
 export interface QuoteLine {
@@ -54,6 +64,7 @@ export interface Quote {
 }
 
 export interface Estimate {
+  system?: SystemKey;
   area: number;
   runM: number;
   catchRunM: number;
@@ -75,6 +86,17 @@ export interface QuoteInput {
   partnerCode?: string;
   /** The 3D building from the address lookup: the server prices its measured walls. */
   model?: ModelRef;
+  /** Scaffold system; the server uses the first one switched on when missing. */
+  system?: SystemKey;
+}
+
+/** The same house priced with one scaffold system. */
+export interface SystemOption {
+  system: SystemKey;
+  name: string;
+  total: number;
+  area: number;
+  weightKg: number;
 }
 
 export interface ModelRef {
@@ -89,6 +111,8 @@ export interface QuoteResult {
   /** First start date per speed with enough scaffolding and crews for this house; null = speed switched off. */
   available?: Record<Urgency, string | null>;
   partner?: { name: string; discountPct: number } | { invalid: true } | null;
+  /** The price with each scaffold system that is switched on. */
+  options?: SystemOption[];
 }
 
 export interface AddressResult {

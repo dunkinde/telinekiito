@@ -61,6 +61,19 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
   server.js), so walls can't be faked. A size change request drops the walls. Attribution "Contains data from the
   National Land Survey of Finland, 3D buildings" (CC BY 4.0) shows with the model on the website.
 
+## Two scaffold systems (added 6 Oct)
+- `lib/engine.js` SYSTEMS: **layher** (Layher Blitz 70 Alu, 3.07 m bays, frames; sizes from Layher's Blitz catalogue
+  04.2019) and **monzon** (MonZon Modular Light, aluminium modular system on the same 3.07 × 0.73 m grid; part numbers
+  and weights from the MonZon Modular Light catalogue 2022, rules from its assembly instruction v2.1). Each system has
+  its own parts with unique keys (MonZon keys start with `mz_`), so stock, crew loading lists and documents never mix
+  them. The roof-catch net weights are estimates (not in either catalogue).
+- `house.system` on quotes and orders (missing = layher). `/api/quote` returns `options` (the price with each system
+  that is switched on); the website calculator and the business portal let the customer choose.
+- Office → Settings → Prices → Scaffold systems: switch a system on/off and give it its own rent, erection and
+  dismantling rates (empty = the general rate). One system always stays on.
+- Stock: a system with no parts entered isn't stock-checked (e.g. MonZon rented from a partner when needed); enter its
+  quantities to start checking it.
+
 ## What's left
 - Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).
 - Company details (M1 phone, privacy controller details), email/SMS keys in `.env`.

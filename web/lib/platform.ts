@@ -1,6 +1,6 @@
 // Typed client for the platform API used by the office (/office) and the crew app (/crew).
 // Every call goes to the same server; the login is an HttpOnly session cookie.
-import { ApiError, type Floors, type JobType, type Pricing, type Quote, type RoofType, type Urgency, type Zone } from "./api";
+import { ApiError, type Floors, type JobType, type Pricing, type Quote, type RoofType, type Urgency, type Zone, type SystemKey } from "./api";
 
 export { ApiError };
 
@@ -10,10 +10,15 @@ export type StaffLang = "fi" | "en" | "ru";
 export type OrderStatus = "received" | "confirmed" | "loading" | "en_route" | "erected" | "pickup_requested" | "dismantled" | "closed" | "cancelled";
 export const ORDER_FLOW: OrderStatus[] = ["received", "confirmed", "loading", "en_route", "erected", "pickup_requested", "dismantled", "closed"];
 
+// Parts of both scaffold systems (lib/engine.js PARTS): Layher Blitz keys as before, MonZon keys start with mz_.
 export type PartKey =
   | "frames" | "baseJacks" | "decks" | "hatchDecks" | "guardrails" | "toeBoards" | "endGuards"
-  | "diagonals" | "topPosts" | "catchPosts" | "catchMesh" | "anchors";
-export const PART_KEYS: PartKey[] = ["frames", "baseJacks", "decks", "hatchDecks", "guardrails", "toeBoards", "endGuards", "diagonals", "topPosts", "catchPosts", "catchMesh", "anchors"];
+  | "diagonals" | "topPosts" | "catchPosts" | "catchMesh" | "anchors"
+  | "mz_baseJacks" | "mz_baseCollars" | "mz_standards" | "mz_transoms" | "mz_ledgers" | "mz_decks" | "mz_accessDecks" | "mz_guardrails" | "mz_endGuards" | "mz_toeBoards" | "mz_endToeBoards" | "mz_braces" | "mz_topPosts" | "mz_catchPosts" | "mz_catchMesh" | "mz_anchors";
+export const LAYHER_PARTS: PartKey[] = ["frames", "baseJacks", "decks", "hatchDecks", "guardrails", "toeBoards", "endGuards", "diagonals", "topPosts", "catchPosts", "catchMesh", "anchors"];
+export const MONZON_PARTS: PartKey[] = ["mz_baseJacks", "mz_baseCollars", "mz_standards", "mz_transoms", "mz_ledgers", "mz_decks", "mz_accessDecks", "mz_guardrails", "mz_endGuards", "mz_toeBoards", "mz_endToeBoards", "mz_braces", "mz_topPosts", "mz_catchPosts", "mz_catchMesh", "mz_anchors"];
+export const PART_KEYS: PartKey[] = [...LAYHER_PARTS, ...MONZON_PARTS];
+export const systemOfPart = (k: PartKey): SystemKey => (k.startsWith("mz_") ? "monzon" : "layher");
 export type Parts = Partial<Record<PartKey, number>>;
 
 export const INSPECTION_ITEMS = ["ground", "bracing", "anchors", "decks", "guardrails", "access", "catch", "clearance", "tag"] as const;
@@ -39,6 +44,8 @@ export interface House {
   length: number; width: number; floors: Floors; eave: number; roofType: RoofType; pitch: number; jobType: JobType; gables: boolean;
   /** Measured walls from the 3D building model; the price follows them instead of the length × width box. */
   walls?: { edge: number; len: number; eave: number; top: number; gable?: boolean; ext?: number }[];
+  /** Scaffold system (missing on older orders = Layher). */
+  system?: SystemKey;
   model?: { id: string; date: string | null };
 }
 export interface Side { name: string; bays: number; lifts: number; workH: number; area: number; catchOn: boolean }

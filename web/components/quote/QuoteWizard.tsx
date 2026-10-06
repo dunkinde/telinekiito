@@ -10,6 +10,9 @@ import {
   lookupAddress,
   modelRefFor,
   placeOrder,
+  SYSTEM_BAY,
+  SYSTEM_KEYS,
+  SYSTEM_NAMES,
   readDrawing,
   type AddressResult,
   type Estimate,
@@ -18,6 +21,8 @@ import {
   type Quote,
   type QuoteResult,
   type RoofType,
+  type SystemKey,
+  type SystemOption,
   type Urgency,
   type Zone
 } from "@/lib/api";
@@ -54,6 +59,7 @@ interface Form {
   email: string;
   notes: string;
   partnerCode: string;
+  system: SystemKey;
 }
 
 const JOBS: JobType[] = ["roof", "facade", "roof_facade", "gutters"];
@@ -252,6 +258,7 @@ function PriceDetails({ quote, estimate, vat }: { quote: Quote; estimate: Estima
   const { t } = i18n;
   return (
     <div className="text-sm">
+      {estimate?.system ? <p className="mb-3 text-xs text-muted">{t("q.systemUsed", { name: SYSTEM_NAMES[estimate.system] })}</p> : null}
       {estimate ? (
         <div className="mb-4 grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-white p-3 ring-1 ring-line">
@@ -329,9 +336,16 @@ function WizardBody({ start }: { start: QuoteStart }) {
       phone: "",
       email: "",
       notes: "",
-      partnerCode: ""
+      partnerCode: "",
+      system: "layher"
     };
   });
+  // Scaffold systems the office offers; the chosen one must be among them.
+  const systems = SYSTEM_KEYS.filter((k) => !config?.systems || config.systems.some((s) => s.key === k && s.enabled));
+  useEffect(() => {
+    if (systems.length && !systems.includes(form.system)) setForm((f) => ({ ...f, system: systems[0] }));
+  }, [systems, form.system]);
+  const [options, setOptions] = useState<SystemOption[]>([]);
   const [source, setSource] = useState<"form" | "address" | "ai">("form");
   const [zoneAuto, setZoneAuto] = useState(false);
   // The customer picked the zone by hand: an address picked later doesn't change it.
@@ -394,9 +408,9 @@ function WizardBody({ start }: { start: QuoteStart }) {
   const modelShape = useMemo(
     () =>
       house.ok
-        ? { length: house.L, width: house.W, eave: house.eave, roofType: form.roofType, pitch: house.pitch || 30, jobType: form.jobType, gables: form.roofType === "gable" && form.jobType === "roof" && form.gables }
+        ? { length: house.L, width: house.W, eave: house.eave, roofType: form.roofType, pitch: house.pitch || 30, jobType: form.jobType, gables: form.roofType === "gable" && form.jobType === "roof" && form.gables, bay: SYSTEM_BAY[form.system] }
         : null,
-    [house, form.roofType, form.jobType, form.gables]
+    [house, form.roofType, form.jobType, form.gables, form.system]
   );
 
   // Rebuild the model only once typing pauses, so it doesn't restart on every digit.
@@ -429,11 +443,13 @@ function WizardBody({ start }: { start: QuoteStart }) {
         zone: form.zone,
         urgency: form.urgency,
         partnerCode: form.partnerCode.trim() || undefined,
-        model: modelRef
+        model: modelRef,
+        system: form.system
       })
         .then((r) => {
           if (id !== reqId.current) return;
           setPrice({ quote: r.quote, estimate: r.estimate, loading: false });
+          setOptions(r.options || []);
           setAvail(r.available || null);
           setPartner(r.partner || null);
         })
@@ -441,7 +457,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
     }, 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode, modelId]);
+  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode, modelId, form.system]);
 
   /* ----- address lookup ----- */
   const addressNow = useRef("");
@@ -561,7 +577,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
         partnerCode: form.partnerCode.trim() || undefined,
         storeys: tooTall || undefined,
         checks: checks.length ? checks : undefined,
-        model: modelRef
+        model: modelRef,
+        system: form.system
       });
       setDone({ ref: r.ref, total: r.order.quote.total, phone4: digits(form.phone).slice(-4), review: Boolean(tooTall), photos: checks.length > 0 || Boolean(tooTall) });
     } catch (e) {
@@ -756,6 +773,27 @@ function WizardBody({ start }: { start: QuoteStart }) {
             <span className="block text-sm text-muted">{t("q.gablesHint")}</span>
           </span>
         </label>
+      ) : null}
+      {systems.length > 1 ? (
+        <div>
+          <span className="field-label">{t("q.system")}</span>
+          <p className="mb-3 text-sm text-muted">{t("q.systemHint")}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {systems.map((k) => {
+              const o = options.find((x) => x.system === k);
+              return (
+                <Choice
+                  key={k}
+                  selected={form.system === k}
+                  onClick={() => set("system", k)}
+                  title={SYSTEM_NAMES[k]}
+                  text={t(`q.sys.${k}`)}
+                  extra={o ? <span className="mt-3 rounded-full bg-mist px-2.5 py-0.5 text-xs font-bold text-ink">{eur(o.total)} · {o.area} m²</span> : null}
+                />
+              );
+            })}
+          </div>
+        </div>
       ) : null}
     </div>,
 

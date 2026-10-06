@@ -265,7 +265,8 @@ route("GET", /^\/api\/config$/, () => {
     urgencies: { standard: true, express: o.urgencies.express, emergency: o.urgencies.emergency },
     zones: o.zones,
     earliest,
-    examples: O.priceExamples(p)
+    examples: O.priceExamples(p),
+    systems: E.SYSTEM_KEYS.map((k) => ({ key: k, name: E.SYSTEMS[k].name, enabled: Boolean(p.systems[k].enabled) }))
   };
 });
 
@@ -309,9 +310,12 @@ route("POST", /^\/api\/quote$/, async (req) => {
   const body = await readJson(req, 4096);
   const f = await withModel(O.parseQuoteInput(body), body);
   const p = pricing();
+  if (!O.systemsOn(p).includes(f.system)) f.system = O.systemsOn(p)[0];
   const out = O.quoteFor(f, p);
   const account = body.partnerCode ? P.accountByCode(store, body.partnerCode) : null;
   if (account && account.discountPct) out.quote = P.applyDiscount(out.quote, account.discountPct, p);
+  // The same house with each scaffold system, so the customer can pick one.
+  out.options = O.quoteOptions(f, p).map((o) => (account && account.discountPct ? { ...o, total: P.applyDiscount({ net: o.net, lines: [], labourGross: 0 }, account.discountPct, p).total } : o));
   out.partner = account ? { name: account.name, discountPct: account.discountPct } : body.partnerCode ? { invalid: true } : null;
   out.available = availableDates(out.estimate.parts, f.days);
   return out;
@@ -433,6 +437,7 @@ route("POST", /^\/api\/orders$/, async (req) => {
   const o0 = ops();
   if (f.urgency !== "standard" && !o0.urgencies[f.urgency]) throw new HttpError(409, "urgency_off", "That delivery speed isn't available right now.");
   if (!o0.zones[f.zone]) throw new HttpError(409, "zone_off", "We don't deliver to that area right now. Contact us.");
+  if (!O.systemsOn(pricing()).includes(f.system)) throw new HttpError(409, "system_off", "That scaffold system isn't available right now.");
   const p = pricing();
   const order = O.buildOrder(f, p, (ref) => Boolean(store.getOrder(ref)));
   const account = f.partnerCode ? P.accountByCode(store, f.partnerCode) : null;
@@ -616,6 +621,7 @@ route("POST", /^\/api\/biz\/orders$/, async (req) => {
   const o0 = ops();
   if (f.urgency !== "standard" && !o0.urgencies[f.urgency]) throw new HttpError(409, "urgency_off", "That delivery speed isn't available right now.");
   if (!o0.zones[f.zone]) throw new HttpError(409, "zone_off", "We don't deliver to that area right now. Contact us.");
+  if (!O.systemsOn(pricing()).includes(f.system)) throw new HttpError(409, "system_off", "That scaffold system isn't available right now.");
   const p = pricing();
   const order = O.buildOrder(f, p, (ref) => Boolean(store.getOrder(ref)));
   order.accountId = s.account.id;

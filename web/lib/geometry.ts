@@ -2,7 +2,7 @@
 // so the 3D model shows the same bays and levels the price is built from.
 import type { JobType, RoofType } from "./api";
 
-export const BAY = 3.07; // m, bay length
+export const BAY = 3.07; // m, bay length (Layher Blitz; each scaffold system has its own, see SYSTEM_BAY in api.ts)
 export const LIFT = 2.0; // m between working levels
 export const JACK = 0.4; // m base jack height
 export const EXTEND = 1.0; // m the scaffold runs past each corner
@@ -17,6 +17,8 @@ export interface HouseShape {
   pitch: number;
   jobType: JobType;
   gables?: boolean;
+  /** Bay length of the chosen scaffold system (default 3.07 m). */
+  bay?: number;
 }
 
 export type SidePos = "front" | "back" | "left" | "right";
@@ -24,6 +26,8 @@ export interface ScaffoldSide {
   pos: SidePos;
   len: number;
   bays: number;
+  /** Bay length, m. */
+  bay: number;
   lifts: number;
   catchOn: boolean;
   deckAll: boolean;
@@ -41,7 +45,7 @@ export function scaffoldSides(h: HouseShape): ScaffoldSide[] {
   const gableLifts = gable ? Math.max(eaveLifts, liftsForTop(ridge - 2.0)) : eaveLifts;
   const out: ScaffoldSide[] = [];
   const add = (pos: SidePos, len: number, lifts: number, catchOn: boolean, deckAll: boolean) =>
-    out.push({ pos, len, lifts, catchOn, deckAll, bays: Math.max(1, Math.ceil((len + 2 * EXTEND) / BAY - 0.05)) });
+    out.push({ pos, len, lifts, catchOn, deckAll, bay: h.bay || BAY, bays: Math.max(1, Math.ceil((len + 2 * EXTEND) / (h.bay || BAY) - 0.05)) });
 
   if (h.jobType === "roof") {
     add("front", L, eaveLifts, true, false);

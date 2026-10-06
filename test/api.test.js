@@ -208,3 +208,37 @@ test("live quote, config extras and contact messages", async () => {
   assert.equal((await req("DELETE", `/api/office/leads/${leads[0].id}`, undefined, H)).status, 200);
   assert.equal((await req("GET", "/api/office/leads", undefined, H)).json.leads.length, 0);
 });
+
+test("two scaffold systems: options in the quote, the chosen one on the order, office can switch one off", async () => {
+  const house = { length: 12.4, width: 9.9, eave: 2.9, roofType: "gable", pitch: 47, jobType: "roof", gables: true, days: 28, zone: "C" };
+  const q = await req("POST", "/api/quote", { ...house, system: "monzon" });
+  assert.equal(q.status, 200);
+  assert.equal(q.json.estimate.system, "monzon");
+  assert.ok(Object.keys(q.json.estimate.parts).every((k) => k.startsWith("mz_")));
+  assert.deepEqual(q.json.options.map((o) => o.system), ["layher", "monzon"]);
+  assert.equal(q.json.options.find((o) => o.system === "monzon").total, q.json.quote.total);
+  const cfg = await req("GET", "/api/config");
+  assert.deepEqual(cfg.json.systems.map((s) => [s.key, s.enabled]), [["layher", true], ["monzon", true]]);
+
+  const start = E.earliestStart("standard", helsinkiNow());
+  const order = { ...house, floors: "1.5", urgency: "standard", start, name: "Monzon Testi", phone: "040 111 2222", address: "Testikatu 9, Hamina", source: "form", system: "monzon" };
+  const placed = await req("POST", "/api/orders", order);
+  assert.equal(placed.status, 200, placed.text);
+  const login = await req("POST", "/api/office/login", { password: PASSWORD });
+  const H = { Cookie: login.headers.get("set-cookie").split(";")[0] };
+  const detail = await req("GET", `/api/office/orders/${placed.json.ref}`, undefined, H);
+  assert.equal(detail.json.order.house.system, "monzon");
+  assert.ok(detail.json.order.estimate.parts.mz_standards > 0);
+
+  // Office switches MonZon off: no longer offered, and orders for it are refused.
+  const pr = await req("GET", "/api/office/pricing", undefined, H);
+  const off = await req("PUT", "/api/office/pricing", { pricing: { ...pr.json.pricing, systems: { layher: { enabled: true }, monzon: { enabled: false, rentPerM2Day: 0.2 } } } }, H);
+  assert.equal(off.json.pricing.systems.monzon.enabled, false);
+  assert.equal(off.json.pricing.systems.monzon.rentPerM2Day, 0.2);
+  const q2 = await req("POST", "/api/quote", { ...house, system: "monzon" });
+  assert.equal(q2.json.estimate.system, "layher");
+  assert.deepEqual(q2.json.options.map((o) => o.system), ["layher"]);
+  const refused = await req("POST", "/api/orders", order);
+  assert.equal(refused.json.error, "system_off");
+  await req("PUT", "/api/office/pricing", { pricing: pr.json.pricing }, H);
+});

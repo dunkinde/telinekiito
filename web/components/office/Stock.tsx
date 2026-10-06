@@ -1,7 +1,7 @@
 "use client";
 // Stock: parts owned, out on sites and reserved; free quantity over the next 60 days; purchases and write-offs.
-import { useEffect, useMemo, useState } from "react";
-import { PART_KEYS, getStock, saveStock, stockMove, type PartKey, type Parts, type StockOverview } from "@/lib/platform";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { PART_KEYS, systemOfPart, getStock, saveStock, stockMove, type PartKey, type Parts, type StockOverview } from "@/lib/platform";
 import { useAct, useLoad, useOffice, useT } from "./context";
 import { dateTime, day, dayMonth, money, number } from "./format";
 import { partLabel, statusLabel } from "./i18n";
@@ -239,9 +239,19 @@ function PartsTable({ d, set, part, setPart }: { d: StockOverview; set: (d: Stoc
             </tr>
           </thead>
           <tbody>
-            {d.parts.map((p) => {
+            {d.parts.map((p, n) => {
               const on = p.key === part;
+              const sys = systemOfPart(p.key);
+              const head = n === 0 || systemOfPart(d.parts[n - 1].key) !== sys;
               return (
+                <Fragment key={p.key}>
+                {head ? (
+                  <tr className="border-b border-line bg-mist/60">
+                    <th scope="colgroup" colSpan={99} className="px-3 py-2 text-left text-[12px] font-semibold tracking-wide text-muted uppercase">
+                      {t(`stock.sys.${sys}`)}
+                    </th>
+                  </tr>
+                ) : null}
                 <tr key={p.key} className={cx("border-b border-line last:border-0", on && "bg-sun-soft/40")}>
                   <th scope="row" className={cx(td, "text-left font-normal")}>
                     <button type="button" onClick={() => setPart(p.key)} aria-pressed={on} className="text-left font-semibold text-ink hover:underline" title={t("stock.showChart")}>
@@ -286,6 +296,7 @@ function PartsTable({ d, set, part, setPart }: { d: StockOverview; set: (d: Stoc
                     )}
                   </td>
                 </tr>
+                </Fragment>
               );
             })}
           </tbody>
