@@ -49,6 +49,8 @@ export interface Quote {
   high: number;
   labourGross: number;
   perM2: number;
+  /** Business customer discount, when one was applied. */
+  discountPct?: number;
 }
 
 export interface Estimate {

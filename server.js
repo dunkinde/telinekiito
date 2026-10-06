@@ -17,6 +17,8 @@ const O = require("./lib/orders");
 const P = require("./lib/platform");
 const S = require("./lib/stock");
 const Docs = require("./lib/docs");
+const B = require("./lib/business");
+const { finvoice } = require("./lib/finvoice");
 const { HttpError } = O;
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -346,6 +348,22 @@ route("POST", /^\/api\/ai\/drawing$/, async (req) => {
   }
 });
 
+/** Never sell scaffolding we won't have: check parts and crews for the chosen dates (409 with the first free date). */
+function assertAvailable(order, f) {
+  const o0 = ops();
+  const orders = store.listOrders();
+  const st = stockCfg();
+  const end = S.addDays(f.start, f.days + st.bufferDays);
+  const parts = S.check(orders, st, order.estimate.parts, f.start, end, { today: P.today() });
+  const cap = S.capacityPerDay(o0, crews());
+  const full = cap !== Infinity && S.jobsOn(orders, f.start) >= cap;
+  if (!parts.ok || full) {
+    const next = S.earliestStart(orders, st, o0, crews(), order.estimate.parts, f.days, f.start, P.today());
+    throw new HttpError(409, parts.ok ? "fully_booked" : "not_enough_stock",
+      next ? `That start date is fully booked. The first free date is ${next}.` : "We can't take this job on these dates. Contact us.", { date: next });
+  }
+}
+
 route("POST", /^\/api\/orders$/, async (req) => {
   limit(req, "order", 10, 60 * 60e3);
   const body = await readJson(req, 16384);
@@ -361,18 +379,7 @@ route("POST", /^\/api\/orders$/, async (req) => {
     order.discountPct = account.discountPct || 0;
     order.quote = P.applyDiscount(order.quote, order.discountPct, p);
   }
-  // Never sell scaffolding we won't have: check parts and crews for the chosen dates.
-  const orders = store.listOrders();
-  const st = stockCfg();
-  const end = S.addDays(f.start, f.days + st.bufferDays);
-  const parts = S.check(orders, st, order.estimate.parts, f.start, end, { today: P.today() });
-  const cap = S.capacityPerDay(o0, crews());
-  const full = cap !== Infinity && S.jobsOn(orders, f.start) >= cap;
-  if (!parts.ok || full) {
-    const next = S.earliestStart(orders, st, o0, crews(), order.estimate.parts, f.days, f.start, P.today());
-    throw new HttpError(409, parts.ok ? "fully_booked" : "not_enough_stock",
-      next ? `That start date is fully booked. The first free date is ${next}.` : "We can't take this job on these dates. Contact us.", { date: next });
-  }
+  assertAvailable(order, f);
   // Taller than the online price covers (register storeys from the address lookup): the office checks the price.
   const storeys = Math.round(Number(body.storeys) || 0);
   if (storeys >= 3 && storeys <= 50) {
@@ -447,6 +454,226 @@ route("GET", /^\/api\/content$/, () => {
   const c = P.mergeContent(store.getSetting("content"));
   return { ...c, reviews: store.list("review", { status: "published", limit: 12 }).map((r) => ({ stars: r.stars, text: r.text, name: r.name, lang: r.lang })) };
 });
+
+/* ---------- Business customer portal (/business) ---------- */
+// People of a business customer account follow and order all of the company's sites. Changes that affect the
+// price or the schedule are change requests the office approves; order details like the PO number are edited directly.
+function bizSession(req) {
+  const s = auth.verify(cookies(req)[auth.BIZ_COOKIE]);
+  if (!s || !s.sid || !String(s.sid).startsWith("b:")) return null;
+  const u = store.get("bizuser", s.sid.slice(2));
+  if (!u || u.active === false || (u.ver || 0) !== (s.ver || 0)) return null;
+  const account = store.get("account", u.accountId);
+  if (!account || account.active === false) return null;
+  return { user: u, account };
+}
+function requireBiz(req, roles) {
+  const s = bizSession(req);
+  if (!s) throw new HttpError(401, "login_required", "Log in first.");
+  if (roles && !roles.includes(s.user.role)) throw new HttpError(403, "forbidden", "Your role can't do that.");
+  return s;
+}
+const BIZ_ORDERING = ["admin", "manager"];
+function bizOrder(s, ref) {
+  const o = /^T[KP]-[A-Z0-9]{4,10}$/.test(ref) ? store.getOrder(ref) : null;
+  if (!o || o.accountId !== s.account.id) throw new HttpError(404, "not_found", "Order not found.");
+  return o;
+}
+const bizActor = (s) => ({ id: `biz:${s.user.id}`, name: `${s.user.name} (${s.account.name})`, role: "customer" });
+function bizChanges(o) {
+  return store.list("change", { ref: o.ref }).map(P.publicChange).map((c) => ({ ...c, by: c.by && c.by.role === "customer" ? { role: "customer", name: c.by.name } : { role: "office" } }));
+}
+function bizInvoices(ref) {
+  return store.list("invoice", { ref }).filter((iv) => iv.status === "sent" || iv.status === "paid")
+    .map((iv) => ({ id: iv.id, no: iv.no, ref: iv.ref, date: iv.date, due: iv.due, net: iv.net, vat: iv.vat, total: iv.total, status: iv.status, reference: iv.reference }));
+}
+function bizDetail(o) {
+  return B.detail(o, { store, rentalEnd: P.rentalEnd(o), today: P.today(), access: auth.enabled ? auth.issue(`c:${o.ref}`, 0) : null, changes: bizChanges(o), invoices: bizInvoices(o.ref) });
+}
+function bizAccountView(a) {
+  return { id: a.id, name: a.name, businessId: a.businessId || "", code: a.code, discountPct: a.discountPct || 0, paymentDays: a.paymentDays,
+    billingAddress: a.billingAddress || "", einvoiceAddress: a.einvoiceAddress || "", einvoiceOperator: a.einvoiceOperator || "", email: a.email || "" };
+}
+
+route("POST", /^\/api\/biz\/login$/, async (req, m, url, res) => {
+  if (!auth.enabled) throw new HttpError(503, "office_disabled", "Logins are switched off on the server.");
+  limit(req, "login", 10, 15 * 60e3);
+  const body = await readJson(req, 2048);
+  const u = B.bizLogin(store, body.phone, body.pin);
+  res.setHeader("Set-Cookie", auth.cookie(auth.issue(`b:${u.id}`, u.ver || 0), isSecure(req), auth.BIZ_COOKIE));
+  return { ok: true, user: B.publicBizUser(u) };
+});
+route("POST", /^\/api\/biz\/logout$/, (req, m, url, res) => {
+  res.setHeader("Set-Cookie", auth.clearCookie(isSecure(req), auth.BIZ_COOKIE));
+  return { ok: true };
+});
+route("GET", /^\/api\/biz\/me$/, (req) => {
+  const s = requireBiz(req);
+  const o = ops();
+  return { user: B.publicBizUser(s.user), account: bizAccountView(s.account), today: P.today(), company: { name: o.company.name, phone: o.company.phone, email: o.company.email },
+    urgencies: { standard: true, express: o.urgencies.express, emergency: o.urgencies.emergency } };
+});
+
+route("GET", /^\/api\/biz\/orders$/, (req) => {
+  const s = requireBiz(req);
+  const pending = {};
+  for (const c of store.list("change", { status: "pending" })) pending[c.ref] = (pending[c.ref] || 0) + 1;
+  const today = P.today();
+  const orders = store.listOrders(5000).filter((o) => o.accountId === s.account.id)
+    .map((o) => B.summary(o, { rentalEnd: P.rentalEnd(o), today, pending: pending[o.ref] || 0 }));
+  return { orders };
+});
+route("GET", /^\/api\/biz\/orders\/([A-Z0-9-]+)$/, (req, m) => {
+  const s = requireBiz(req);
+  return { order: bizDetail(bizOrder(s, m[1])) };
+});
+
+// A new order from the portal: the account's discount applies, contact details come from the user.
+route("POST", /^\/api\/biz\/orders$/, async (req) => {
+  const s = requireBiz(req, BIZ_ORDERING);
+  limit(req, "biz-order", 30, 60 * 60e3);
+  const body = await readJson(req, 16384);
+  const bf = B.parseBizFields(body);
+  const contactName = bf.siteContact.name || s.user.name;
+  const contactPhone = bf.siteContact.phone || s.user.phone;
+  const f = O.parseOrderInput({ ...body, name: `${s.account.name} / ${contactName}`, phone: contactPhone, email: s.user.email || s.account.email || "", lang: s.user.lang === "en" ? "en" : "fi" });
+  const o0 = ops();
+  if (f.urgency !== "standard" && !o0.urgencies[f.urgency]) throw new HttpError(409, "urgency_off", "That delivery speed isn't available right now.");
+  if (!o0.zones[f.zone]) throw new HttpError(409, "zone_off", "We don't deliver to that area right now. Contact us.");
+  const p = pricing();
+  const order = O.buildOrder(f, p, (ref) => Boolean(store.getOrder(ref)));
+  order.accountId = s.account.id;
+  order.discountPct = s.account.discountPct || 0;
+  order.quote = P.applyDiscount(order.quote, order.discountPct, p);
+  order.history[0].by = "customer";
+  B.applyBizFields(order, { ...bf, orderedBy: s.user.name, orderedById: s.user.id });
+  assertAvailable(order, f);
+  store.insertOrder(order);
+  store.bump("orders");
+  notify.event(order, "order_received");
+  notify.alert("new_order", order.ref, `New order ${order.ref}: ${order.site.address}, ${order.estimate.area} m², start ${order.schedule.start}`);
+  P.audit(store, bizActor(s), "order_created", order.ref, { total: order.quote.total, partner: s.account.name, po: bf.po || null });
+  return { ref: order.ref, order: bizDetail(order) };
+});
+
+// Order details the company keeps up to date itself (no approval needed): PO, project, cost centre, site contact.
+route("PATCH", /^\/api\/biz\/orders\/([A-Z0-9-]+)$/, async (req, m) => {
+  const s = requireBiz(req, BIZ_ORDERING);
+  const o = bizOrder(s, m[1]);
+  if (o.status === "closed" || o.status === "cancelled") throw new HttpError(409, "order_finished", "This order is already finished.");
+  const body = await readJson(req, 8192);
+  const bf = B.parseBizFields({ ...(o.business || {}), ...body, siteContact: { ...((o.business || {}).siteContact || {}), ...(body.siteContact || {}) } });
+  B.applyBizFields(o, bf);
+  if (bf.siteContact.phone) o.customer.phone = bf.siteContact.phone;
+  o.updatedAt = new Date().toISOString();
+  saveOrder(o);
+  P.audit(store, bizActor(s), "biz_details", o.ref, { po: bf.po, project: bf.project, costCentre: bf.costCentre });
+  return { order: bizDetail(o) };
+});
+
+// Price and stock before → after for a change (nothing is saved).
+route("POST", /^\/api\/biz\/orders\/([A-Z0-9-]+)\/preview$/, async (req, m) => {
+  const s = requireBiz(req, BIZ_ORDERING);
+  const o = bizOrder(s, m[1]);
+  const body = await readJson(req, 2048);
+  return B.previewChange(o, body, { pricing: pricing(), reprice: P.repriceOrder, stockCfg: stockCfg(), orders: store.listOrders(), today: P.today() });
+});
+
+// A change request: longer/shorter rental, pickup date or anything else. The office always decides.
+route("POST", /^\/api\/biz\/orders\/([A-Z0-9-]+)\/change$/, async (req, m) => {
+  const s = requireBiz(req, BIZ_ORDERING);
+  limit(req, "biz-change", 30, 10 * 60e3);
+  const o = bizOrder(s, m[1]);
+  const body = await readJson(req, 8192);
+  if (!["days", "pickup_date", "other"].includes(body.type)) throw new HttpError(400, "bad_type", "Unknown change type.");
+  if (body.type === "other" && !O.str(body.note, 1000)) throw new HttpError(400, "note_required", "Describe the change.");
+  const pending = store.list("change", { ref: o.ref }).find((c) => c.status === "pending" && c.source === "customer");
+  if (pending) throw new HttpError(409, "change_pending", "There is already a change waiting for the office on this order.");
+  const c = P.createChange(store, o, body, { source: "customer", user: { id: `biz:${s.user.id}`, name: `${s.user.name} (${s.account.name})`, role: "customer" }, pricing: pricing(), orders: store.listOrders() });
+  saveOrder(o);
+  notify.alert("change_request", o.ref, `${o.ref}: customer asks for ${P.describeChange(c, "en")}`, { id: c.id });
+  return { order: bizDetail(o) };
+});
+
+route("POST", /^\/api\/biz\/orders\/([A-Z0-9-]+)\/pickup$/, async (req, m) => {
+  const s = requireBiz(req, BIZ_ORDERING);
+  const o = bizOrder(s, m[1]);
+  if (o.status !== "erected") throw new HttpError(409, "not_erected", "Pickup can be requested once the scaffold is up.");
+  const prev = o.status;
+  o.status = "pickup_requested";
+  O.pushHistory(o, { status: "pickup_requested", at: new Date().toISOString(), by: "customer" });
+  o.updatedAt = new Date().toISOString();
+  afterStatusChange(o, prev, null);
+  saveOrder(o);
+  return { order: bizDetail(o) };
+});
+
+route("POST", /^\/api\/biz\/orders\/([A-Z0-9-]+)\/message$/, async (req, m) => {
+  const s = requireBiz(req);
+  limit(req, "track-action", 30, 10 * 60e3);
+  const o = bizOrder(s, m[1]);
+  const body = await readJson(req, 4096);
+  const text = O.str(body.text, 1000);
+  if (!text) throw new HttpError(400, "empty_message", "Write a message first.");
+  o.messages = (o.messages || []).concat([{ from: "customer", text, at: new Date().toISOString(), by: s.user.name }]).slice(-200);
+  o.updatedAt = new Date().toISOString();
+  saveOrder(o);
+  notify.alert("customer_message", o.ref, `${o.ref}: message from ${s.user.name} (${s.account.name})`, { text: text.slice(0, 200) });
+  return { order: bizDetail(o) };
+});
+
+route("GET", /^\/api\/biz\/invoices$/, (req) => {
+  const s = requireBiz(req);
+  const refs = new Map(store.listOrders(5000).filter((o) => o.accountId === s.account.id).map((o) => [o.ref, o]));
+  const invoices = store.list("invoice", { limit: 5000 }).filter((iv) => refs.has(iv.ref) && (iv.status === "sent" || iv.status === "paid"))
+    .map((iv) => { const b = refs.get(iv.ref).business || {}; return { id: iv.id, no: iv.no, ref: iv.ref, site: iv.site, date: iv.date, due: iv.due, net: iv.net, vat: iv.vat, total: iv.total, status: iv.status, reference: iv.reference, po: b.po || "", project: b.project || "", costCentre: b.costCentre || "", access: auth.issue(`c:${iv.ref}`, 0) }; });
+  return { invoices };
+});
+route("GET", /^\/api\/biz\/invoices\/([\w-]+)\/finvoice$/, (req, m) => {
+  const s = requireBiz(req);
+  const iv = store.get("invoice", m[1]);
+  const o = iv ? store.getOrder(iv.ref) : null;
+  if (!iv || !o || o.accountId !== s.account.id || !(iv.status === "sent" || iv.status === "paid")) throw new HttpError(404, "not_found", "Invoice not found.");
+  return finvoiceFile(iv, o);
+});
+
+// The company's own users (admins manage them).
+route("GET", /^\/api\/biz\/users$/, (req) => {
+  const s = requireBiz(req, ["admin"]);
+  return { users: store.list("bizuser", { limit: 5000 }).filter((u) => u.accountId === s.account.id).map(B.publicBizUser) };
+});
+route("POST", /^\/api\/biz\/users$/, async (req) => {
+  const s = requireBiz(req, ["admin"]);
+  const body = await readJson(req, 4096);
+  const u = B.saveBizUser(store, s.account.id, body, null);
+  P.audit(store, bizActor(s), "biz_user_added", null, { name: u.name });
+  return { user: B.publicBizUser(u) };
+});
+route("PATCH", /^\/api\/biz\/users\/([\w-]+)$/, async (req, m) => {
+  const s = requireBiz(req, ["admin"]);
+  const u = store.get("bizuser", m[1]);
+  if (!u || u.accountId !== s.account.id) throw new HttpError(404, "not_found", "User not found.");
+  const body = await readJson(req, 4096);
+  if (u.id === s.user.id && (body.active === false || (body.role && body.role !== "admin"))) throw new HttpError(409, "not_self", "You can't switch off or demote yourself.");
+  return { user: B.publicBizUser(B.saveBizUser(store, s.account.id, body, u)) };
+});
+route("DELETE", /^\/api\/biz\/users\/([\w-]+)$/, (req, m) => {
+  const s = requireBiz(req, ["admin"]);
+  const u = store.get("bizuser", m[1]);
+  if (!u || u.accountId !== s.account.id) throw new HttpError(404, "not_found", "User not found.");
+  if (u.id === s.user.id) throw new HttpError(409, "not_self", "You can't remove yourself.");
+  store.del("bizuser", u.id);
+  return { ok: true };
+});
+
+/** Finvoice 3.0 file for an invoice; lines in the invoice's language. */
+function finvoiceFile(iv, o) {
+  const account = o.accountId ? store.get("account", o.accountId) : null;
+  const t = Docs.T[iv.lang === "en" ? "en" : "fi"];
+  const withText = { ...iv, lines: (iv.lines || []).map((l) => ({ ...l, text: Docs.lineLabel(l, t) })) };
+  const xml = finvoice(withText, o, account, ops().company);
+  return new Raw(xml, { "Content-Type": "application/xml; charset=utf-8", "Content-Disposition": `attachment; filename="finvoice-${iv.no}.xml"` });
+}
 
 /* ---------- Logins (office and crew) ---------- */
 async function login(req, m, url, res) {
@@ -881,7 +1108,8 @@ route("DELETE", /^\/api\/office\/crews\/([\w-]+)$/, (req, m) => {
 route("GET", /^\/api\/office\/accounts$/, (req) => {
   requireOwner(req);
   const orders = store.listOrders();
-  return { accounts: store.list("account").map((a) => ({ ...a, orders: orders.filter((o) => o.accountId === a.id).map((o) => ({ ref: o.ref, status: o.status, total: o.quote.total, createdAt: o.createdAt, address: o.site.address })) })) };
+  const users = store.list("bizuser", { limit: 5000 });
+  return { accounts: store.list("account").map((a) => ({ ...a, portalUsers: users.filter((u) => u.accountId === a.id).length, orders: orders.filter((o) => o.accountId === a.id).map((o) => ({ ref: o.ref, status: o.status, total: o.quote.total, createdAt: o.createdAt, address: o.site.address })) })) };
 });
 route("POST", /^\/api\/office\/accounts$/, async (req) => {
   requireOwner(req);
@@ -900,6 +1128,40 @@ route("DELETE", /^\/api\/office\/accounts\/([\w-]+)$/, (req, m) => {
 });
 
 /* Invoices */
+// Portal users of a business customer (the office creates the first admin; the company's admin adds the rest).
+route("GET", /^\/api\/office\/accounts\/([\w-]+)\/users$/, (req, m) => {
+  requireOwner(req);
+  if (!store.get("account", m[1])) throw new HttpError(404, "not_found", "Account not found.");
+  return { users: store.list("bizuser", { limit: 5000 }).filter((u) => u.accountId === m[1]).map(B.publicBizUser) };
+});
+route("POST", /^\/api\/office\/accounts\/([\w-]+)\/users$/, async (req, m) => {
+  const user = requireOwner(req);
+  if (!store.get("account", m[1])) throw new HttpError(404, "not_found", "Account not found.");
+  const u = B.saveBizUser(store, m[1], await readJson(req, 4096), null);
+  P.audit(store, user, "biz_user_added", null, { name: u.name, account: m[1] });
+  return { user: B.publicBizUser(u) };
+});
+route("PATCH", /^\/api\/office\/accounts\/([\w-]+)\/users\/([\w-]+)$/, async (req, m) => {
+  requireOwner(req);
+  const u = store.get("bizuser", m[2]);
+  if (!u || u.accountId !== m[1]) throw new HttpError(404, "not_found", "User not found.");
+  return { user: B.publicBizUser(B.saveBizUser(store, m[1], await readJson(req, 4096), u)) };
+});
+route("DELETE", /^\/api\/office\/accounts\/([\w-]+)\/users\/([\w-]+)$/, (req, m) => {
+  requireOwner(req);
+  const u = store.get("bizuser", m[2]);
+  if (!u || u.accountId !== m[1]) throw new HttpError(404, "not_found", "User not found.");
+  store.del("bizuser", u.id);
+  return { ok: true };
+});
+route("GET", /^\/api\/office\/invoices\/([\w-]+)\/finvoice$/, (req, m) => {
+  requireOwner(req);
+  const iv = store.get("invoice", m[1]);
+  const o = iv ? store.getOrder(iv.ref) : null;
+  if (!iv || !o) throw new HttpError(404, "not_found", "Invoice not found.");
+  return finvoiceFile(iv, o);
+});
+
 route("GET", /^\/api\/office\/invoices$/, (req) => {
   requireOwner(req);
   return { invoices: store.list("invoice", { limit: 2000 }) };
@@ -907,7 +1169,7 @@ route("GET", /^\/api\/office\/invoices$/, (req) => {
 route("GET", /^\/api\/office\/invoices\.csv$/, (req) => {
   requireOwner(req);
   const list = store.list("invoice", { limit: 5000 }).filter((iv) => iv.status !== "draft");
-  return new Raw(Docs.invoicesCsv(list), { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="telinekiito-invoices-${P.today()}.csv"` });
+  return new Raw(Docs.invoicesCsv(list, (ref) => store.getOrder(ref)), { "Content-Type": "text/csv; charset=utf-8", "Content-Disposition": `attachment; filename="telinekiito-invoices-${P.today()}.csv"` });
 });
 route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/invoice$/, (req, m) => {
   const user = requireOwner(req);

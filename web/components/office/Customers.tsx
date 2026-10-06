@@ -1,6 +1,8 @@
 "use client";
 // Business customers (partner accounts): discount, payment terms and the partner code for the website quote.
 import { useState } from "react";
+import { officeAccountUsers, officeRemoveAccountUser, officeSaveAccountUser, type BizUser } from "@/lib/business";
+import { UserDialog, UserList } from "../business/Users";
 import { getAccounts, removeAccount, saveAccount, type Account } from "@/lib/platform";
 import { IconMail, IconPhone, IconPlus } from "../ui/Icons";
 import { useAct, useLoad, useT } from "./context";
@@ -10,8 +12,8 @@ import { ICopy, ICustomers, IEdit, ITrash } from "./icons";
 import { RefLink } from "./bits";
 import { Async, Badge, Btn, Callout, Card, Confirm, Dialog, Empty, Field, IconBtn, Input, NumInput, Switch, TextArea, Toolbar, cx, useCopy } from "./ui";
 
-type Draft = { name: string; businessId: string; contactName: string; email: string; phone: string; code: string; discountPct: number | null; paymentDays: number | null; notes: string; active: boolean };
-const blank: Draft = { name: "", businessId: "", contactName: "", email: "", phone: "", code: "", discountPct: 0, paymentDays: 14, notes: "", active: true };
+type Draft = { name: string; businessId: string; contactName: string; email: string; phone: string; code: string; discountPct: number | null; paymentDays: number | null; notes: string; active: boolean; billingAddress: string; einvoiceAddress: string; einvoiceOperator: string };
+const blank: Draft = { name: "", businessId: "", contactName: "", email: "", phone: "", code: "", discountPct: 0, paymentDays: 14, notes: "", active: true, billingAddress: "", einvoiceAddress: "", einvoiceOperator: "" };
 
 function AccountDialog({ open, onClose, account, onSaved }: { open: boolean; onClose: () => void; account: Account | null; onSaved: () => void }) {
   const { t, lang } = useT();
@@ -34,7 +36,10 @@ function AccountDialog({ open, onClose, account, onSaved }: { open: boolean; onC
               discountPct: account.discountPct,
               paymentDays: account.paymentDays,
               notes: account.notes || "",
-              active: account.active
+              active: account.active,
+              billingAddress: account.billingAddress || "",
+              einvoiceAddress: account.einvoiceAddress || "",
+              einvoiceOperator: account.einvoiceOperator || ""
             }
           : blank
       );
@@ -53,7 +58,10 @@ function AccountDialog({ open, onClose, account, onSaved }: { open: boolean; onC
       discountPct: d.discountPct ?? 0,
       paymentDays: d.paymentDays ?? 14,
       notes: d.notes,
-      active: d.active
+      active: d.active,
+      billingAddress: d.billingAddress.trim(),
+      einvoiceAddress: d.einvoiceAddress.trim(),
+      einvoiceOperator: d.einvoiceOperator.trim()
     };
     const r = await run("save", () => saveAccount(body, account?.id), account ? t("acc.saved") : t("acc.created"));
     if (r) {
@@ -108,6 +116,15 @@ function AccountDialog({ open, onClose, account, onSaved }: { open: boolean; onC
         <Field label={t("acc.payDays")} hint={t("acc.payDaysHint")}>
           {(id, h) => <NumInput id={id} lang={lang} value={d.paymentDays} onChange={(v) => up({ paymentDays: v })} suffix={t("ui.daysUnit")} describedBy={h} />}
         </Field>
+        <Field label={t("acc.billing")} optional className="sm:col-span-2">
+          {(id) => <Input id={id} value={d.billingAddress} onChange={(v) => up({ billingAddress: v })} maxLength={120} autoComplete="street-address" />}
+        </Field>
+        <Field label={t("acc.einvoice")} optional hint={t("acc.einvoiceHint")}>
+          {(id, h) => <Input id={id} value={d.einvoiceAddress} onChange={(v) => up({ einvoiceAddress: v })} maxLength={40} describedBy={h} className="font-mono" />}
+        </Field>
+        <Field label={t("acc.operator")} optional hint={t("acc.operatorHint")}>
+          {(id, h) => <Input id={id} value={d.einvoiceOperator} onChange={(v) => up({ einvoiceOperator: v })} maxLength={40} describedBy={h} className="font-mono" />}
+        </Field>
         <Field label={t("acc.notes")} optional className="sm:col-span-2">
           {(id) => <TextArea id={id} rows={3} value={d.notes} onChange={(v) => up({ notes: v })} maxLength={1000} />}
         </Field>
@@ -120,7 +137,7 @@ function AccountDialog({ open, onClose, account, onSaved }: { open: boolean; onC
   );
 }
 
-function AccountCard({ a, onEdit, onDelete }: { a: Account; onEdit: () => void; onDelete: () => void }) {
+function AccountCard({ a, onEdit, onDelete, onUsers }: { a: Account; onEdit: () => void; onDelete: () => void; onUsers: () => void }) {
   const i = useT();
   const { t, lang } = i;
   const { copied, copy } = useCopy();
@@ -164,6 +181,12 @@ function AccountCard({ a, onEdit, onDelete }: { a: Account; onEdit: () => void; 
         </span>
         <Badge tone="sun">{t("acc.discountV", { pct: a.discountPct })}</Badge>
         <Badge tone="neutral">{t("acc.payDaysV", { n: a.paymentDays })}</Badge>
+        {a.einvoiceAddress ? <Badge tone="green">{t("acc.einvoiceOn")}</Badge> : null}
+      </div>
+      <div className="mt-3 px-5">
+        <Btn size="xs" variant="light" onClick={onUsers}>
+          {t("acc.portal", { n: a.portalUsers ?? 0 })}
+        </Btn>
       </div>
       <ul className="mt-3 space-y-1 px-5 text-[13.5px]">
         {a.contactName ? <li className="font-medium text-ink">{a.contactName}</li> : null}
@@ -208,6 +231,60 @@ function AccountCard({ a, onEdit, onDelete }: { a: Account; onEdit: () => void; 
   );
 }
 
+/** The account's people in the business portal (/business). */
+function PortalUsersDialog({ account, onClose }: { account: Account | null; onClose: () => void }) {
+  const { t } = useT();
+  const { run } = useAct();
+  const st = useLoad(() => (account ? officeAccountUsers(account.id) : Promise.resolve({ users: [] as BizUser[] })), [account?.id]);
+  const [edit, setEdit] = useState<BizUser | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [del, setDel] = useState<BizUser | null>(null);
+  if (!account) return null;
+  return (
+    <>
+      <Dialog
+        open={!!account && !adding && !edit && !del}
+        onClose={onClose}
+        title={t("acc.portalTitle", { name: account.name })}
+        footer={
+          <>
+            <Btn variant="quiet" onClick={onClose}>
+              {t("ui.close")}
+            </Btn>
+            <Btn variant="primary" icon={<IconPlus className="h-4 w-4" />} onClick={() => setAdding(true)}>
+              {t("biz.users.add")}
+            </Btn>
+          </>
+        }
+      >
+        <p className="mb-4 text-[13.5px] text-ink-soft">{t("acc.portalHow")}</p>
+        <Async state={st}>{(d) => (d.users.length ? <UserList users={d.users} onEdit={setEdit} onDelete={setDel} /> : <p className="text-[14px] text-muted">{t("acc.portalNone")}</p>)}</Async>
+      </Dialog>
+      <UserDialog
+        open={adding || !!edit}
+        user={edit}
+        onClose={() => (setAdding(false), setEdit(null))}
+        save={(body, id) => officeSaveAccountUser(account.id, body, id)}
+        onSaved={() => st.reload()}
+      />
+      <Confirm
+        open={!!del}
+        onClose={() => setDel(null)}
+        danger
+        title={t("biz.users.removeTitle", { name: del?.name || "" })}
+        text={<p>{t("biz.users.removeText")}</p>}
+        confirmLabel={t("team.removeBtn")}
+        onConfirm={async () => {
+          if (!del) return;
+          const r = await run("del", () => officeRemoveAccountUser(account.id, del.id), t("team.removed"));
+          if (r) st.reload();
+          return !!r;
+        }}
+      />
+    </>
+  );
+}
+
 export function Customers() {
   const { t } = useT();
   const st = useLoad(getAccounts, [], { poll: true });
@@ -215,6 +292,7 @@ export function Customers() {
   const [edit, setEdit] = useState<Account | null>(null);
   const [creating, setCreating] = useState(false);
   const [del, setDel] = useState<Account | null>(null);
+  const [portal, setPortal] = useState<Account | null>(null);
   return (
     <div>
       <Callout tone="info" className="mb-4" title={t("acc.howTitle")}>
@@ -231,7 +309,7 @@ export function Customers() {
             <ul className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
               {d.accounts.map((a) => (
                 <li key={a.id}>
-                  <AccountCard a={a} onEdit={() => setEdit(a)} onDelete={() => setDel(a)} />
+                  <AccountCard a={a} onEdit={() => setEdit(a)} onDelete={() => setDel(a)} onUsers={() => setPortal(a)} />
                 </li>
               ))}
             </ul>
@@ -242,6 +320,7 @@ export function Customers() {
           )
         }
       </Async>
+      <PortalUsersDialog account={portal} onClose={() => (setPortal(null), st.reload())} />
       <AccountDialog open={creating || !!edit} account={edit} onClose={() => (setCreating(false), setEdit(null))} onSaved={() => st.reload()} />
       <Confirm
         open={!!del}

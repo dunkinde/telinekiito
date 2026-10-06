@@ -110,6 +110,8 @@ export interface FullOrder {
   cancelled?: { at: string; by: string; reason: string } | null;
   invoiceNo?: string;
   accountId?: string;
+  /** Set when a business customer ordered in the portal or edited their details there. */
+  business?: { po?: string; project?: string; costCentre?: string; siteContact?: { name?: string; phone?: string }; siteInfo?: string; orderedBy?: string };
   discountPct?: number;
   weather?: { maxGust: number; maxWind: number; peakAt: string; at: string };
   pendingChanges?: number;
@@ -293,7 +295,7 @@ export interface Messaging {
 export interface Ops {
   siteUrl: string;
   officeEmail: string;
-  company: { name: string; businessId: string; address: string; phone: string; email: string; iban: string; bic: string };
+  company: { name: string; businessId: string; address: string; phone: string; email: string; iban: string; bic: string; einvoiceAddress?: string; einvoiceOperator?: string };
   paymentDays: number;
   invoiceNote: string;
   jobsPerCrewDay: number;
@@ -319,6 +321,10 @@ export interface Account {
   discountPct: number;
   paymentDays: number;
   notes?: string;
+  billingAddress?: string;
+  einvoiceAddress?: string;
+  einvoiceOperator?: string;
+  portalUsers?: number;
   active: boolean;
   createdAt: string;
   orders?: { ref: string; status: OrderStatus; total: number; createdAt: string; address: string }[];

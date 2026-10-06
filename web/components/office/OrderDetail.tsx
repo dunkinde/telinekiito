@@ -195,6 +195,7 @@ function SummaryTab({ o, crews, reload }: { o: OfficeOrderDetail; crews: Crew[];
       </div>
       <div className="space-y-4">
         <CustomerCard o={o} />
+        <BizCard o={o} />
         <NotesCard o={o} reload={reload} />
         <DangerCard o={o} />
       </div>
@@ -473,6 +474,31 @@ function CustomerCard({ o }: { o: OfficeOrderDetail }) {
             <p className="mt-0.5 whitespace-pre-line text-ink">{o.notes}</p>
           </div>
         ) : null}
+      </div>
+    </Card>
+  );
+}
+
+/** PO, project, cost centre and site contact from the business portal. */
+function BizCard({ o }: { o: OfficeOrderDetail }) {
+  const { t } = useT();
+  const b = o.business;
+  if (!b || !(b.po || b.project || b.costCentre || b.siteContact?.name || b.siteContact?.phone || b.siteInfo || b.orderedBy)) return null;
+  const contact = [b.siteContact?.name, b.siteContact?.phone].filter(Boolean).join(" · ");
+  return (
+    <Card aria-labelledby="od-biz">
+      <CardHead id="od-biz" title={t("od.biz.title")} />
+      <div className="px-5 pb-4">
+        <KV
+          items={[
+            ...(b.po ? [{ k: t("od.biz.po"), v: b.po }] : []),
+            ...(b.project ? [{ k: t("od.biz.project"), v: b.project }] : []),
+            ...(b.costCentre ? [{ k: t("od.biz.costCentre"), v: b.costCentre }] : []),
+            ...(contact ? [{ k: t("od.biz.contact"), v: contact }] : []),
+            ...(b.orderedBy ? [{ k: t("od.biz.orderedBy"), v: b.orderedBy }] : [])
+          ]}
+        />
+        {b.siteInfo ? <p className="mt-2 rounded-xl bg-mist px-3 py-2 text-[13px] whitespace-pre-line text-ink-soft">{b.siteInfo}</p> : null}
       </div>
     </Card>
   );

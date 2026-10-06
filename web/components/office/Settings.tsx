@@ -301,6 +301,11 @@ function CompanyTab() {
                 <div />
                 <Field label="IBAN">{(id) => <Input id={id} value={c.iban} onChange={(v) => setC({ iban: v.toUpperCase() })} maxLength={40} className="font-mono" placeholder="FI00 0000 0000 0000 00" />}</Field>
                 <Field label="BIC">{(id) => <Input id={id} value={c.bic} onChange={(v) => setC({ bic: v.toUpperCase() })} maxLength={11} className="font-mono" />}</Field>
+                <div className="hidden xl:block" />
+                <Field label={t("set.co.einvoice")} optional hint={t("set.co.einvoiceHint")}>
+                  {(id, h) => <Input id={id} value={c.einvoiceAddress || ""} onChange={(v) => setC({ einvoiceAddress: v.toUpperCase() })} maxLength={40} className="font-mono" describedBy={h} />}
+                </Field>
+                <Field label={t("set.co.operator")} optional>{(id) => <Input id={id} value={c.einvoiceOperator || ""} onChange={(v) => setC({ einvoiceOperator: v.toUpperCase() })} maxLength={40} className="font-mono" />}</Field>
               </div>
             </Card>
             <Card aria-labelledby="c-inv">

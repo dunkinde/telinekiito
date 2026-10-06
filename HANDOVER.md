@@ -29,6 +29,18 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
   (M1); the office can override them under Settings → Website.
 - Tall buildings (3+ storeys in the register) are ordered with an office note "Check the price" and an alert.
 
+## Business customer portal (/business) – added 6 Oct
+- People of a business customer account (Office → Business customers → Portal users) log in at `/business` with phone + PIN.
+  Roles: admin (also manages the company's users), site manager (orders and changes), accountant (invoices only). FI/EN/RU.
+- They see all the company's sites live (refresh every 20 s): status, schedule, crew progress, photos, cost so far,
+  documents and invoices; order new sites (company discount, first free dates, PO / project / cost centre / site contact);
+  ask for changes with the price before → after – **the office always approves**; request pickup; message the office.
+- Code: `lib/business.js`, `/api/biz/*` in `server.js` (cookie `tk_biz`, separate from staff logins), `web/components/business/*`,
+  `web/lib/business.ts`. Tests: `test/business.test.js`.
+- E-invoicing: `lib/finvoice.js` makes a Finvoice 3.0 file per invoice (download in the portal and in Office → Invoices).
+  Account fields: e-invoice address (OVT) + operator ID; our own in Settings → Company. **Sending through an operator
+  (Maventa, Apix, Netvisor…) is not connected yet** – pick an operator, then add its API like SMTP/SMS.
+
 ## What's left
 - Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).
 - Company details (M1 phone, privacy controller details), email/SMS keys in `.env`.

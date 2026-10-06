@@ -2,6 +2,7 @@
 // Invoices (head of company): list, status changes, documents and the CSV export for accounting.
 import { useMemo, useState } from "react";
 import { getInvoices, invoiceDocUrl, invoicesCsvUrl, setInvoiceStatus, type Invoice } from "@/lib/platform";
+import { officeFinvoiceUrl } from "@/lib/business";
 import { IconSearch } from "../ui/Icons";
 import { useAct, useLoad, useOffice, useT } from "./context";
 import { day, money, money0 } from "./format";
@@ -192,6 +193,11 @@ export function Invoices() {
                             <Btn size="xs" variant="light" href={invoiceDocUrl(iv.no)} newTab icon={<IExternal className="h-3.5 w-3.5" />}>
                               {t("inv.open")}
                             </Btn>
+                            {iv.status !== "draft" && iv.status !== "void" ? (
+                              <Btn size="xs" variant="light" href={officeFinvoiceUrl(iv.id || iv.no)} title={t("inv.finvoiceHint")}>
+                                {t("inv.finvoice")}
+                              </Btn>
+                            ) : null}
                             <InvoiceActions iv={iv} onDone={() => st.reload()} />
                           </div>
                         </td>

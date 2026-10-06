@@ -4,3 +4,4 @@ Disallow: /crew
 Disallow: /doc/
 Disallow: /api/
 Disallow: /mvp
+Disallow: /business
