@@ -287,15 +287,42 @@ test("weather protection: sheeting area and anchors, temporary roof raises the s
   assert.ok(sheet.totals.parts.anchors > E.estimate(fh).totals.parts.anchors);
   assert.ok(sheet.totals.parts.wp_sheetRolls >= 3);
   assert.equal(E.quote(sheet, sel, P).lines.find((l) => l.key === "sheeting").vars.m2, sheet.sheeting.m2);
-  // The roof spans the scaffold (house width + 2 × (gap + frame)) and its trusses clear the ridge.
-  assert.ok(Math.abs(roof.roof.span - (9.9 + 2 * 1.03)) < 0.01);
+  // The roof spans the scaffold (house width + 2 × (0.6 m gap clear of the overhang + frame)) and clears the ridge.
+  assert.ok(Math.abs(roof.roof.span - (9.9 + 2 * 1.33)) < 0.01);
   assert.ok(roof.roof.support + 1.0 + (roof.roof.span / 2) * Math.tan((18 * Math.PI) / 180) - 0.75 > plain.ridge);
-  assert.ok(roof.sides.every((s) => s.lifts >= 4 && !s.catchOn));
-  // Raised sides keep their working deck and get one on top for putting the roof up.
+  // Every side carries the roof at one level, on inner consoles; the eave sides keep their working deck under the
+  // eave (2.4 m, eave 2.9 m) with the roof-catch grids on it, and get a deck on top for putting the roof up.
+  assert.ok(roof.sides.every((s) => s.lifts === 4 && s.half === 0 && s.inner && s.gap === 0.6));
   assert.deepEqual(roof.sides[0].deckLevels, [1, 4]);
+  assert.equal(roof.sides[0].catchLevel, 1);
+  assert.ok(roof.sides.filter((s) => s.kind === "gable").every((s) => !s.catchOn));
   assert.equal(roof.totals.parts.lr_ridges, roof.roof.sections + 1); // Layher scaffold → Layher Keder Roof XL
   assert.equal(E.estimate({ ...h, weatherRoof: true, system: "monzon" }).totals.parts.wr_ridges > 0, true);
   const q = E.quote(roof, sel, P);
   assert.ok(q.lines.some((l) => l.key === "roofRent") && q.lines.some((l) => l.key === "roofWork"));
   assert.ok(q.total > E.quote(plain, sel, P).total * 2);
+});
+
+test("roof-edge protection follows DIN 4420-1 (Layher AuV §17): deck ≤ 1.5 m under the eave, catch wall b ≥ 0.7 m and 1.5 − b above it", () => {
+  const E = require("../lib/engine");
+  const C = E.CATCH;
+  for (const eave of [2.7, 3.0, 3.6, 4.3, 5.0, 5.8, 6.5, 7.2]) {
+    for (const jobType of ["roof", "roof_facade", "gutters", "facade"]) {
+      const est = E.estimate({ length: 12, width: 9, eave, pitch: 30, roofType: "hip", jobType });
+      for (const s of est.sides) {
+        assert.ok(s.deckH <= eave - 0.2 + 1e-9 && s.deckH >= eave - C.maxBelow - 1e-9, `${jobType} eave ${eave}: deck ${s.deckH}`);
+        if (s.catchOn) {
+          const b = E.catchB(false);
+          assert.ok(b >= C.minB);
+          assert.ok(s.deckH + C.wall >= eave + C.reach - b - 1e-9, `catch wall too low at eave ${eave}`);
+          assert.ok(s.catchConsole);
+        }
+      }
+    }
+  }
+  // 1½ floors (eave 4.3 m): a 1.00 m compensation frame puts the deck at 3.4 m (2.4 m would be 1.9 m under the eave).
+  const s = E.estimate({ length: 12, width: 9, eave: 4.3, pitch: 30, roofType: "hip", jobType: "roof" }).sides[0];
+  assert.equal(s.half, 1);
+  assert.equal(s.deckH, 3.4);
+  assert.equal(s.parts.frames1, s.bays + 1);
 });

@@ -21,6 +21,16 @@ export interface PlanSide {
   /** Levels (1 = lowest lift) with decks. */
   decks: number[];
   catchOn: boolean;
+  /** Distance from the wall to the inner standards, m (0.3; 0.6 under a temporary roof, clear of the eave overhang). */
+  gap?: number;
+  /** 1 when a 1.00 m compensation frame stands under the 2.00 m lifts. */
+  half?: number;
+  /** 0.36 m inner consoles with a deck on every decked level (under a temporary roof). */
+  inner?: boolean;
+  /** Roof-catch wall on an outer 0.36 m console at the top deck (DIN 4420-1: b ≥ 0.70 m from the eave). */
+  catchConsole?: boolean;
+  /** Level the roof-catch grids rise 2 m above. */
+  catchLevel?: number | null;
   area: number;
 }
 
@@ -34,6 +44,8 @@ export interface ScaffoldPlan {
   gap: number;
   lift: number;
   jack: number;
+  /** Height of the compensation frame, m. */
+  half?: number;
   house: { walls: P3[][]; roofs: P3[][]; ridge: number; measured: boolean };
   sides: PlanSide[];
   /** Weather sheeting on the outer face of every side. */

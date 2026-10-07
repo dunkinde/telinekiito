@@ -14,7 +14,7 @@ export const COLORS = {
   deck: 0xc9ced4,
   hatch: 0x6c737c,
   toe: 0xb5651d,
-  net: 0x1f2a24,
+  net: 0xd9482b,
   ground: 0xe6e8e2,
   sheet: 0xf4f7fa,
   tarp: 0xdfe9f2,
@@ -97,11 +97,19 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
   const deckMat = new T.MeshStandardMaterial({ color: COLORS.deck, metalness: 0.3, roughness: 0.6 });
   const hatchMat = new T.MeshStandardMaterial({ color: COLORS.hatch, roughness: 0.7 });
   const toeMat = new T.MeshStandardMaterial({ color: COLORS.toe, roughness: 0.8 });
-  const netMat = new T.MeshStandardMaterial({ color: COLORS.net, transparent: true, opacity: 0.35, side: T.DoubleSide, depthWrite: false });
+  const netMat = new T.MeshStandardMaterial({ color: COLORS.net, transparent: true, opacity: 0.45, side: T.DoubleSide, depthWrite: false });
 
-  const { bay, width, gap, lift, jack } = plan;
+  const { bay, width, lift, jack } = plan;
+  const gap = side.gap ?? plan.gap;
+  const base = jack + (side.half ? plan.half ?? 1 : 0); // lowest transom of the 2 m lifts
+  const Z = (l: number) => (l === 0 ? jack : base + lift * l); // height of level l (0 = on the base jacks)
   const run = side.bays * bay;
-  const top = jack + lift * side.lifts; // highest deck
+  const top = Z(side.lifts); // highest deck
+  const cons = 0.36;
+  // Roof-catch: grids 2 m high from the catch level, on an outer console at the top or on the outer standards.
+  const catchZ = side.catchOn ? Z(side.catchLevel ?? side.lifts) : null;
+  const catchD = side.catchConsole ? gap + width + cons : gap + width;
+  const postTop = side.catchOn && side.catchConsole ? top : top + 1;
   const yaw = Math.atan2(side.dir[1], side.dir[0]); // plan angle; three.js turns the other way round y
   // A point at distance t along the run, d out from the wall, height z.
   const P = (t: number, d: number, z: number) => toV(T, [side.at[0] + side.dir[0] * t + side.out[0] * d, side.at[1] + side.dir[1] * t + side.out[1] * d, z]);
@@ -110,12 +118,19 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
 
   for (let k = 0; k <= side.bays; k++) {
     const t = k * bay;
-    tl.push([P(t, inner, 0), P(t, inner, top + 1)]);
-    tl.push([P(t, outer, 0), P(t, outer, top + (side.catchOn ? 2 : 1))]);
-    for (let l = 0; l <= side.lifts; l++) tl.push([P(t, inner, jack + lift * l), P(t, outer, jack + lift * l)]); // transoms
+    // Inner standards end at the top deck (no posts against the wall); outer ones carry the guardrail posts.
+    tl.push([P(t, inner, 0), P(t, inner, top)]);
+    tl.push([P(t, outer, 0), P(t, outer, postTop)]);
+    if (side.half) tl.push([P(t, inner, base), P(t, outer, base)]);
+    for (let l = 0; l <= side.lifts; l++) tl.push([P(t, inner, Z(l)), P(t, outer, Z(l))]); // transoms
+    if (catchZ != null) {
+      if (side.catchConsole) tl.push([P(t, outer, top), P(t, catchD, top)], [P(t, catchD, top), P(t, catchD, top + 2)]);
+    }
+    if (side.inner) for (const l of side.decks) tl.push([P(t, inner - cons, Z(l)), P(t, inner, Z(l))]);
   }
+  if (side.half) { tl.push([P(0, inner, base), P(run, inner, base)]); tl.push([P(0, outer, base), P(run, outer, base)]); }
   for (let l = 0; l <= side.lifts; l++) {
-    const z = jack + lift * l;
+    const z = Z(l);
     tl.push([P(0, inner, z), P(run, inner, z)]);
     tl.push([P(0, outer, z), P(run, outer, z)]);
   }
@@ -123,7 +138,11 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
   const deckList: { c: THREE_NS.Vector3; size: [number, number, number]; yaw: number }[] = [];
   const hatchList: typeof deckList = [], toeList: typeof deckList = [];
   for (const l of side.decks) {
-    const z = jack + lift * l;
+    const z = Z(l);
+    const atCatch = catchZ != null && Math.abs(z - catchZ) < 0.01;
+    if (side.inner) for (let k = 0; k < side.bays; k++) deckList.push({ c: P((k + 0.5) * bay, inner - cons / 2, z + 0.03), size: [bay - 0.04, 0.05, cons - 0.04], yaw });
+    if (atCatch && side.catchConsole) for (let k = 0; k < side.bays; k++) deckList.push({ c: P((k + 0.5) * bay, outer + cons / 2, z + 0.03), size: [bay - 0.04, 0.05, cons - 0.04], yaw });
+    if (atCatch) continue; // the catch wall is the side protection here
     for (const h of [0.5, 1.0]) {
       tl.push([P(0, outer, z + h), P(run, outer, z + h)]);
       tl.push([P(0, inner, z + h), P(0, outer, z + h)]);
@@ -135,8 +154,14 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
       toeList.push({ c: P((k + 0.5) * bay, outer - 0.02, z + 0.08), size: [bay - 0.04, 0.15, 0.025], yaw });
     }
   }
-  // Diagonal braces in the outer plane, every fifth bay, through all lifts.
-  for (let k = 0; k < side.bays; k += 5) for (let l = 0; l < side.lifts; l++) tl.push([P(k * bay, outer, jack + lift * l), P((k + 1) * bay, outer, jack + lift * (l + 1))]);
+  // Diagonal braces in the outer plane, every fifth bay, through all 2 m lifts.
+  for (let k = 0; k < side.bays; k += 5) for (let l = 0; l < side.lifts; l++) tl.push([P(k * bay, outer, l === 0 ? base : Z(l)), P((k + 1) * bay, outer, Z(l + 1))]);
+  if (catchZ != null) {
+    // Roof-catch wall: rails along it every 0.5 m and a toe board, the grids drawn as a fine mesh below.
+    for (const h of [0.5, 1.0, 1.5, 2.0]) tl.push([P(0, catchD, catchZ + h), P(run, catchD, catchZ + h)]);
+    for (const h of [0.5, 1.0, 1.5, 2.0]) { tl.push([P(0, inner, catchZ + Math.min(h, 1)), P(0, catchD, catchZ + h)]); tl.push([P(run, inner, catchZ + Math.min(h, 1)), P(run, catchD, catchZ + h)]); }
+    for (let k = 0; k < side.bays; k++) toeList.push({ c: P((k + 0.5) * bay, catchD - 0.02, catchZ + 0.08), size: [bay - 0.04, 0.15, 0.025], yaw });
+  }
 
   group.add(tubes(T, tl, 0.024, tubeMat));
   if (deckList.length) group.add(boxes(T, deckList, deckMat));
@@ -145,21 +170,25 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
 
   if (plan.sheeting) {
     // Weather sheeting over the whole outer face.
-    const h = top + (side.catchOn ? 2 : 1);
+    const h = Math.max(top + 1, catchZ != null ? catchZ + 2 : 0);
     const a = P(0, outer + 0.05, 0), b = P(run, outer + 0.05, 0), c = P(run, outer + 0.05, h), d = P(0, outer + 0.05, h);
     const g = new T.BufferGeometry().setFromPoints([a, b, c, a, c, d]);
     g.computeVertexNormals();
     group.add(new T.Mesh(g, new T.MeshStandardMaterial({ color: COLORS.sheet, transparent: true, opacity: 0.5, side: T.DoubleSide, depthWrite: false })));
   }
-  if (side.catchOn) {
-    // Roof-catch net above the top deck on the outside.
-    const a = P(0, outer, top + 0.1), b = P(run, outer, top + 0.1), c = P(run, outer, top + 2), d = P(0, outer, top + 2);
+  if (catchZ != null) {
+    // The side protection grids of the roof-catch wall.
+    const a = P(0, catchD, catchZ + 0.1), b = P(run, catchD, catchZ + 0.1), c = P(run, catchD, catchZ + 2), d = P(0, catchD, catchZ + 2);
     const g = new T.BufferGeometry().setFromPoints([a, b, c, a, c, d]);
     g.computeVertexNormals();
     group.add(new T.Mesh(g, netMat));
+    const grid: [THREE_NS.Vector3, THREE_NS.Vector3][] = [];
+    for (let t = 0.25; t < run; t += 0.25) grid.push([P(t, catchD, catchZ + 0.1), P(t, catchD, catchZ + 2)]);
+    for (let h = 0.35; h < 2; h += 0.25) grid.push([P(0, catchD, catchZ + h), P(run, catchD, catchZ + h)]);
+    group.add(tubes(T, grid, 0.006, netMat));
   }
   group.traverse((o) => { o.userData.side = side.i; });
-  return { side, group, materials: [tubeMat, deckMat], labelAt: P(run / 2, outer + 0.6, top + (side.catchOn ? 2.6 : 1.6)) };
+  return { side, group, materials: [tubeMat, deckMat], labelAt: P(run / 2, outer + 0.6, Math.max(top + 1.6, catchZ != null ? catchZ + 2.6 : 0)) };
 }
 
 /** The temporary keder roof: trusses every section and the tarpaulin over them, resting on the scaffold top. */

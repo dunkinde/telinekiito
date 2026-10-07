@@ -94,6 +94,15 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
   Layher rules come from the 2013 AuV – replace the numbers in RULES.layher when Layher sends the current edition.
   Layher anchors in the engine now follow AuV p. 14 (one level: every second frame; one level with roof-catch: every frame).
 
+## Scaffold rules (7 Oct, strict pass)
+
+- Deck heights (lib/engine.js `deckFor`, `eaveTarget`): eave sides have the deck at most 1.5 m under the eave (DIN 4420-1, which Layher AuV §17 refers to; MonZon has no rules of its own). A 1.00 m compensation frame at the bottom (Layher 1714.101, MonZon 240.100) is used where 2 m lifts alone miss that window. Gables reach the ridge from 2 m below it. web/lib/geometry.ts mirrors this for the website drawing.
+- Roof-catch (every roof job, with or without the temporary roof): the catch wall is b ≥ 0.70 m out from the eave edge and reaches 1.5 − b above the eave. The eave overhang is not in the building model, so it is assumed to be 0.5 m. Normal sides put the wall (2 m posts 1748.003, two grids per bay) on an outer 0.36 m console (b = 0.89). Sides raised for a temporary roof hang the grids on the outer standards (b = 0.83).
+- Temporary roof: carrying sides stand 0.6 m from the wall, clear of the overhang, with 0.36 m inner consoles at the working decks. They share one frame grid (`roofGrid`), chosen so the working decks stay under the eave. On measured L/T houses the work scaffold follows the walls, and "Roof support N" runs carry the roof where its edge crosses open ground (`roofSupport`).
+- Anchors: consoles, roof-catch and the temporary roof densify the anchor grid to every standard line every 2 m (Layher AuV p. 19).
+- MonZon: the instruction v2.1 §1.11 does not cover sheeting or weather roofs, so check `mz_not_covered` is "engineer": get a calculation from MonZon or use Layher.
+- The checks list shows the worst roof-catch side against the DIN figures (`catch_din`).
+
 ## What's left
 - Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).
 - Company details (M1 phone, privacy controller details), email/SMS keys in `.env`.

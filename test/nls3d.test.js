@@ -96,13 +96,15 @@ test("MonZon Modular Light: same grid as Layher, its own parts", () => {
   assert.equal(mz.system, "monzon");
   assert.equal(mz.totals.area, lay.totals.area); // 3.07 m bays in both
   assert.ok(Object.keys(mz.totals.parts).every((k) => k.startsWith("mz_")));
-  // A long side: 5 bays, 6 frame lines, one lift, one decked level.
+  // A long side: 5 bays, 6 frame lines, one lift, one decked level, and the roof-catch wall on 0.36 m brackets with a
+  // deck on them (DIN 4420-1: b ≥ 0.70 m from the eave).
   const side = mz.sides[0];
   assert.equal(side.bays, 5);
   assert.deepEqual(
     [side.parts.mz_standards, side.parts.mz_transoms, side.parts.mz_ledgers, side.parts.mz_decks, side.parts.mz_guardrails, side.parts.mz_anchors],
-    [12, 12, 15, 8, 5, 6]
+    [12, 12, 15, 13, 5, 6]
   );
+  assert.equal(side.parts.mz_brackets, 6);
   // Own rates per system when the office sets them.
   const P = { ...E.DEFAULT_PRICING, systems: { layher: { enabled: true }, monzon: { enabled: true, rentPerM2Day: 0.2 } } };
   const sel = { days: 28, zone: "C", urgency: "standard" };

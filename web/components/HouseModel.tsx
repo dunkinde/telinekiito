@@ -39,8 +39,8 @@ function buildPieces(h: HouseShape): Piece[] {
   for (const s of scaffoldSides(h)) {
     const front = s.pos === "front" || s.pos === "right";
     for (let k = 1; k <= s.lifts; k++) {
-      const zLo = k === 1 ? 0 : JACK + LIFT * (k - 1);
-      const zHi = JACK + LIFT * k;
+      const zLo = k === 1 ? 0 : JACK + s.half + LIFT * (k - 1);
+      const zHi = JACK + s.half + LIFT * k;
       const top = k === s.lifts;
       for (let b = 0; b < s.bays; b++) {
         const t0 = b * s.bay, t1 = (b + 1) * s.bay, last = b === s.bays - 1;

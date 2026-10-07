@@ -29,23 +29,31 @@ export interface ScaffoldSide {
   /** Bay length, m. */
   bay: number;
   lifts: number;
+  /** 1 when a 1.00 m compensation frame stands under the 2.00 m lifts. */
+  half: number;
   catchOn: boolean;
   deckAll: boolean;
 }
 
-const liftsForEave = (eave: number) => Math.max(1, Math.round((eave - 1.2 - JACK) / LIFT));
-const liftsForTop = (target: number) => Math.max(1, Math.round((target - JACK) / LIFT));
+// Same deck rules as lib/engine.js: the lowest deck at or above a target on 2.00 m lifts, with or without a 1.00 m
+// compensation frame; eave decks at most 1.5 m under the eave (DIN 4420-1), the roof-catch wall reaching 1.5 − b
+// above the eave (b = 0.89 m on a 0.36 m console), gables reaching the ridge from 2 m below.
+const deckFor = (target: number) => {
+  const a = Math.max(1, Math.ceil((target - JACK) / LIFT - 1e-9)), b = Math.max(1, Math.ceil((target - JACK - 1) / LIFT - 1e-9));
+  return JACK + 1 + LIFT * b < JACK + LIFT * a - 1e-9 ? { lifts: b, half: 1 } : { lifts: a, half: 0 };
+};
+const eaveTarget = (eave: number, catchOn: boolean) => (catchOn ? Math.max(eave - 1.5, eave + 1.5 - 0.89 - 2) : eave - 1.5);
 export const roofRise = (h: HouseShape) => (h.roofType === "flat" ? 0 : (h.width / 2) * Math.tan((h.pitch * Math.PI) / 180));
 
 export function scaffoldSides(h: HouseShape): ScaffoldSide[] {
   const L = h.length, W = h.width;
   const ridge = h.eave + roofRise(h);
-  const eaveLifts = liftsForEave(h.eave);
+  const eaveLifts = h.eave - 1.5;
   const gable = h.roofType === "gable";
-  const gableLifts = gable ? Math.max(eaveLifts, liftsForTop(ridge - 2.0)) : eaveLifts;
+  const gableLifts = gable ? Math.max(eaveLifts, ridge - 2.0) : eaveLifts;
   const out: ScaffoldSide[] = [];
-  const add = (pos: SidePos, len: number, lifts: number, catchOn: boolean, deckAll: boolean) =>
-    out.push({ pos, len, lifts, catchOn, deckAll, bay: h.bay || BAY, bays: Math.max(1, Math.ceil((len + 2 * EXTEND) / (h.bay || BAY) - 0.05)) });
+  const add = (pos: SidePos, len: number, target: number, catchOn: boolean, deckAll: boolean) =>
+    out.push({ pos, len, ...deckFor(catchOn ? Math.max(target, eaveTarget(h.eave, true)) : target), catchOn, deckAll, bay: h.bay || BAY, bays: Math.max(1, Math.ceil((len + 2 * EXTEND) / (h.bay || BAY) - 0.05)) });
 
   if (h.jobType === "roof") {
     add("front", L, eaveLifts, true, false);
