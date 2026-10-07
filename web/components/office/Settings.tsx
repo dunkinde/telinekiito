@@ -70,7 +70,7 @@ function PricesTab() {
         if (!d) return null;
         const def = data.defaults;
         const dirty = !same(d, data.pricing);
-        const nums: unknown[] = [d.rentPerM2Day, d.minRentDays, d.erectPerM2, d.dismantlePerM2, d.catchPerMetre, d.extraLevelPerM, d.truckCapacityKg, d.minOrder, d.vat, d.rangePct, d.zones.A.trip, d.zones.B.trip, d.zones.C.trip, d.urgency.express.pct, d.urgency.emergency.pct];
+        const nums: unknown[] = [d.rentPerM2Day, d.minRentDays, d.erectPerM2, d.dismantlePerM2, d.catchPerMetre, d.extraLevelPerM, d.truckCapacityKg, d.minOrder, d.vat, d.rangePct, d.zones.A.trip, d.zones.B.trip, d.zones.C.trip, d.urgency.express.pct, d.urgency.emergency.pct, d.sheetingPerM2 ?? 0, d.roofRentPerM2Day ?? 0, d.roofWorkPerM2 ?? 0];
         const bad = nums.some((n) => n == null || !Number.isFinite(n as number) || (n as number) < 0);
         const f = (k: keyof Pricing, label: string, unit: string, hint?: string) => (
           <Field label={label} hint={<>{hint ? `${hint} ` : ""}<Def v={def[k] as number} unit={unit} lang={lang} /></>}>
@@ -128,6 +128,14 @@ function PricesTab() {
                   {f("minOrder", t("set.prices.minOrder"), "€", t("set.prices.minOrderHint"))}
                   {f("vat", t("set.prices.vat"), "%")}
                   {f("rangePct", t("set.prices.rangePct"), "%", t("set.prices.rangeHint"))}
+                </div>
+              </Card>
+              <Card aria-labelledby="p-weather" className="xl:col-span-2">
+                <CardHead id="p-weather" title={t("set.prices.weather")} sub={t("set.prices.weatherSub")} />
+                <div className="grid gap-4 px-5 pb-5 sm:grid-cols-3">
+                  {f("sheetingPerM2", t("set.prices.sheetingPerM2"), "€/m²")}
+                  {f("roofRentPerM2Day", t("set.prices.roofRentPerM2Day"), lang === "fi" ? "€/m²/pv" : lang === "ru" ? "€/м²/день" : "€/m²/day")}
+                  {f("roofWorkPerM2", t("set.prices.roofWorkPerM2"), "€/m²")}
                 </div>
               </Card>
               <Card aria-labelledby="p-sys" className="xl:col-span-2">

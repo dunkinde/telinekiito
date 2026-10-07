@@ -15,11 +15,13 @@ export const ORDER_FLOW: OrderStatus[] = ["received", "confirmed", "loading", "e
 export type PartKey =
   | "frames" | "baseJacks" | "decks" | "hatchDecks" | "guardrails" | "toeBoards" | "endGuards"
   | "diagonals" | "topPosts" | "catchPosts" | "catchMesh" | "anchors"
-  | "mz_baseJacks" | "mz_baseCollars" | "mz_standards" | "mz_transoms" | "mz_ledgers" | "mz_decks" | "mz_accessDecks" | "mz_guardrails" | "mz_endGuards" | "mz_toeBoards" | "mz_endToeBoards" | "mz_braces" | "mz_topPosts" | "mz_catchPosts" | "mz_catchMesh" | "mz_anchors";
+  | "mz_baseJacks" | "mz_baseCollars" | "mz_standards" | "mz_transoms" | "mz_ledgers" | "mz_decks" | "mz_accessDecks" | "mz_guardrails" | "mz_endGuards" | "mz_toeBoards" | "mz_endToeBoards" | "mz_braces" | "mz_topPosts" | "mz_catchPosts" | "mz_catchMesh" | "mz_anchors"
+  | "wp_sheetRolls" | "wp_ties" | "wr_eaves" | "wr_ridges" | "wr_beam300" | "wr_beam200" | "wr_beam100" | "wr_beam050" | "wr_frames" | "wr_ledgers" | "wr_tarps" | "wr_gableTarps";
 export const LAYHER_PARTS: PartKey[] = ["frames", "baseJacks", "decks", "hatchDecks", "guardrails", "toeBoards", "endGuards", "diagonals", "topPosts", "catchPosts", "catchMesh", "anchors"];
 export const MONZON_PARTS: PartKey[] = ["mz_baseJacks", "mz_baseCollars", "mz_standards", "mz_transoms", "mz_ledgers", "mz_decks", "mz_accessDecks", "mz_guardrails", "mz_endGuards", "mz_toeBoards", "mz_endToeBoards", "mz_braces", "mz_topPosts", "mz_catchPosts", "mz_catchMesh", "mz_anchors"];
-export const PART_KEYS: PartKey[] = [...LAYHER_PARTS, ...MONZON_PARTS];
-export const systemOfPart = (k: PartKey): SystemKey => (k.startsWith("mz_") ? "monzon" : "layher");
+export const WEATHER_PARTS: PartKey[] = ["wp_sheetRolls", "wp_ties", "wr_eaves", "wr_ridges", "wr_beam300", "wr_beam200", "wr_beam100", "wr_beam050", "wr_frames", "wr_ledgers", "wr_tarps", "wr_gableTarps"];
+export const PART_KEYS: PartKey[] = [...LAYHER_PARTS, ...MONZON_PARTS, ...WEATHER_PARTS];
+export const systemOfPart = (k: PartKey): SystemKey | "weather" => (k.startsWith("mz_") ? "monzon" : /^w[pr]_/.test(k) ? "weather" : "layher");
 export type Parts = Partial<Record<PartKey, number>>;
 
 export const INSPECTION_ITEMS = ["ground", "bracing", "anchors", "decks", "guardrails", "access", "catch", "clearance", "tag"] as const;
@@ -49,10 +51,12 @@ export interface House {
   adjust?: LayoutAdjust;
   /** Scaffold system (missing on older orders = Layher). */
   system?: SystemKey;
+  sheeting?: boolean;
+  weatherRoof?: boolean;
   model?: { id: string; date: string | null };
 }
 export interface Side { name: string; bays: number; lifts: number; workH: number; area: number; catchOn: boolean }
-export interface FullEstimate { area: number; runM: number; catchRunM: number; extraLevelM: number; weightKg: number; parts: Parts; sides: Side[] }
+export interface FullEstimate { sheeting?: { m2: number } | null; roof?: { span: number; length: number; pitch: number; support: number; sections: number; tarpWidth: number; planM2: number } | null; area: number; runM: number; catchRunM: number; extraLevelM: number; weightKg: number; parts: Parts; sides: Side[] }
 export interface Assignment { date?: string | null; time?: string; crewId?: string | null; pickupDate?: string | null; pickupTime?: string; pickupCrewId?: string | null }
 export interface HistoryEntry { status?: OrderStatus; event?: string; code?: string; at: string; by?: string; days?: number; detail?: unknown }
 export interface Message { from: "customer" | "office"; text: string; at: string; by?: string }

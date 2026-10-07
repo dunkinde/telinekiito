@@ -25,6 +25,10 @@ export interface Pricing {
   minOrder: number;
   vat: number;
   rangePct: number;
+  /** Weather protection: sheeting fitted and removed per m², temporary roof rent per m² of roof per day and work per m². */
+  sheetingPerM2?: number;
+  roofRentPerM2Day?: number;
+  roofWorkPerM2?: number;
   /** Per scaffold system: on/off and its own rates (missing = the general rate). */
   systems?: Record<SystemKey, { enabled: boolean; rentPerM2Day?: number; erectPerM2?: number; dismantlePerM2?: number }>;
 }
@@ -65,6 +69,8 @@ export interface Quote {
 
 export interface Estimate {
   system?: SystemKey;
+  sheeting?: { m2: number } | null;
+  roof?: { span: number; length: number; pitch: number; support: number; sections: number; tarpWidth: number; planM2: number } | null;
   area: number;
   runM: number;
   catchRunM: number;
@@ -88,6 +94,9 @@ export interface QuoteInput {
   model?: ModelRef;
   /** Scaffold system; the server uses the first one switched on when missing. */
   system?: SystemKey;
+  /** Weather sheeting on the scaffold, and a temporary roof over the house. */
+  sheeting?: boolean;
+  weatherRoof?: boolean;
 }
 
 /** The same house priced with one scaffold system. */

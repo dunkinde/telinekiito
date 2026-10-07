@@ -53,6 +53,8 @@ interface Form {
   eaveAuto: boolean;
   jobType: JobType;
   gables: boolean;
+  sheeting: boolean;
+  weatherRoof: boolean;
   urgency: Urgency;
   start: string;
   days: string;
@@ -331,6 +333,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
       eaveAuto: true,
       jobType: start.jobType ?? "roof",
       gables: true,
+      sheeting: false,
+      weatherRoof: false,
       urgency,
       start: "",
       days: "28",
@@ -444,6 +448,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
         pitch: house.pitch,
         jobType: form.jobType,
         gables: form.roofType === "gable" && form.jobType === "roof" && form.gables,
+        sheeting: form.sheeting,
+        weatherRoof: form.weatherRoof,
         days: Math.max(1, Math.round(Number(form.days) || 28)),
         zone: form.zone,
         urgency: form.urgency,
@@ -463,7 +469,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
     }, 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode, modelId, form.system]);
+  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode, modelId, form.system, form.sheeting, form.weatherRoof]);
 
   /* ----- address lookup ----- */
   const addressNow = useRef("");
@@ -567,6 +573,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
         pitch: house.pitch,
         jobType: form.jobType,
         gables: form.roofType === "gable" && form.jobType === "roof" && form.gables,
+        sheeting: form.sheeting,
+        weatherRoof: form.weatherRoof,
         zone: form.zone,
         urgency: form.urgency,
         start: form.start,
@@ -780,6 +788,20 @@ function WizardBody({ start }: { start: QuoteStart }) {
           </span>
         </label>
       ) : null}
+      <div>
+        <span className="field-label">{t("q.weather")}</span>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {(["sheeting", "weatherRoof"] as const).map((k) => (
+            <label key={k} className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-line">
+              <input type="checkbox" className="mt-1 h-5 w-5 accent-ink" checked={form[k]} onChange={(e) => set(k, e.target.checked)} />
+              <span>
+                <span className="font-semibold text-ink">{t(`q.${k}`)}</span>
+                <span className="block text-sm text-muted">{t(`q.${k}Hint`)}</span>
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
       {systems.length > 1 ? (
         <div>
           <span className="field-label">{t("q.system")}</span>

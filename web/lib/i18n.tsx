@@ -188,6 +188,14 @@ const en = {
   "q.priceRange": "Likely range {low}–{high}",
   "q.priceNote": "Likely range {low}–{high}. The final price may differ from this estimate: the automatic price relies on map data and assumptions, so we may adjust it after checking your house, before we confirm the order.",
   "q.priceEmpty": "Add the house size and floors to see the price.",
+  "q.weather": "Weather protection",
+  "q.sheeting": "Weather sheeting on the scaffold",
+  "q.sheetingHint": "Plastic sheeting around the scaffold keeps rain and wind off the work and dust in. Needs denser wall anchoring.",
+  "q.weatherRoof": "Temporary roof over the house",
+  "q.weatherRoofHint": "A keder roof on top of the scaffold, so the old roof can be stripped in any weather. The scaffold goes up past the ridge to carry it.",
+  "line.sheeting": "Weather sheeting, {m2} m²",
+  "line.roofRent": "Temporary roof rent, {m2} m², {days} days",
+  "line.roofWork": "Temporary roof, putting up and taking down",
   "p3d.title": "Scaffold plan",
   "p3d.sub": "{system} · {area} m² · {sides} sides",
   "p3d.hint": "Drag to turn · pinch or scroll to zoom · tap a side",
@@ -643,6 +651,14 @@ const fi: Record<Key, Entry> = {
   "q.priceRange": "Todennäköinen haarukka {low}–{high}",
   "q.priceNote": "Todennäköinen haarukka {low}–{high}. Lopullinen hinta voi poiketa tästä arviosta: automaattinen hinta perustuu karttatietoihin ja oletuksiin, joten voimme tarkentaa hintaa tarkistettuamme talosi, ennen kuin vahvistamme tilauksen.",
   "q.priceEmpty": "Lisää talon mitat ja kerrokset, niin näet hinnan.",
+  "q.weather": "Sääsuojaus",
+  "q.sheeting": "Sääsuojapeite telineisiin",
+  "q.sheetingHint": "Muovipeite telineiden ympärillä suojaa työn sateelta ja tuulelta ja pitää pölyn sisällä. Vaatii tiheämmän ankkuroinnin.",
+  "q.weatherRoof": "Sääsuojakatto talon päälle",
+  "q.weatherRoofHint": "Väliaikainen keder-katto telineiden päällä, jotta vanhan katon voi purkaa säästä riippumatta. Telineet nousevat harjan yli kattoa kantamaan.",
+  "line.sheeting": "Sääsuojapeite, {m2} m²",
+  "line.roofRent": "Sääsuojakaton vuokra, {m2} m², {days} päivää",
+  "line.roofWork": "Sääsuojakaton asennus ja purku",
   "p3d.title": "Telinesuunnitelma",
   "p3d.sub": "{system} · {area} m² · {sides} sivua",
   "p3d.hint": "Käännä vetämällä · zoomaa nipistämällä tai rullalla · napauta sivua",
@@ -1009,6 +1025,12 @@ export function lineLabel(i: I18n, l: QuoteLine, q?: Quote): string {
     }
     case "levels":
       return i.t("line.levels", { m: v.m ?? fromLabel(/(\d+) m/) });
+    case "sheeting":
+      return i.t("line.sheeting", { m2: v.m2 ?? "" });
+    case "roofRent":
+      return i.t("line.roofRent", { m2: v.m2 ?? "", days: v.days ?? q?.rentDays ?? "" });
+    case "roofWork":
+      return i.t("line.roofWork");
     case "discount":
       return i.t("line.discount", { pct: v.pct ?? fromLabel(/([\d.]+) %/) });
     default:

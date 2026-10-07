@@ -27,6 +27,8 @@ type Form = {
   eave: string;
   jobType: JobType;
   gables: boolean;
+  sheeting: boolean;
+  weatherRoof: boolean;
   zone: Zone;
   urgency: Urgency;
   start: string;
@@ -34,7 +36,7 @@ type Form = {
   notes: string;
   system: SystemKey;
 };
-const blank: Form = { address: "", length: "", width: "", floors: "", roofType: "gable", pitch: "30", eave: "", jobType: "roof", gables: true, zone: "A", urgency: "standard", start: "", days: "28", notes: "", system: "layher" };
+const blank: Form = { address: "", length: "", width: "", floors: "", roofType: "gable", pitch: "30", eave: "", jobType: "roof", gables: true, sheeting: false, weatherRoof: false, zone: "A", urgency: "standard", start: "", days: "28", notes: "", system: "layher" };
 const blankBiz: BizDetails = { po: "", project: "", costCentre: "", siteContact: { name: "", phone: "" }, siteInfo: "" };
 
 export function NewOrder({ copyFrom }: { copyFrom?: string }) {
@@ -97,7 +99,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
     if (!house.ok) return setPrice(null);
     let alive = true;
     const id = window.setTimeout(() => {
-      getQuote({ length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables, days, zone: f.zone, urgency: f.urgency, partnerCode: me.account.code, model: modelRef, system: f.system })
+      getQuote({ length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables, sheeting: f.sheeting, weatherRoof: f.weatherRoof, days, zone: f.zone, urgency: f.urgency, partnerCode: me.account.code, model: modelRef, system: f.system })
         .then((r) => alive && setPrice(r))
         .catch(() => alive && setPrice(null));
     }, 300);
@@ -106,7 +108,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
       window.clearTimeout(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [house, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, me.account.code, modelId, f.system]);
+  }, [house, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, me.account.code, modelId, f.system, f.sheeting, f.weatherRoof]);
   const firstFree = price?.available?.[f.urgency] || null;
   useEffect(() => {
     if (firstFree && (!f.start || f.start < firstFree)) setF((x) => ({ ...x, start: firstFree }));
@@ -164,6 +166,8 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
         pitch: house.P,
         jobType: f.jobType,
         gables: f.roofType === "gable" && f.jobType === "roof" && f.gables,
+        sheeting: f.sheeting,
+        weatherRoof: f.weatherRoof,
         zone: f.zone,
         urgency: f.urgency,
         start: f.start,
@@ -258,6 +262,14 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
                   <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.gables} onChange={(e) => set("gables", e.target.checked)} /> {t("biz.new.gables")}
                 </label>
               ) : null}
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
+                <label className="flex items-center gap-2 text-[14px] text-ink-soft">
+                  <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.sheeting} onChange={(e) => set("sheeting", e.target.checked)} /> {t("biz.new.sheeting")}
+                </label>
+                <label className="flex items-center gap-2 text-[14px] text-ink-soft">
+                  <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.weatherRoof} onChange={(e) => set("weatherRoof", e.target.checked)} /> {t("biz.new.weatherRoof")}
+                </label>
+              </div>
               {(price?.options?.length || 0) > 1 ? (
                 <Chips
                   label={t("biz.new.system")}

@@ -16,6 +16,8 @@ export const COLORS = {
   toe: 0xb5651d,
   net: 0x1f2a24,
   ground: 0xe6e8e2,
+  sheet: 0xf4f7fa,
+  truss: 0x9aa3ad,
   selected: 0xffc20e
 };
 
@@ -140,6 +142,14 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
   if (hatchList.length) group.add(boxes(T, hatchList, hatchMat));
   if (toeList.length) group.add(boxes(T, toeList, toeMat));
 
+  if (plan.sheeting) {
+    // Weather sheeting over the whole outer face.
+    const h = top + (side.catchOn ? 2 : 1);
+    const a = P(0, outer + 0.05, 0), b = P(run, outer + 0.05, 0), c = P(run, outer + 0.05, h), d = P(0, outer + 0.05, h);
+    const g = new T.BufferGeometry().setFromPoints([a, b, c, a, c, d]);
+    g.computeVertexNormals();
+    group.add(new T.Mesh(g, new T.MeshStandardMaterial({ color: COLORS.sheet, transparent: true, opacity: 0.5, side: T.DoubleSide, depthWrite: false })));
+  }
   if (side.catchOn) {
     // Roof-catch net above the top deck on the outside.
     const a = P(0, outer, top + 0.1), b = P(run, outer, top + 0.1), c = P(run, outer, top + 2), d = P(0, outer, top + 2);
@@ -149,6 +159,41 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
   }
   group.traverse((o) => { o.userData.side = side.i; });
   return { side, group, materials: [tubeMat, deckMat], labelAt: P(run / 2, outer + 0.6, top + (side.catchOn ? 2.6 : 1.6)) };
+}
+
+/** The temporary keder roof: trusses every section and the tarpaulin over them, resting on the scaffold top. */
+function roofObject(T: THREE, r: NonNullable<ScaffoldPlan["roof"]>) {
+  const g = new T.Group();
+  const d = r.dir, n: [number, number] = [-d[1], d[0]];
+  const rise = (r.span / 2) * Math.tan((r.pitch * Math.PI) / 180);
+  const z0 = r.support + 1.0; // on top of the scaffold's guardrail posts
+  // A point at u along the ridge (from the centre), v across it, height z.
+  const Q = (u: number, v: number, z: number) => toV(T, [r.at[0] + d[0] * u + n[0] * v, r.at[1] + d[1] * u + n[1] * v, z]);
+  const tl: [THREE_NS.Vector3, THREE_NS.Vector3][] = [];
+  const half = r.length / 2, w = r.span / 2;
+  for (let k = 0; k <= r.sections; k++) {
+    const u = -half + (k * r.length) / r.sections;
+    for (const s of [-1, 1]) {
+      tl.push([Q(u, s * w, z0), Q(u, 0, z0 + rise)]); // top chord
+      tl.push([Q(u, s * w, z0 - 0.75), Q(u, 0, z0 + rise - 0.75)]); // bottom chord
+      for (let f = 0; f <= 4; f++) { const v = s * w * (1 - f / 4), z = z0 + rise * (f / 4); tl.push([Q(u, v, z), Q(u, v, z - 0.75)]); }
+    }
+  }
+  for (const v of [-w, 0, w]) tl.push([Q(-half, v, v === 0 ? z0 + rise : z0), Q(half, v, v === 0 ? z0 + rise : z0)]);
+  g.add(tubes(T, tl, 0.03, new T.MeshStandardMaterial({ color: COLORS.truss, metalness: 0.4, roughness: 0.5 })));
+  const tarp = new T.MeshStandardMaterial({ color: COLORS.sheet, transparent: true, opacity: 0.6, side: T.DoubleSide, depthWrite: false });
+  const quad = (a: THREE_NS.Vector3, b: THREE_NS.Vector3, c: THREE_NS.Vector3, e: THREE_NS.Vector3) => {
+    const geo = new T.BufferGeometry().setFromPoints([a, b, c, a, c, e]);
+    geo.computeVertexNormals();
+    return new T.Mesh(geo, tarp);
+  };
+  for (const s of [-1, 1]) g.add(quad(Q(-half, s * w, z0 + 0.02), Q(half, s * w, z0 + 0.02), Q(half, 0, z0 + rise + 0.02), Q(-half, 0, z0 + rise + 0.02)));
+  for (const u of [-half, half]) {
+    const geo = new T.BufferGeometry().setFromPoints([Q(u, -w, z0), Q(u, w, z0), Q(u, 0, z0 + rise)]);
+    geo.computeVertexNormals();
+    g.add(new T.Mesh(geo, tarp));
+  }
+  return g;
 }
 
 export function buildScene(T: THREE, plan: ScaffoldPlan) {
@@ -170,6 +215,7 @@ export function buildScene(T: THREE, plan: ScaffoldPlan) {
   const sides = plan.sides.map((s) => sideObjects(T, plan, s));
   for (const s of sides) root.add(s.group);
 
+  if (plan.roof) root.add(roofObject(T, plan.roof));
   const box = new T.Box3().setFromObject(root);
   const size = box.getSize(new T.Vector3());
   const ground = new T.Mesh(new T.CircleGeometry(Math.max(size.x, size.z) * 1.2 + 6, 48), new T.MeshStandardMaterial({ color: COLORS.ground, roughness: 1 }));

@@ -273,3 +273,22 @@ test("standard-configuration checks: height, anchors and sources per system", ()
   const side = E.estimate(h).sides.find((s) => s.lifts === 1 && s.catchOn);
   assert.equal(side.parts.anchors, side.bays + 1);
 });
+
+test("weather protection: sheeting area and anchors, temporary roof raises the scaffold and is priced", () => {
+  const E = require("../lib/engine");
+  const P = E.DEFAULT_PRICING, sel = { days: 28, zone: "C", urgency: "standard" };
+  const h = { length: 12.4, width: 9.9, eave: 2.9, pitch: 47, roofType: "gable", jobType: "roof", gables: true };
+  const plain = E.estimate(h), sheet = E.estimate({ ...h, sheeting: true }), roof = E.estimate({ ...h, weatherRoof: true });
+  assert.ok(sheet.sheeting.m2 > 250);
+  assert.ok(sheet.totals.parts.anchors > plain.totals.parts.anchors);
+  assert.ok(sheet.totals.parts.wp_sheetRolls >= 3);
+  assert.equal(E.quote(sheet, sel, P).lines.find((l) => l.key === "sheeting").vars.m2, sheet.sheeting.m2);
+  // The roof spans the scaffold (house width + 2 × (gap + frame)) and its trusses clear the ridge.
+  assert.ok(Math.abs(roof.roof.span - (9.9 + 2 * 1.03)) < 0.01);
+  assert.ok(roof.roof.support + 1.0 + (roof.roof.span / 2) * Math.tan((18 * Math.PI) / 180) - 0.75 > plain.ridge);
+  assert.ok(roof.sides.every((s) => s.lifts >= 4 && !s.catchOn));
+  assert.equal(roof.totals.parts.wr_ridges, roof.roof.sections + 1);
+  const q = E.quote(roof, sel, P);
+  assert.ok(q.lines.some((l) => l.key === "roofRent") && q.lines.some((l) => l.key === "roofWork"));
+  assert.ok(q.total > E.quote(plain, sel, P).total * 2);
+});

@@ -36,6 +36,10 @@ export interface ScaffoldPlan {
   jack: number;
   house: { walls: P3[][]; roofs: P3[][]; ridge: number; measured: boolean };
   sides: PlanSide[];
+  /** Weather sheeting on the outer face of every side. */
+  sheeting?: boolean;
+  /** Temporary roof: centre, ridge direction, span across it, length along it, pitch (°) and the level it rests on. */
+  roof?: { at: P2; dir: P2; span: number; length: number; pitch: number; support: number; sections: number } | null;
   area: number;
   weightKg: number;
 }

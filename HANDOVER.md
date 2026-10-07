@@ -84,6 +84,11 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
   GET /api/plan/:token (no personal data).
 - Office layout editor (7 Oct): per side bays, levels, decks, roof-catch or off, stored in `house.adjust` (by side name);
   POST /api/office/orders/:ref/layout/preview and …/layout reprice the order. Dropped when the house size changes.
+- Weather protection (7 Oct): `house.sheeting` (plastic sheeting on the outer face of every side; every standard line
+  anchored on every level) and `house.weatherRoof` (MonZon PROTECT IT keder roof, 18°, 2.50 m sections, spanning the
+  scaffold; every side is raised so the trusses clear the ridge, roof-catch dropped). Parts with prefixes wp_/wr_ (own
+  "weather" stock group), quote lines sheeting/roofRent/roofWork, prices sheetingPerM2/roofRentPerM2Day/roofWorkPerM2
+  (starting values, editable in Office → Settings → Prices). Drawn in the 3D view.
 - Standard-configuration checks (`lib/checks.js`): height limit, load class, anchoring and sheeting reminders per system
   with document + page; "engineer" when over the limit. Shown in the office (Teline ja hinta) and the crew job card.
   Layher rules come from the 2013 AuV – replace the numbers in RULES.layher when Layher sends the current edition.
