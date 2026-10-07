@@ -139,8 +139,9 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
   // Guardrails at hand and knee height on every decked level, outside and at both ends.
   const deckList: { c: THREE_NS.Vector3; size: [number, number, number]; yaw: number }[] = [];
   const hatchList: typeof deckList = [], toeList: typeof deckList = [];
-  for (const l of side.decks) {
-    const z = Z(l);
+  // Decked levels: the listed lifts, plus the top of the 1 m base frame where every level is decked.
+  const decked = [...(side.halfDeck ? [{ l: -1, z: base }] : []), ...side.decks.map((l) => ({ l, z: Z(l) }))];
+  for (const { l, z } of decked) {
     const atCatch = catchZ != null && Math.abs(z - catchZ) < 0.01;
     if (side.inner && !(side.innerRail && l === side.lifts)) for (let k = 0; k < side.bays; k++) deckList.push({ c: P((k + 0.5) * bay, inner - cons / 2, z + 0.03), size: [bay - 0.04, 0.05, cons - 0.04], yaw });
     if (atCatch && side.catchConsole) for (let k = 0; k < side.bays; k++) deckList.push({ c: P((k + 0.5) * bay, outer + cons / 2, z + 0.03), size: [bay - 0.04, 0.05, cons - 0.04], yaw });

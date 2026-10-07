@@ -31,6 +31,8 @@ export interface PlanSide {
   inner?: boolean;
   /** Access towers (hatch decks with ladders) on this side: one per connected scaffold, more every 50 m. */
   access?: number;
+  /** A walking platform also on top of the 1 m base frame (work on the walls: every level is decked). */
+  halfDeck?: boolean;
   /** Guardrail on the inside of the top deck (it stands above the eave, away from any wall). */
   innerRail?: boolean;
   /** Roof-catch wall on an outer 0.36 m console at the top deck (DIN 4420-1: b ≥ 0.70 m from the eave). */

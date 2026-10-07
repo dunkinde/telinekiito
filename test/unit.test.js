@@ -420,3 +420,19 @@ test("measured L-shaped house: scaffolds never overlap and every wall has one in
     for (const s of est.sides) assert.ok(s.run >= s.len - 1.13 - 1e-9, `${jobType}: ${s.name}`);
   }
 });
+
+test("work on the walls: a walking platform on every level, the top of the 1 m base frame included", () => {
+  const E = require("../lib/engine");
+  for (const jobType of ["facade", "roof_facade"]) {
+    const est = E.estimate({ length: 12, width: 9, eave: 4.3, roofType: "gable", pitch: 30, jobType });
+    for (const s of est.sides) {
+      assert.ok(s.deckAll, jobType);
+      assert.equal(s.decked, s.deckLevels.length + (s.half ? 1 : 0), `${jobType} ${s.name}`);
+      // every 2 m lift up to the work level is decked
+      assert.deepEqual(s.deckLevels.slice(0, s.lifts), Array.from({ length: s.lifts }, (_, k) => k + 1));
+    }
+  }
+  // Roof-only and gutter jobs keep one working level.
+  const g = E.estimate({ length: 12, width: 9, eave: 4.3, roofType: "hip", pitch: 30, jobType: "gutters" }).sides[0];
+  assert.equal(g.decked, 1);
+});
