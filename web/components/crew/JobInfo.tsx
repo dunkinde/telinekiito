@@ -48,6 +48,15 @@ export function SiteModel({ view }: { view: ViewCard }) {
           }}
         />
       ) : null}
+      {view.checks?.length ? (
+        <ul className="space-y-2 rounded-2xl bg-mist p-4 text-[15px] leading-snug">
+          {view.checks.filter((c) => c.level !== "ok").map((c, k) => (
+            <li key={k} className={c.level === "engineer" ? "font-semibold text-[#b91c1c]" : "text-ink"}>
+              • {t(`chk.${c.code}` as Key, Object.fromEntries(Object.entries(c.vars).map(([k, v]) => [k, typeof v === "number" ? fmtNum(v, lang) : v])) as Record<string, string | number>)}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {e.catchRunM > 0 ? (
         <div className="flex items-start gap-3 rounded-2xl bg-[#fff1e6] p-4 text-[#7c2d12] ring-1 ring-[#fbc59a]" role="note">
           <IWarn className="mt-0.5 h-6 w-6 shrink-0" />

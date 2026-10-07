@@ -256,3 +256,20 @@ test("stock: a scaffold system with no stock entered isn't checked", () => {
   const both = S.mergeStock({ enabled: true, owned: { frames: 10, mz_standards: 50 } });
   assert.equal(S.check([], both, { mz_standards: 80 }, "2027-05-01", "2027-05-29").ok, false);
 });
+
+test("standard-configuration checks: height, anchors and sources per system", () => {
+  const E = require("../lib/engine");
+  const { checksFor } = require("../lib/checks");
+  const h = { length: 12.4, width: 9.9, eave: 2.9, pitch: 47, roofType: "gable", jobType: "roof", gables: true };
+  const lay = checksFor(h, E.estimate(h));
+  assert.equal(lay[0].code, "height_ok");
+  assert.ok(lay.some((c) => c.code === "anchor_every_frame"));
+  assert.match(lay[0].source.doc, /Layher Blitz/);
+  const mz = checksFor({ ...h, system: "monzon" }, E.estimate({ ...h, system: "monzon" }));
+  assert.ok(mz.some((c) => c.code === "anchor_4m" && c.vars.kn === 3.2));
+  const tall = { length: 12, width: 10, eave: 23, pitch: 30, roofType: "gable", jobType: "facade" };
+  assert.equal(checksFor(tall, E.estimate(tall))[0].level, "engineer");
+  // Layher one-level roof-catch sides are anchored at every frame (AuV p. 14).
+  const side = E.estimate(h).sides.find((s) => s.lifts === 1 && s.catchOn);
+  assert.equal(side.parts.anchors, side.bays + 1);
+});

@@ -13,6 +13,7 @@ const { makeLimiter } = require("./lib/ratelimit");
 const { createAddressService } = require("./lib/address");
 const { createNls3d } = require("./lib/nls3d");
 const { createSuggest } = require("./lib/suggest");
+const { checksFor } = require("./lib/checks");
 const { createAI } = require("./lib/ai");
 const { createNotifier, mergeTemplates } = require("./lib/notify");
 const { createWeather } = require("./lib/weather");
@@ -913,7 +914,8 @@ route("GET", /^\/api\/plan\/([\w-]{12,40})$/, (req, m) => {
 
 route("GET", /^\/api\/crew\/jobs\/([A-Z0-9-]+)$/, (req, m) => {
   const user = requireStaff(req);
-  return P.jobCard(store, crewOrder(user, m[1]));
+  const o = crewOrder(user, m[1]);
+  return { ...P.jobCard(store, o), checks: orderChecks(o) };
 });
 
 route("POST", /^\/api\/crew\/jobs\/([A-Z0-9-]+)\/action$/, async (req, m) => {
@@ -1010,6 +1012,10 @@ route("POST", /^\/api\/(office|crew)\/changes\/([\w-]+)\/(approve|reject)$/, asy
 });
 
 /* ---------- Office ---------- */
+/** Standard-configuration checks for an order (lib/checks.js). */
+function orderChecks(o) {
+  try { return checksFor(o.house, E.estimate(O.houseOf(o.house))); } catch { return []; }
+}
 function officeOrderView(o) {
   return {
     ...o,
@@ -1020,7 +1026,8 @@ function officeOrderView(o) {
     audit: store.list("audit", { ref: o.ref, limit: 200 }),
     files: store.list("file", { ref: o.ref }),
     review: store.get("review", `rev_${o.ref}`),
-    rentalEnd: P.rentalEnd(o)
+    rentalEnd: P.rentalEnd(o),
+    checks: orderChecks(o)
   };
 }
 

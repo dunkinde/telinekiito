@@ -82,8 +82,12 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
   order → Teline ja hinta (3D card + copy share link), crew job card ("Avaa 3D-malli"), tracking page, and `/3d?t=…`.
 - API: GET /api/office/orders/:ref/plan, POST …/share, GET /api/crew/jobs/:ref/plan, POST /api/orders/:ref/plan {phone},
   GET /api/plan/:token (no personal data).
-- Next: office layout editor (move bays, levels, consoles) and standard-configuration checks from the manufacturers'
-  assembly instructions (MonZon Modular Light v2.1 ch. 7; Layher Blitz AuV — ask Layher for the current edition).
+- Office layout editor (7 Oct): per side bays, levels, decks, roof-catch or off, stored in `house.adjust` (by side name);
+  POST /api/office/orders/:ref/layout/preview and …/layout reprice the order. Dropped when the house size changes.
+- Standard-configuration checks (`lib/checks.js`): height limit, load class, anchoring and sheeting reminders per system
+  with document + page; "engineer" when over the limit. Shown in the office (Teline ja hinta) and the crew job card.
+  Layher rules come from the 2013 AuV – replace the numbers in RULES.layher when Layher sends the current edition.
+  Layher anchors in the engine now follow AuV p. 14 (one level: every second frame; one level with roof-catch: every frame).
 
 ## What's left
 - Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).

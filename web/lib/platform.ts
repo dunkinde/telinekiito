@@ -183,7 +183,16 @@ export interface Invoice {
 }
 export interface Review { id: string; ref: string; stars: number; text: string; consent: boolean; published: boolean; name: string; lang: string; createdAt: string }
 
+/** A standard-configuration check from the manufacturer's assembly instructions (lib/checks.js). */
+export interface ScaffoldCheck {
+  code: string;
+  level: "ok" | "note" | "engineer";
+  vars: Record<string, string | number | boolean>;
+  source: { doc: string; page: number | null; current: boolean } | null;
+}
+
 export interface OfficeOrderDetail extends FullOrder {
+  checks?: ScaffoldCheck[];
   changes: ChangeRequest[];
   outbox: OutboxMessage[];
   time: TimeEntry[];
@@ -221,6 +230,7 @@ export interface JobsResponse {
   crews: { id: string; name: string; color: string }[];
 }
 export interface JobCard {
+  checks?: ScaffoldCheck[];
   ref: string;
   status: OrderStatus;
   example: boolean;

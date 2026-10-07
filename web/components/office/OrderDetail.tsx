@@ -684,6 +684,7 @@ function ScaffoldTab({ o, reload }: { o: OfficeOrderDetail; reload?: () => void 
         </Card>
       </div>
       <div className="space-y-4">
+        <ChecksCard o={o} />
         <PlanCard o={o} reload={reload} />
         <Card aria-labelledby="od-parts">
           <CardHead id="od-parts" title={t("od.parts.title")} sub={t("od.parts.sub", { kg: number(e.weightKg, lang, 0), trucks: q.trucks })} />
@@ -862,6 +863,38 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
         )}
         {copied ? <p className="text-[13px] text-[#17663a]" role="status">{t("od.3d.copied")}</p> : null}
       </div>
+    </Card>
+  );
+}
+
+/** Reminders from the manufacturer's assembly instructions for this scaffold, with the source of each. */
+function ChecksCard({ o }: { o: OfficeOrderDetail }) {
+  const i = useT();
+  const { t } = i;
+  const checks = o.checks || [];
+  if (!checks.length) return null;
+  const engineer = checks.some((c) => c.level === "engineer");
+  const src = checks.find((c) => c.source)?.source;
+  return (
+    <Card aria-labelledby="od-chk" className={engineer ? "ring-2 ring-[#dc2626]" : undefined}>
+      <CardHead id="od-chk" title={t("chk.title")} sub={t("chk.sub")} />
+      <ul className="space-y-2 px-5 pb-3 text-[14px]">
+        {checks.map((c, k) => (
+          <li key={k} className="flex gap-2">
+            <span aria-hidden className={cx("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", c.level === "engineer" ? "bg-[#dc2626]" : c.level === "ok" ? "bg-[#17663a]" : "bg-[#e0a800]")} />
+            <span>
+              {c.level === "engineer" ? <strong className="mr-1 text-[#b91c1c]">{t("chk.engineer")}:</strong> : null}
+              {i.tk(`chk.${c.code}`, Object.fromEntries(Object.entries(c.vars).map(([k, v]) => [k, typeof v === "number" ? number(v, i.lang, 1) : v])) as Record<string, string | number>, c.code)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {src ? (
+        <p className="px-5 pb-5 text-[12px] text-muted">
+          {t("chk.source", { doc: src.doc, page: "" })}
+          {!src.current ? ` · ${t("chk.oldDoc")}` : ""}
+        </p>
+      ) : null}
     </Card>
   );
 }
