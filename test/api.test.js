@@ -242,3 +242,25 @@ test("two scaffold systems: options in the quote, the chosen one on the order, o
   assert.equal(refused.json.error, "system_off");
   await req("PUT", "/api/office/pricing", { pricing: pr.json.pricing }, H);
 });
+
+test("office layout editor: preview, save and reset change the parts and the price", async () => {
+  const login = await req("POST", "/api/office/login", { password: PASSWORD });
+  const H = { Cookie: login.headers.get("set-cookie").split(";")[0] };
+  const start = E.earliestStart("standard", helsinkiNow());
+  const order = { length: 12.4, width: 9.9, eave: 2.9, floors: "1.5", roofType: "gable", pitch: 47, jobType: "roof", gables: true, zone: "A", urgency: "standard", start, days: 28, name: "Layout Testi", phone: "040 333 4444", address: "Testikatu 3, Espoo", source: "form" };
+  const placed = await req("POST", "/api/orders", order);
+  assert.equal(placed.status, 200, placed.text);
+  const ref = placed.json.ref;
+  const pre = await req("POST", `/api/office/orders/${ref}/layout/preview`, { adjust: { sides: { "Long side A": { bays: 7, lifts: 2 }, "Gable end B": { off: true }, "Nope": { off: true } } } }, H);
+  assert.equal(pre.status, 200, pre.text);
+  assert.deepEqual(Object.keys(pre.json.adjust.sides).sort(), ["Gable end B", "Long side A"]);
+  assert.equal(pre.json.plan.sides.length, 3);
+  assert.equal(pre.json.base.length, 4);
+  const saved = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: pre.json.adjust }, H);
+  assert.equal(saved.status, 200, saved.text);
+  assert.equal(saved.json.order.estimate.sides.find((s) => s.name === "Long side A").bays, 7);
+  assert.equal(saved.json.order.history.at(-1).code, "layout_changed");
+  const reset = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: null }, H);
+  assert.equal(reset.json.order.house.adjust, undefined);
+  assert.equal(reset.json.order.estimate.sides.length, 4);
+});

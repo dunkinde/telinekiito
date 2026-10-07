@@ -1,6 +1,6 @@
 "use client";
 // Order panel: everything about one order, with status, schedule, messages, crew work, money and history.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SYSTEM_NAMES } from "@/lib/api";
 import type { PlanSide, ScaffoldPlan } from "@/lib/plan";
 import { Scaffold3D } from "../scaffold3d/Scaffold3D";
@@ -9,7 +9,13 @@ import {
   ORDER_FLOW,
   PART_KEYS,
   getOrderPlan,
+  previewLayout,
+  saveLayout,
   shareOrderPlan,
+  type LayoutAdjust,
+  type LayoutBase,
+  type LayoutEdit,
+  type LayoutSide,
   createInvoice,
   deleteOrder,
   docUrl,
@@ -128,7 +134,7 @@ function OrderPanel({ refNo }: { refNo: string }) {
             return (
               <div className="p-4 sm:p-6">
                 {tab === "summary" ? <SummaryTab o={o} crews={d.crews} reload={reload} /> : null}
-                {tab === "scaffold" ? <ScaffoldTab o={o} /> : null}
+                {tab === "scaffold" ? <ScaffoldTab o={o} reload={reload} /> : null}
                 {tab === "work" ? <WorkTab o={o} /> : null}
                 {tab === "messages" ? <MessagesTab o={o} reload={reload} /> : null}
                 {tab === "docs" ? <DocsTab o={o} reload={reload} /> : null}
@@ -604,7 +610,7 @@ function DangerCard({ o }: { o: OfficeOrderDetail }) {
 }
 
 /* ======================= Scaffold and price ======================= */
-function ScaffoldTab({ o }: { o: OfficeOrderDetail }) {
+function ScaffoldTab({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) {
   const i = useT();
   const { t, lang } = i;
   const h = o.house;
@@ -678,7 +684,7 @@ function ScaffoldTab({ o }: { o: OfficeOrderDetail }) {
         </Card>
       </div>
       <div className="space-y-4">
-        <PlanCard o={o} />
+        <PlanCard o={o} reload={reload} />
         <Card aria-labelledby="od-parts">
           <CardHead id="od-parts" title={t("od.parts.title")} sub={t("od.parts.sub", { kg: number(e.weightKg, lang, 0), trucks: q.trucks })} />
           <ul className="divide-y divide-line px-5 pb-3">
@@ -726,13 +732,20 @@ function ScaffoldTab({ o }: { o: OfficeOrderDetail }) {
 }
 
 /* ======================= Crew work ======================= */
-/** The order's scaffold in 3D, loaded when asked for, and a share link for the customer or crew. */
-function PlanCard({ o }: { o: OfficeOrderDetail }) {
+/**
+ * The order's scaffold in 3D, loaded when asked for, a share link for the customer or crew, and the layout editor:
+ * per side bays, levels, decks on every level, roof-catch or the whole side off. The price, parts list and 3D
+ * view follow every change (preview); saving updates the order.
+ */
+function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) {
   const i = useT();
-  const { t } = i;
-  const { run } = useAct();
+  const { t, lang } = i;
+  const { run, busy } = useAct();
   const [plan, setPlan] = useState<ScaffoldPlan | null>(null);
   const [copied, setCopied] = useState(false);
+  const [edit, setEdit] = useState<LayoutEdit | null>(null);
+  const [pick, setPick] = useState<number | null>(null);
+  const finished = ["dismantled", "closed", "cancelled"].includes(o.status);
   const texts = {
     hint: t("p3d.hint"), reset: t("p3d.reset"), loading: t("p3d.loading"), failed: t("p3d.failed"), close: t("p3d.close"),
     sideName: (s: PlanSide) => sideText(i, s.name),
@@ -745,23 +758,122 @@ function PlanCard({ o }: { o: OfficeOrderDetail }) {
     try { await navigator.clipboard.writeText(url); } catch { window.prompt(t("od.3d.share"), url); }
     setCopied(true);
   };
+
+  // Preview: the server prices the changed layout and returns its plan. The newest request wins.
+  const seq = useRef(0);
+  const preview = (adjust: LayoutAdjust | null | undefined, base?: LayoutBase[]) => {
+    const id = ++seq.current;
+    previewLayout(o.ref, adjust)
+      .then((r) => {
+        if (id !== seq.current) return;
+        setPlan(r.plan);
+        setEdit((e) => ({ adjust: r.adjust, base: base || r.base || e?.base || [], total: r.quote.total, area: r.estimate.area, weightKg: r.estimate.weightKg, before: r.before.total }));
+      })
+      .catch(() => {});
+  };
+  const change = (name: string, patch: Partial<LayoutSide>) => {
+    if (!edit) return;
+    const sides = { ...(edit.adjust?.sides || {}) };
+    const next = { ...(sides[name] || {}), ...patch };
+    for (const k of Object.keys(next) as (keyof LayoutSide)[]) if (next[k] === undefined) delete next[k];
+    if (Object.keys(next).length) sides[name] = next; else delete sides[name];
+    const adjust = Object.keys(sides).length ? { sides } : null;
+    setEdit({ ...edit, adjust });
+    preview(adjust);
+  };
+  const save = async () => {
+    if (!edit) return;
+    const r = await run("layout", () => saveLayout(o.ref, edit.adjust));
+    if (r) { setEdit(null); reload?.(); }
+  };
+  const pickName = pick != null ? plan?.sides.find((s) => s.i === pick)?.name : null;
+
   return (
     <Card aria-labelledby="od-3d">
-      <CardHead id="od-3d" title={t("od.3d.title")} sub={t("od.3d.sub")} />
+      <CardHead id="od-3d" title={t("od.3d.title")} sub={o.house.adjust ? t("od.3d.adjusted") : t("od.3d.sub")} />
       <div className="space-y-3 px-5 pb-5">
         {plan ? (
-          <Scaffold3D plan={plan} texts={texts} className="h-[380px]" />
+          <Scaffold3D plan={plan} texts={texts} className="h-[380px]" selected={pick} onSelect={setPick} />
         ) : (
           <Btn variant="dark" onClick={async () => { const r = await run("plan", () => getOrderPlan(o.ref)); if (r) setPlan(r.plan); }}>
             {t("od.3d.show")}
           </Btn>
         )}
-        <Btn variant="ghost" size="sm" onClick={() => void share()}>
-          {t("od.3d.share")}
-        </Btn>
+        {edit ? (
+          <div className="space-y-2">
+            <ul className="divide-y divide-line rounded-xl ring-1 ring-line">
+              {edit.base.map((b) => {
+                const a = edit.adjust?.sides?.[b.name] || {};
+                const on = !a.off;
+                const bays = a.bays ?? b.bays, lifts = a.lifts ?? b.lifts, deckAll = a.deckAll ?? b.deckAll, catchOn = a.catchOn ?? b.catchOn;
+                return (
+                  <li key={b.name} className={cx("space-y-2 px-3 py-2.5", pickName === b.name && "bg-sun-soft/50", !on && "opacity-60")}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-semibold text-ink">{sideText(i, b.name)}</p>
+                      <label className="flex items-center gap-2 text-[13px] text-ink-soft">
+                        <input type="checkbox" className="h-4 w-4 accent-ink" checked={on} onChange={(e) => change(b.name, { off: e.target.checked ? undefined : true })} />
+                        {t("od.3d.included")}
+                      </label>
+                    </div>
+                    {on ? (
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[13px]">
+                        <Stepper label={t("od.3d.bays")} value={bays} min={1} max={60} onChange={(v) => change(b.name, { bays: v === b.bays ? undefined : v })} />
+                        <Stepper label={t("od.3d.levels")} value={lifts} min={1} max={12} onChange={(v) => change(b.name, { lifts: v === b.lifts ? undefined : v })} />
+                        <label className="flex items-center gap-1.5 text-ink-soft">
+                          <input type="checkbox" className="h-4 w-4 accent-ink" checked={deckAll} onChange={(e) => change(b.name, { deckAll: e.target.checked === b.deckAll ? undefined : e.target.checked })} />
+                          {t("od.3d.deckAll")}
+                        </label>
+                        <label className="flex items-center gap-1.5 text-ink-soft">
+                          <input type="checkbox" className="h-4 w-4 accent-ink" checked={catchOn} onChange={(e) => change(b.name, { catchOn: e.target.checked === b.catchOn ? undefined : e.target.checked })} />
+                          {t("od.3d.catch")}
+                        </label>
+                      </div>
+                    ) : null}
+                  </li>
+                );
+              })}
+            </ul>
+            <p className="text-[14px] text-ink" role="status">
+              {t("od.3d.newPrice", { total: money(edit.total, lang), before: money(edit.before, lang), area: number(edit.area, lang, 0), kg: number(edit.weightKg, lang, 0) })}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Btn variant="dark" onClick={() => void save()} busy={busy === "layout"}>
+                {t("od.3d.save")}
+              </Btn>
+              <Btn variant="ghost" onClick={() => { setEdit({ ...edit, adjust: null }); preview(null); }}>
+                {t("od.3d.resetLayout")}
+              </Btn>
+              <Btn variant="ghost" onClick={() => { setEdit(null); preview(undefined); }}>
+                {t("ui.cancel")}
+              </Btn>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {!finished ? (
+              <Btn variant="ghost" size="sm" onClick={() => preview(undefined)}>
+                {t("od.3d.edit")}
+              </Btn>
+            ) : null}
+            <Btn variant="ghost" size="sm" onClick={() => void share()}>
+              {t("od.3d.share")}
+            </Btn>
+          </div>
+        )}
         {copied ? <p className="text-[13px] text-[#17663a]" role="status">{t("od.3d.copied")}</p> : null}
       </div>
     </Card>
+  );
+}
+
+function Stepper({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (v: number) => void }) {
+  return (
+    <span className="flex items-center gap-1.5 text-ink-soft">
+      {label}
+      <button type="button" aria-label={`${label} −`} disabled={value <= min} onClick={() => onChange(value - 1)} className="grid h-7 w-7 place-items-center rounded-full ring-1 ring-line disabled:opacity-40">−</button>
+      <span className="w-6 text-center font-semibold text-ink tabular-nums">{value}</span>
+      <button type="button" aria-label={`${label} +`} disabled={value >= max} onClick={() => onChange(value + 1)} className="grid h-7 w-7 place-items-center rounded-full ring-1 ring-line disabled:opacity-40">+</button>
+    </span>
   );
 }
 

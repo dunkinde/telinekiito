@@ -828,6 +828,63 @@ route("GET", /^\/api\/office\/orders\/([A-Z0-9-]+)\/plan$/, (req, m) => {
   requireOffice(req);
   return { plan: O.orderPlan(getOrderOr404(m[1])) };
 });
+/**
+ * The office's changes to an order's scaffold layout: per side (by name) off, bays, lifts, decks on every level,
+ * roof-catch. Only sides the order actually has, and sane numbers.
+ */
+function parseAdjust(o, body) {
+  const names = new Set(E.sidesOf(O.houseOf({ ...o.house, adjust: undefined })).map((s) => s.name));
+  const out = {};
+  const src = (body && body.adjust && body.adjust.sides) || {};
+  for (const [name, a] of Object.entries(src)) {
+    if (!names.has(name) || !a || typeof a !== "object") continue;
+    const x = {};
+    if (a.off === true) x.off = true;
+    const b = Number(a.bays), l = Number(a.lifts);
+    if (Number.isFinite(b) && b >= 1 && b <= 60) x.bays = Math.round(b);
+    if (Number.isFinite(l) && l >= 1 && l <= 12) x.lifts = Math.round(l);
+    if (typeof a.deckAll === "boolean") x.deckAll = a.deckAll;
+    if (typeof a.catchOn === "boolean") x.catchOn = a.catchOn;
+    if (Object.keys(x).length) out[name] = x;
+  }
+  return Object.keys(out).length ? { sides: out } : null;
+}
+/** The layout before the office's changes: what each side would be, for the editor to start from and reset to. */
+function baseSides(o) {
+  const est = E.estimate(O.houseOf({ ...o.house, adjust: undefined }));
+  return est.sides.map((s) => ({ name: s.name, kind: s.kind, bays: s.bays, lifts: s.lifts, deckAll: s.deckAll, catchOn: s.catchOn }));
+}
+function layoutResult(o, adjust) {
+  const house = { ...o.house };
+  if (adjust) house.adjust = adjust; else delete house.adjust;
+  const r = P.repriceOrder(o, pricing(), { house });
+  return { house, r, plan: O.orderPlan({ ...o, house }) };
+}
+route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout\/preview$/, async (req, m) => {
+  requireOffice(req);
+  const o = getOrderOr404(m[1]);
+  const body = await readJson(req, 16384);
+  const adjust = body.adjust === undefined ? o.house.adjust || null : parseAdjust(o, body);
+  const { r, plan } = layoutResult(o, adjust);
+  return { adjust, base: baseSides(o), plan, estimate: r.estimate, quote: r.quote, before: { total: o.quote.total, area: o.estimate.area } };
+});
+route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) => {
+  const user = requireOffice(req);
+  const o = getOrderOr404(m[1]);
+  if (["dismantled", "closed", "cancelled"].includes(o.status)) throw new HttpError(409, "order_finished", "This order is already finished.");
+  const body = await readJson(req, 16384);
+  const adjust = parseAdjust(o, body);
+  const { house, r } = layoutResult(o, adjust);
+  const before = o.quote.total;
+  o.house = house;
+  o.estimate = r.estimate;
+  o.quote = r.quote;
+  O.pushHistory(o, { event: "Scaffold layout changed", code: "layout_changed", at: new Date().toISOString(), by: user.name, detail: { before, after: r.quote.total } });
+  o.updatedAt = new Date().toISOString();
+  saveOrder(o);
+  return { order: officeOrderView(o) };
+});
+
 route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/share$/, (req, m) => {
   requireOffice(req);
   const o = getOrderOr404(m[1]);
