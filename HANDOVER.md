@@ -74,6 +74,17 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
 - Stock: a system with no parts entered isn't stock-checked (e.g. MonZon rented from a partner when needed); enter its
   quantities to start checking it.
 
+## 3D scaffold plan (added 7 Oct)
+- `lib/layout.js` builds the plan from the same estimate as the price: house walls/roofs (real NLS polygons when the
+  house was measured, `house.shape` on the order; otherwise a box with its roof) and each side's position, bays,
+  levels, decks and roof-catch. NLS index format v2 stores each building's polygons (sheets ~19 MB; old ones re-download).
+- Viewer: `web/components/scaffold3d` (three.js, loaded on demand). Used in the calculator ("Näytä 3D:nä"), office
+  order → Teline ja hinta (3D card + copy share link), crew job card ("Avaa 3D-malli"), tracking page, and `/3d?t=…`.
+- API: GET /api/office/orders/:ref/plan, POST …/share, GET /api/crew/jobs/:ref/plan, POST /api/orders/:ref/plan {phone},
+  GET /api/plan/:token (no personal data).
+- Next: office layout editor (move bays, levels, consoles) and standard-configuration checks from the manufacturers'
+  assembly instructions (MonZon Modular Light v2.1 ch. 7; Layher Blitz AuV — ask Layher for the current edition).
+
 ## What's left
 - Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).
 - Company details (M1 phone, privacy controller details), email/SMS keys in `.env`.
