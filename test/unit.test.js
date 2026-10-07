@@ -287,7 +287,8 @@ test("weather protection: sheeting area and anchors, temporary roof raises the s
   assert.ok(Math.abs(roof.roof.span - (9.9 + 2 * 1.03)) < 0.01);
   assert.ok(roof.roof.support + 1.0 + (roof.roof.span / 2) * Math.tan((18 * Math.PI) / 180) - 0.75 > plain.ridge);
   assert.ok(roof.sides.every((s) => s.lifts >= 4 && !s.catchOn));
-  assert.equal(roof.totals.parts.wr_ridges, roof.roof.sections + 1);
+  assert.equal(roof.totals.parts.lr_ridges, roof.roof.sections + 1); // Layher scaffold → Layher Keder Roof XL
+  assert.equal(E.estimate({ ...h, weatherRoof: true, system: "monzon" }).totals.parts.wr_ridges > 0, true);
   const q = E.quote(roof, sel, P);
   assert.ok(q.lines.some((l) => l.key === "roofRent") && q.lines.some((l) => l.key === "roofWork"));
   assert.ok(q.total > E.quote(plain, sel, P).total * 2);

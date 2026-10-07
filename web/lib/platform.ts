@@ -16,12 +16,12 @@ export type PartKey =
   | "frames" | "baseJacks" | "decks" | "hatchDecks" | "guardrails" | "toeBoards" | "endGuards"
   | "diagonals" | "topPosts" | "catchPosts" | "catchMesh" | "anchors"
   | "mz_baseJacks" | "mz_baseCollars" | "mz_standards" | "mz_transoms" | "mz_ledgers" | "mz_decks" | "mz_accessDecks" | "mz_guardrails" | "mz_endGuards" | "mz_toeBoards" | "mz_endToeBoards" | "mz_braces" | "mz_topPosts" | "mz_catchPosts" | "mz_catchMesh" | "mz_anchors"
-  | "wp_sheetRolls" | "wp_ties" | "wr_eaves" | "wr_ridges" | "wr_beam300" | "wr_beam200" | "wr_beam100" | "wr_beam050" | "wr_frames" | "wr_ledgers" | "wr_tarps" | "wr_gableTarps";
+  | "wp_sheetRolls" | "wp_ties" | "wr_eaves" | "wr_ridges" | "wr_beam300" | "wr_beam200" | "wr_beam100" | "wr_beam050" | "wr_frames" | "wr_ledgers" | "wr_tarps" | "wr_gableTarps" | "lr_eaves" | "lr_ridges" | "lr_beam300" | "lr_beam200" | "lr_supports" | "lr_ledgers" | "lr_stiffeners" | "lr_braces" | "lr_tarps" | "lr_gableTarps";
 export const LAYHER_PARTS: PartKey[] = ["frames", "baseJacks", "decks", "hatchDecks", "guardrails", "toeBoards", "endGuards", "diagonals", "topPosts", "catchPosts", "catchMesh", "anchors"];
 export const MONZON_PARTS: PartKey[] = ["mz_baseJacks", "mz_baseCollars", "mz_standards", "mz_transoms", "mz_ledgers", "mz_decks", "mz_accessDecks", "mz_guardrails", "mz_endGuards", "mz_toeBoards", "mz_endToeBoards", "mz_braces", "mz_topPosts", "mz_catchPosts", "mz_catchMesh", "mz_anchors"];
-export const WEATHER_PARTS: PartKey[] = ["wp_sheetRolls", "wp_ties", "wr_eaves", "wr_ridges", "wr_beam300", "wr_beam200", "wr_beam100", "wr_beam050", "wr_frames", "wr_ledgers", "wr_tarps", "wr_gableTarps"];
+export const WEATHER_PARTS: PartKey[] = ["wp_sheetRolls", "wp_ties", "wr_eaves", "wr_ridges", "wr_beam300", "wr_beam200", "wr_beam100", "wr_beam050", "wr_frames", "wr_ledgers", "wr_tarps", "wr_gableTarps", "lr_eaves", "lr_ridges", "lr_beam300", "lr_beam200", "lr_supports", "lr_ledgers", "lr_stiffeners", "lr_braces", "lr_tarps", "lr_gableTarps"];
 export const PART_KEYS: PartKey[] = [...LAYHER_PARTS, ...MONZON_PARTS, ...WEATHER_PARTS];
-export const systemOfPart = (k: PartKey): SystemKey | "weather" => (k.startsWith("mz_") ? "monzon" : /^w[pr]_/.test(k) ? "weather" : "layher");
+export const systemOfPart = (k: PartKey): SystemKey | "weather" => (k.startsWith("mz_") ? "monzon" : /^(w[pr]|lr)_/.test(k) ? "weather" : "layher");
 export type Parts = Partial<Record<PartKey, number>>;
 
 export const INSPECTION_ITEMS = ["ground", "bracing", "anchors", "decks", "guardrails", "access", "catch", "clearance", "tag"] as const;
