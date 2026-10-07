@@ -283,7 +283,9 @@ test("weather protection: sheeting area and anchors, temporary roof raises the s
   // Options follow the job: no sheeting on a roof-only job, no temporary roof on a facade-only job.
   assert.equal(E.estimate({ ...h, sheeting: true }).sheeting, null);
   assert.equal(E.estimate({ ...fh, weatherRoof: true }).roof, null);
-  assert.ok(sheet.sheeting.m2 > 250);
+  // Sheeting covers the outer faces of the scaffold as built (corners counted once), up to the top guardrail.
+  assert.equal(sheet.sheeting.m2, Math.round(sheet.sides.reduce((m, x) => m + x.run * (x.deckH + 1), 0)));
+  assert.ok(sheet.sheeting.m2 > 200);
   assert.ok(sheet.totals.parts.anchors > E.estimate(fh).totals.parts.anchors);
   assert.ok(sheet.totals.parts.wp_sheetRolls >= 3);
   assert.equal(E.quote(sheet, sel, P).lines.find((l) => l.key === "sheeting").vars.m2, sheet.sheeting.m2);
@@ -325,4 +327,96 @@ test("roof-edge protection follows DIN 4420-1 (Layher AuV §17): deck ≤ 1.5 m 
   assert.equal(s.half, 1);
   assert.equal(s.deckH, 3.4);
   assert.equal(s.parts.frames1, s.bays + 1);
+});
+
+test("corners: one scaffold per corner, the roof-catch side runs through; free roof-catch ends run 2 m past the roof edge", () => {
+  const E = require("../lib/engine");
+  const W = E.SYS.gap + E.SYS.width;
+  const ring = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "gable", pitch: 30, jobType: "roof", gables: true });
+  const eaves = ring.sides.filter((s) => s.kind === "eaves"), gables = ring.sides.filter((s) => s.kind === "gable");
+  assert.ok(eaves.every((s) => Math.abs(s.ext0 - W) < 1e-9 && Math.abs(s.ext1 - W) < 1e-9)); // catch runs through
+  // The gables run just past their wall ends, up to 0.1 m short of the through side's inner standards.
+  const butt = E.SYS.gap - 0.1;
+  assert.ok(gables.every((s) => Math.abs(s.ext0 - butt) < 1e-9 && Math.abs(s.ext1 - butt) < 1e-9));
+  // Each corner is built once: perimeter + the through sides' corner pieces + the butting sides' short run-ins.
+  assert.ok(Math.abs(ring.sides.reduce((m, s) => m + s.run, 0) - (2 * (12 + 9) + 4 * W + 4 * butt)) < 1e-9);
+  // Bays never stretch past 3.07 m.
+  assert.ok(ring.sides.every((s) => s.run / s.bays <= 3.07 + 1e-9));
+  // Facade: the taller gables run through.
+  const fac = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "gable", pitch: 40, jobType: "facade" });
+  assert.ok(fac.sides.filter((s) => s.kind === "gable").every((s) => s.ext0 > 0 && s.ext1 > 0));
+  // Gable roof with only the eave sides: the roof-catch runs 2 m past the 0.5 m verge overhang at both ends.
+  const free = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "gable", pitch: 30, jobType: "roof", gables: false });
+  assert.ok(free.sides.every((s) => Math.abs(s.ext0 - 2.5) < 1e-9 && Math.abs(s.ext1 - 2.5) < 1e-9));
+  // An office-removed side leaves its neighbours with free ends.
+  const off = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "hip", pitch: 30, jobType: "facade", adjust: { sides: { "Short side A": { off: true } } } });
+  const front = off.sides.find((s) => s.name === "Long side A");
+  assert.equal(front.ext0, E.SYS.extend);
+});
+
+test("Layher parts follow the catalogue and AuV: double guardrails, end toe boards, base braces, access, 1 m frames", () => {
+  const E = require("../lib/engine");
+  // Facade, 1 floor (deck 2.4 m), gable roof: long sides have 1 decked level.
+  const fac = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "gable", pitch: 40, jobType: "facade" });
+  const s = fac.sides.find((x) => x.kind === "eaves");
+  const D = s.deckLevels.length, fields = Math.ceil(s.bays / 5);
+  assert.equal(s.parts.guardrails, s.bays * D); // one double guardrail per bay and level
+  assert.equal(s.parts.endToeBoards, 2 * D);
+  assert.equal(s.parts.hBraces, fields);
+  assert.equal(s.parts.startLedgers, 2); // the lowest ladder stands on a deck
+  assert.equal(s.parts.decks, D * s.bays * 2 - 2 * D + 2);
+  // Roof job: no guardrails behind the roof-catch wall, ends closed with frames.
+  const roof = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "gable", pitch: 30, jobType: "roof", gables: true }).sides[0];
+  assert.equal(roof.parts.guardrails, 0);
+  assert.equal(roof.parts.frames, (roof.bays + 1) * roof.lifts + 2);
+  assert.equal(roof.parts.endGuards, 0);
+  // 1½ floors: 1 m frames braced with tubes and couplers, a ladder from the ground instead of the start ledgers.
+  const half = E.estimate({ length: 12, width: 9, eave: 4.3, roofType: "hip", pitch: 30, jobType: "gutters" }).sides[0];
+  assert.equal(half.half, 1);
+  assert.equal(half.parts.tubes, Math.ceil(half.bays / 5));
+  assert.equal(half.parts.couplers, 2 * Math.ceil(half.bays / 5));
+  assert.equal(half.parts.ladders, 1);
+  assert.equal(half.parts.startLedgers, 0);
+  // Flat roof (≤ 22.5°): the edge protection reaches 1.0 m above the eave.
+  const flat = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "flat", pitch: 0, jobType: "roof" }).sides[0];
+  assert.ok(flat.deckH + E.CATCH.wall >= 3.0 + 1.0 - 1e-9);
+});
+
+test("checks flag what the rules don't cover", () => {
+  const E = require("../lib/engine"), { checksFor } = require("../lib/checks");
+  const codes = (h) => checksFor(h, E.estimate(h)).map((c) => c.code + ":" + c.level);
+  const steep = codes({ length: 12, width: 9, eave: 3.0, roofType: "gable", pitch: 65, jobType: "roof", gables: true });
+  assert.ok(steep.includes("catch_steep:engineer"));
+  const hamina = codes({ length: 12.41, width: 9.91, eave: 2.9, roofType: "gable", pitch: 47, jobType: "roof", gables: true, weatherRoof: true });
+  assert.ok(hamina.includes("roof_anchor:engineer")); // the roof's top deck is far above the eave
+  assert.ok(hamina.includes("steep_45:note"));
+  const mz = codes({ length: 12, width: 9, eave: 3.0, roofType: "gable", pitch: 30, jobType: "roof", gables: true, weatherRoof: true, system: "monzon" });
+  assert.ok(mz.includes("mz_not_covered:engineer"));
+  assert.ok(mz.includes("mz_vties:note"));
+});
+
+test("measured L-shaped house: scaffolds never overlap and every wall has one in front of it", () => {
+  const E = require("../lib/engine"), { planFor } = require("../lib/layout");
+  // L: 12 × 8 with a 5 × 4 notch; counter-clockwise outline, one wall per edge.
+  const outline = [[0, 0], [12, 0], [12, 4], [7, 4], [7, 8], [0, 8]];
+  const outer = [true, true, true, false, true, true]; // vertex 3 (7,4) is the inner corner
+  const walls = outline.map((p, i) => {
+    const q = outline[(i + 1) % outline.length];
+    return { edge: i, len: Math.hypot(q[0] - p[0], q[1] - p[1]), eave: 3, top: 3, e0: outer[i] ? 1 : 0, e1: outer[(i + 1) % 6] ? 1 : 0 };
+  });
+  for (const jobType of ["roof", "facade", "gutters"]) {
+    const h = { length: 12, width: 8, eave: 3, roofType: "hip", pitch: 30, jobType, walls, shape: { outline, w: [], r: [] } };
+    const est = E.estimate(h), plan = planFor(h, est);
+    const quad = (s) => { const g = s.gap ?? plan.gap, w = plan.width, P = (t, k) => [s.at[0] + s.dir[0] * t + s.out[0] * k, s.at[1] + s.dir[1] * t + s.out[1] * k]; return [P(0, g), P(s.run, g), P(s.run, g + w), P(0, g + w)]; };
+    const sep = (A, B) => [A, B].some((poly) => poly.some((p, i) => {
+      const q = poly[(i + 1) % 4], n = [q[1] - p[1], p[0] - q[0]];
+      const pa = A.map((v) => v[0] * n[0] + v[1] * n[1]), pb = B.map((v) => v[0] * n[0] + v[1] * n[1]), L = Math.hypot(...n);
+      return (Math.max(...pa) - Math.min(...pb)) / L <= 0.02 || (Math.max(...pb) - Math.min(...pa)) / L <= 0.02;
+    }));
+    const qs = plan.sides.map(quad);
+    for (let i = 0; i < qs.length; i++) for (let j = i + 1; j < qs.length; j++) assert.ok(sep(qs[i], qs[j]), `${jobType}: ${plan.sides[i].name} × ${plan.sides[j].name}`);
+    assert.equal(est.sides.length, 6, jobType);
+    // Each side runs at least the length of its wall, less the 1.13 m it gives up at the inner corner.
+    for (const s of est.sides) assert.ok(s.run >= s.len - 1.13 - 1e-9, `${jobType}: ${s.name}`);
+  }
 });

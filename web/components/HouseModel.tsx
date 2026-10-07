@@ -20,7 +20,7 @@ const COL = { tube: "#7d8996", brace: "#a6b0ba", guard: "#5d6773", catch: "#e548
 
 /** A point on a scaffold side: t along the side, outer = outer row of standards, z = height. */
 function sidePoint(h: HouseShape, s: ScaffoldSide, t: number, outer: boolean, z: number): P3 {
-  const run = s.bays * s.bay;
+  const run = s.run;
   const d = GAP + (outer ? FRAME : 0);
   switch (s.pos) {
     case "front":

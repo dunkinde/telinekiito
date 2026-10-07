@@ -103,6 +103,18 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
 - MonZon: the instruction v2.1 §1.11 does not cover sheeting or weather roofs, so check `mz_not_covered` is "engineer": get a calculation from MonZon or use Layher.
 - The checks list shows the worst roof-catch side against the DIN figures (`catch_din`).
 
+## Engineering audit (7 Oct, 2nd pass)
+
+- Corners (`resolveEnds`): one scaffold per corner. At an outer corner the through side runs past to the other side's outer edge, and the butting side runs 0.2 m past its wall end. At an inner corner the through side stops at the other wall's gap and the butting side stops 1.13 m short. Through = roof-catch side, then the taller side, then long sides / the side ending there; short jogs always run through. Free ends: 1 m, or for roof-catch 2 m past the 0.5 m overhang (Austrian BauV §88 (4), the strictest rule found; `CATCH.lateral`). The price length (`runM`) is still measured the usual way, 1 m past outer corners; material, 3D, sheeting and catch metres use the run as built (`run`).
+- Measured houses: steps in the facade (≥ 0.5 m) are their own short sides (no longer merged into the next wall). `unclash` tests every footprint on the real outline and shortens the lower-priority run where two clash, keeping 0.1 m clear. A run left under 0.7 m is dropped; cuts over 1 m show as `tight_spots`. Bays never stretch past 3.07 m.
+- Temporary roof: only the walls on the roof's edge set its level; scaffolds inside the outline must clear the trusses (`interiorDeck`). The truss underside also clears every carrying wall's eave by 0.2 m at a 0.5 m overhang. Low-pitch roofs therefore get a higher roof than before; the old one would have sat on the eaves.
+- Layher parts per the catalogue and AuV: alu double guardrail 1732.307 (one per bay and level), toe board 6.8 kg, end toe boards, diagonal 8.3 kg, a horizontal brace at the foot of each braced bay (1727.307), start ledgers plus a base deck for the lowest ladder, end frames closing a catch level, 1 m frames braced with tubes and couplers, and a ladder (Layher) or 1 m stair (MonZon) to the first deck over a 1 m base lift.
+- Access: hatch-deck towers per connected scaffold (sides that share a deck height at a corner), one more every 50 m (TRBS 2121-1), not one per side.
+- MonZon: V ties on every 5th pair of standards and in the end bays; 18 m height limit with brackets; guardrail/ledger counts at the catch level.
+- Roof rules (BG BAU B 121): roof-catch for roofs over 22.5° up to 60°; on flatter roofs the protection reaches 1.0 m above the eave; over 45° → note on special work positions; over 60° → engineer; roof rising more than 5 m above the eave → note on roof protection walls. Raised scaffold above the eave under a temporary roof → engineer (`roof_anchor`).
+- Stock: weather kits are tracked separately (wp_/wr_/lr_). In a tracked system every part counts, so enter the new parts (consoles, 1 m frames, grid posts, start ledgers, horizontal braces, end toe boards, tubes, couplers, ladders) in the office stock, or orders will be refused for lack of them.
+- Tests: rectangle and L-shaped corner tests in test/unit.test.js. For a full sweep over real buildings, run the overlap and coverage scripts against tkdata (see the 7 Oct session): 0 clashes in 200 cases, 97% of wall face covered (the rest is inner-corner gaps).
+
 ## What's left
 - Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).
 - Company details (M1 phone, privacy controller details), email/SMS keys in `.env`.

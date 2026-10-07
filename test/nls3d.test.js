@@ -84,9 +84,16 @@ test("price wall by wall from measured walls", () => {
   const box = E.estimate({ ...house, jobType: "roof" });
   assert.deepEqual(box.sides.map((s) => s.name), ["Long side A", "Long side B", "Gable end A", "Gable end B"]);
 
-  // Short jogs are scaffolded with the side before them.
-  const jog = E.estimate({ ...house, jobType: "facade", walls: [{ edge: 0, len: 8, eave: 3, top: 3, ext: 1 }, { edge: 1, len: 0.8, eave: 3, top: 3, ext: 0 }, { edge: 2, len: 6, eave: 3, top: 3, ext: 2 }] });
-  assert.deepEqual(jog.sides.map((s) => s.len), [8.8, 6]);
+  // A step in the facade is a short side of its own (it runs through its corners); a 0.8 m niche between two inner
+  // corners has no room for a scaffold and is worked from its neighbours; scraps under 0.5 m are merged into the
+  // piece before them on the same wall.
+  const step = E.estimate({ ...house, jobType: "facade", walls: [{ edge: 0, len: 8, eave: 3, top: 3, e0: 1, e1: 0 }, { edge: 1, len: 0.8, eave: 3, top: 3, e0: 0, e1: 1 }, { edge: 2, len: 6, eave: 3, top: 3, e0: 1, e1: 1 }] });
+  assert.deepEqual(step.sides.map((s) => s.len), [8, 0.8, 6]);
+  assert.ok(step.sides[1].run >= 0.7);
+  const niche = E.estimate({ ...house, jobType: "facade", walls: [{ edge: 0, len: 8, eave: 3, top: 3, ext: 1 }, { edge: 1, len: 0.8, eave: 3, top: 3, ext: 0 }, { edge: 2, len: 6, eave: 3, top: 3, ext: 2 }] });
+  assert.deepEqual(niche.sides.map((s) => s.len), [8, 6]);
+  const scrap = E.estimate({ ...house, jobType: "facade", walls: [{ edge: 0, len: 8, eave: 3, top: 3, ext: 1 }, { edge: 0, len: 0.3, eave: 3, top: 3, ext: 0 }, { edge: 1, len: 6, eave: 3, top: 3, ext: 2 }] });
+  assert.deepEqual(scrap.sides.map((s) => s.len), [8.3, 6]);
 });
 
 test("MonZon Modular Light: same grid as Layher, its own parts", () => {
@@ -96,13 +103,15 @@ test("MonZon Modular Light: same grid as Layher, its own parts", () => {
   assert.equal(mz.system, "monzon");
   assert.equal(mz.totals.area, lay.totals.area); // 3.07 m bays in both
   assert.ok(Object.keys(mz.totals.parts).every((k) => k.startsWith("mz_")));
-  // A long side: 5 bays, 6 frame lines, one lift, one decked level, and the roof-catch wall on 0.36 m brackets with a
-  // deck on them (DIN 4420-1: b ≥ 0.70 m from the eave).
+  // A long side: 5 bays, 6 frame lines, one lift, one decked level with the roof-catch wall on 0.36 m brackets and a
+  // deck on them (DIN 4420-1: b ≥ 0.70 m from the eave). The wall replaces the double guardrails, so the outer ledger
+  // stays; two decks in the access bay for the lowest ladder; ties on every standard (catch) plus V ties at both
+  // ends and every 5th pair (instruction p. 28).
   const side = mz.sides[0];
   assert.equal(side.bays, 5);
   assert.deepEqual(
     [side.parts.mz_standards, side.parts.mz_transoms, side.parts.mz_ledgers, side.parts.mz_decks, side.parts.mz_guardrails, side.parts.mz_anchors],
-    [12, 12, 15, 13, 5, 6]
+    [12, 12, 20, 15, 0, 9]
   );
   assert.equal(side.parts.mz_brackets, 6);
   // Own rates per system when the office sets them.

@@ -17,6 +17,8 @@ export interface PlanSide {
   dir: P2;
   out: P2;
   bays: number;
+  /** Run length as built, m (bays are shortened to fit where a side butts against a corner scaffold). */
+  run?: number;
   lifts: number;
   /** Levels (1 = lowest lift) with decks. */
   decks: number[];
@@ -27,6 +29,10 @@ export interface PlanSide {
   half?: number;
   /** 0.36 m inner consoles with a deck on every decked level (under a temporary roof). */
   inner?: boolean;
+  /** Access towers (hatch decks with ladders) on this side: one per connected scaffold, more every 50 m. */
+  access?: number;
+  /** Guardrail on the inside of the top deck (it stands above the eave, away from any wall). */
+  innerRail?: boolean;
   /** Roof-catch wall on an outer 0.36 m console at the top deck (DIN 4420-1: b ≥ 0.70 m from the eave). */
   catchConsole?: boolean;
   /** Level the roof-catch grids rise 2 m above. */

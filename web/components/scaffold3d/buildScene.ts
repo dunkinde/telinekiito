@@ -99,7 +99,9 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
   const toeMat = new T.MeshStandardMaterial({ color: COLORS.toe, roughness: 0.8 });
   const netMat = new T.MeshStandardMaterial({ color: COLORS.net, transparent: true, opacity: 0.45, side: T.DoubleSide, depthWrite: false });
 
-  const { bay, width, lift, jack } = plan;
+  const { width, lift, jack } = plan;
+  // Bays as built: a side that butts against a corner scaffold uses shorter bays to fit its run.
+  const bay = side.run ? side.run / side.bays : plan.bay;
   const gap = side.gap ?? plan.gap;
   const base = jack + (side.half ? plan.half ?? 1 : 0); // lowest transom of the 2 m lifts
   const Z = (l: number) => (l === 0 ? jack : base + lift * l); // height of level l (0 = on the base jacks)
@@ -119,14 +121,14 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
   for (let k = 0; k <= side.bays; k++) {
     const t = k * bay;
     // Inner standards end at the top deck (no posts against the wall); outer ones carry the guardrail posts.
-    tl.push([P(t, inner, 0), P(t, inner, top)]);
+    tl.push([P(t, inner, 0), P(t, inner, side.innerRail ? top + 1 : top)]);
     tl.push([P(t, outer, 0), P(t, outer, postTop)]);
     if (side.half) tl.push([P(t, inner, base), P(t, outer, base)]);
     for (let l = 0; l <= side.lifts; l++) tl.push([P(t, inner, Z(l)), P(t, outer, Z(l))]); // transoms
     if (catchZ != null) {
       if (side.catchConsole) tl.push([P(t, outer, top), P(t, catchD, top)], [P(t, catchD, top), P(t, catchD, top + 2)]);
     }
-    if (side.inner) for (const l of side.decks) tl.push([P(t, inner - cons, Z(l)), P(t, inner, Z(l))]);
+    if (side.inner) for (const l of side.decks) if (!(side.innerRail && l === side.lifts)) tl.push([P(t, inner - cons, Z(l)), P(t, inner, Z(l))]);
   }
   if (side.half) { tl.push([P(0, inner, base), P(run, inner, base)]); tl.push([P(0, outer, base), P(run, outer, base)]); }
   for (let l = 0; l <= side.lifts; l++) {
@@ -140,7 +142,7 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
   for (const l of side.decks) {
     const z = Z(l);
     const atCatch = catchZ != null && Math.abs(z - catchZ) < 0.01;
-    if (side.inner) for (let k = 0; k < side.bays; k++) deckList.push({ c: P((k + 0.5) * bay, inner - cons / 2, z + 0.03), size: [bay - 0.04, 0.05, cons - 0.04], yaw });
+    if (side.inner && !(side.innerRail && l === side.lifts)) for (let k = 0; k < side.bays; k++) deckList.push({ c: P((k + 0.5) * bay, inner - cons / 2, z + 0.03), size: [bay - 0.04, 0.05, cons - 0.04], yaw });
     if (atCatch && side.catchConsole) for (let k = 0; k < side.bays; k++) deckList.push({ c: P((k + 0.5) * bay, outer + cons / 2, z + 0.03), size: [bay - 0.04, 0.05, cons - 0.04], yaw });
     if (atCatch) continue; // the catch wall is the side protection here
     for (const h of [0.5, 1.0]) {
@@ -150,10 +152,12 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
     }
     for (let k = 0; k < side.bays; k++) {
       const c = P((k + 0.5) * bay, mid, z + 0.03);
-      (k === 0 ? hatchList : deckList).push({ c, size: [bay - 0.04, 0.05, width - 0.06], yaw });
+      (k === 0 && (side.access ?? 1) > 0 ? hatchList : deckList).push({ c, size: [bay - 0.04, 0.05, width - 0.06], yaw });
       toeList.push({ c: P((k + 0.5) * bay, outer - 0.02, z + 0.08), size: [bay - 0.04, 0.15, 0.025], yaw });
     }
   }
+  // Above the eave the top deck has no wall beside it: guardrail on the inside too.
+  if (side.innerRail) for (const h of [0.5, 1.0]) tl.push([P(0, inner, top + h), P(run, inner, top + h)]);
   // Diagonal braces in the outer plane, every fifth bay, through all 2 m lifts.
   for (let k = 0; k < side.bays; k += 5) for (let l = 0; l < side.lifts; l++) tl.push([P(k * bay, outer, l === 0 ? base : Z(l)), P((k + 1) * bay, outer, Z(l + 1))]);
   if (catchZ != null) {

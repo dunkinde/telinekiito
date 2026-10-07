@@ -7,7 +7,7 @@ export const LIFT = 2.0; // m between working levels
 export const JACK = 0.4; // m base jack height
 export const EXTEND = 1.0; // m the scaffold runs past each corner
 export const FRAME = 0.73; // m frame width (wall side to outer side)
-export const GAP = 0.35; // m from the wall to the inner standards
+export const GAP = 0.3; // m from the wall to the inner standards (MonZon: at most 300 mm)
 
 export interface HouseShape {
   length: number;
@@ -28,6 +28,8 @@ export interface ScaffoldSide {
   bays: number;
   /** Bay length, m. */
   bay: number;
+  /** Run as built, m: through sides reach the corner scaffold's outer edge, butting sides stop at it. */
+  run: number;
   lifts: number;
   /** 1 when a 1.00 m compensation frame stands under the 2.00 m lifts. */
   half: number;
@@ -42,7 +44,8 @@ const deckFor = (target: number) => {
   const a = Math.max(1, Math.ceil((target - JACK) / LIFT - 1e-9)), b = Math.max(1, Math.ceil((target - JACK - 1) / LIFT - 1e-9));
   return JACK + 1 + LIFT * b < JACK + LIFT * a - 1e-9 ? { lifts: b, half: 1 } : { lifts: a, half: 0 };
 };
-const eaveTarget = (eave: number, catchOn: boolean) => (catchOn ? Math.max(eave - 1.5, eave + 1.5 - 0.89 - 2) : eave - 1.5);
+const eaveTarget = (eave: number, catchOn: boolean, pitch: number) =>
+  catchOn ? Math.max(eave - 1.5, eave + (pitch <= 22.5 ? Math.max(1.0, 1.5 - 0.89) : 1.5 - 0.89) - 2) : eave - 1.5;
 export const roofRise = (h: HouseShape) => (h.roofType === "flat" ? 0 : (h.width / 2) * Math.tan((h.pitch * Math.PI) / 180));
 
 export function scaffoldSides(h: HouseShape): ScaffoldSide[] {
@@ -53,7 +56,7 @@ export function scaffoldSides(h: HouseShape): ScaffoldSide[] {
   const gableLifts = gable ? Math.max(eaveLifts, ridge - 2.0) : eaveLifts;
   const out: ScaffoldSide[] = [];
   const add = (pos: SidePos, len: number, target: number, catchOn: boolean, deckAll: boolean) =>
-    out.push({ pos, len, ...deckFor(catchOn ? Math.max(target, eaveTarget(h.eave, true)) : target), catchOn, deckAll, bay: h.bay || BAY, bays: Math.max(1, Math.ceil((len + 2 * EXTEND) / (h.bay || BAY) - 0.05)) });
+    out.push({ pos, len, run: len, ...deckFor(catchOn ? Math.max(target, eaveTarget(h.eave, true, h.pitch)) : target), catchOn, deckAll, bay: h.bay || BAY, bays: Math.max(1, Math.ceil((len + 2 * EXTEND) / (h.bay || BAY) - 0.05)) });
 
   if (h.jobType === "roof") {
     add("front", L, eaveLifts, true, false);
@@ -81,6 +84,19 @@ export function scaffoldSides(h: HouseShape): ScaffoldSide[] {
       add("right", W, eaveLifts, false, false);
     }
   }
+  // Corners as in lib/engine.js: the roof-catch side runs through, else the taller, else the long sides; the other
+  // runs just past its wall end to the through side's inner edge. Free ends run 1 m past the corner (a roof-catch
+  // 2.5 m, past the overhang).
+  const CW = GAP + FRAME, top = (s: ScaffoldSide) => s.half + LIFT * s.lifts;
+  const longs = out.filter((s) => s.pos === "front" || s.pos === "back"), shorts = out.filter((s) => s.pos === "left" || s.pos === "right");
+  const free = (s: ScaffoldSide) => (s.catchOn ? 2.5 : EXTEND);
+  if (!shorts.length || !longs.length) for (const s of out) s.run = s.len + 2 * free(s);
+  else {
+    const a = longs[0], b = shorts[0];
+    const longThrough = a.catchOn !== b.catchOn ? a.catchOn : Math.abs(top(a) - top(b)) > 0.01 ? top(a) > top(b) : true;
+    for (const s of out) s.run = s.len + 2 * ((longs.includes(s) === longThrough) ? CW : GAP - 0.1);
+  }
+  for (const s of out) { s.bays = Math.max(1, Math.ceil(s.run / (h.bay || BAY) - 0.01)); s.bay = s.run / s.bays; }
   return out;
 }
 
