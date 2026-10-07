@@ -188,6 +188,23 @@ const en = {
   "q.priceRange": "Likely range {low}–{high}",
   "q.priceNote": "Likely range {low}–{high}. The final price may differ from this estimate: the automatic price relies on map data and assumptions, so we may adjust it after checking your house, before we confirm the order.",
   "q.priceEmpty": "Add the house size and floors to see the price.",
+  "p3d.title": "Scaffold plan",
+  "p3d.sub": "{system} · {area} m² · {sides} sides",
+  "p3d.hint": "Drag to turn · pinch or scroll to zoom · tap a side",
+  "p3d.reset": "Reset view",
+  "p3d.loading": "Loading the 3D model…",
+  "p3d.failed": "The 3D view doesn't work on this device.",
+  "p3d.close": "Close",
+  "p3d.open": "Show in 3D",
+  "p3d.sides": "Sides",
+  "p3d.measured": "House shape from the National Land Survey 3D building model.",
+  "p3d.box": "The house is drawn as a simple shape from the size given.",
+  "p3d.notFound": "This link doesn't work any more.",
+  "p3d.side.long": "Long side {x}",
+  "p3d.side.short": "Short side {x}",
+  "p3d.side.gable": "Gable end {x}",
+  "p3d.side.wall": "Wall {x}",
+  "p3d.info": (v) => `${plural(v.bays, "1 bay", `${v.bays} bays`)} · ${plural(v.levels, "1 level", `${v.levels} levels`)} · ${v.area} m²`,
   "q.system": "Scaffold system",
   "q.systemHint": "Both are aluminium scaffolds for roof and facade work. The price for your house:",
   "q.sys.layher": "German aluminium frame scaffold.",
@@ -626,6 +643,23 @@ const fi: Record<Key, Entry> = {
   "q.priceRange": "Todennäköinen haarukka {low}–{high}",
   "q.priceNote": "Todennäköinen haarukka {low}–{high}. Lopullinen hinta voi poiketa tästä arviosta: automaattinen hinta perustuu karttatietoihin ja oletuksiin, joten voimme tarkentaa hintaa tarkistettuamme talosi, ennen kuin vahvistamme tilauksen.",
   "q.priceEmpty": "Lisää talon mitat ja kerrokset, niin näet hinnan.",
+  "p3d.title": "Telinesuunnitelma",
+  "p3d.sub": "{system} · {area} m² · {sides} sivua",
+  "p3d.hint": "Käännä vetämällä · zoomaa nipistämällä tai rullalla · napauta sivua",
+  "p3d.reset": "Palauta näkymä",
+  "p3d.loading": "Ladataan 3D-mallia…",
+  "p3d.failed": "3D-näkymä ei toimi tällä laitteella.",
+  "p3d.close": "Sulje",
+  "p3d.open": "Näytä 3D:nä",
+  "p3d.sides": "Sivut",
+  "p3d.measured": "Talon muoto Maanmittauslaitoksen 3D-rakennusmallista.",
+  "p3d.box": "Talo on piirretty yksinkertaisena annettujen mittojen mukaan.",
+  "p3d.notFound": "Linkki ei ole enää voimassa.",
+  "p3d.side.long": "Pitkä sivu {x}",
+  "p3d.side.short": "Lyhyt sivu {x}",
+  "p3d.side.gable": "Päätyseinä {x}",
+  "p3d.side.wall": "Seinä {x}",
+  "p3d.info": (v) => `${plural(v.bays, "1 kenttä", `${v.bays} kenttää`)} · ${plural(v.levels, "1 taso", `${v.levels} tasoa`)} · ${v.area} m²`,
   "q.system": "Telinejärjestelmä",
   "q.systemHint": "Molemmat ovat alumiinitelineitä katto- ja julkisivutöihin. Hinta talollesi:",
   "q.sys.layher": "Saksalainen alumiininen kehysteline.",
@@ -889,7 +923,7 @@ export function translate(lang: Lang, key: Key, vars?: Vars): string {
 const hasKey = (k: string): k is Key => k in en;
 
 /* ---------- React context ---------- */
-interface I18n {
+export interface I18n {
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (key: Key, vars?: Vars) => string;

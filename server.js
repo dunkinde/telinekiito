@@ -5,6 +5,7 @@ const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
 
+const crypto = require("node:crypto");
 const E = require("./lib/engine");
 const Store = require("./lib/store");
 const { makeAuth, MASTER_ID } = require("./lib/auth");
@@ -300,6 +301,9 @@ async function withModel(f, body) {
   if (r && r.status === "found" && r.building.id === m.id && r.building.walls && r.building.walls.length) {
     f.walls = r.building.walls;
     f.model = { id: r.building.id, date: (r.modelDate || r.building.created || "").slice(0, 10) || null };
+    // The measured walls and roof for the 3D view, in metres from the first outline corner.
+    const b = r.building, [x0, y0] = b.outline[0];
+    if (b.shape) f.shape = { outline: b.outline.map(([x, y]) => [Math.round((x - x0) * 100) / 100, Math.round((y - y0) * 100) / 100]), w: b.shape.w, r: b.shape.r };
   }
   return f;
 }
@@ -817,6 +821,37 @@ route("GET", /^\/api\/crew\/jobs$/, (req, m, url) => {
   }).filter((v) => v.due <= S.addDays(t, 2));
   const pending = user.role === "worker" ? 0 : store.count("change", "pending");
   return { today: t, from, to, jobs, visits, pendingChanges: pending, crews: crews().map((c) => ({ id: c.id, name: c.name, color: c.color })) };
+});
+
+/* ---------- 3D scaffold plan of an order: office, crew, the customer, and a share link anyone with it can open ---------- */
+route("GET", /^\/api\/office\/orders\/([A-Z0-9-]+)\/plan$/, (req, m) => {
+  requireOffice(req);
+  return { plan: O.orderPlan(getOrderOr404(m[1])) };
+});
+route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/share$/, (req, m) => {
+  requireOffice(req);
+  const o = getOrderOr404(m[1]);
+  if (!o.shareToken) {
+    o.shareToken = crypto.randomBytes(12).toString("base64url");
+    saveOrder(o);
+  }
+  return { token: o.shareToken };
+});
+route("GET", /^\/api\/crew\/jobs\/([A-Z0-9-]+)\/plan$/, (req, m) => {
+  const user = requireStaff(req);
+  return { plan: O.orderPlan(crewOrder(user, m[1])) };
+});
+route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/plan$/, async (req, m) => {
+  limit(req, "track", 60, 10 * 60e3);
+  const body = await readJson(req, 1024);
+  return { plan: O.orderPlan(customerOrder(m[1], body.phone)) };
+});
+// Shared plan: only the scaffold and the house shape, no names, phone numbers or address.
+route("GET", /^\/api\/plan\/([\w-]{12,40})$/, (req, m) => {
+  limit(req, "plan", 120, 10 * 60e3);
+  const o = store.listOrders().find((x) => x.shareToken === m[1]);
+  if (!o || o.status === "cancelled") throw new HttpError(404, "not_found", "This link doesn't work any more.");
+  return { ref: o.ref, plan: O.orderPlan(o) };
 });
 
 route("GET", /^\/api\/crew\/jobs\/([A-Z0-9-]+)$/, (req, m) => {

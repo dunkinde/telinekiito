@@ -5,3 +5,4 @@ Disallow: /doc/
 Disallow: /api/
 Disallow: /mvp
 Disallow: /business
+Disallow: /3d
