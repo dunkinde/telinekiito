@@ -439,6 +439,20 @@ const en = {
   "privacy.title": "Privacy notice",
   "privacy.updated": "Updated {date}",
   "privacy.back": "Back to the website",
+  "terms.link": "Terms of service",
+  "terms.title": "Terms of service",
+  "info.link": "Pre-contract information",
+  "info.title": "Pre-contract information and right of withdrawal",
+  "legal.draft": "Draft: these texts are still being reviewed by a lawyer and may change.",
+  "q.terms": "I accept the {terms} and have read the {info}.",
+  "q.termsLink": "terms of service",
+  "q.infoLink": "pre-contract information",
+  "q.earlyStart": "I ask you to start the work before my 14-day withdrawal period ends.",
+  "q.earlyStartHint": "If I withdraw after the work has started, I pay for the part of the service provided until then. Without this request, the start must be on {date} or later.",
+  "q.earlyStartLater": "Start on {date} instead",
+  "q.err.terms": "Accept the terms to place the order.",
+  "q.err.earlyStart": "Your start date is within the 14-day withdrawal period. Tick the box to ask us to start, or pick {date} or later.",
+  "err.terms_required": "Accept the terms to place the order.",
   "q.privacy": "We use your details only for this order.",
   "ai.privacy": "The images are used only to read the measurements.",
   "contact.mapFallback": "Map of our home area around Helsinki. If it doesn't show, open the larger map below.",
@@ -897,6 +911,20 @@ const fi: Record<Key, Entry> = {
   "privacy.title": "Tietosuojaseloste",
   "privacy.updated": "Päivitetty {date}",
   "privacy.back": "Takaisin verkkosivuille",
+  "terms.link": "Sopimusehdot",
+  "terms.title": "Sopimusehdot",
+  "info.link": "Ennakkotiedot",
+  "info.title": "Ennakkotiedot ja peruuttamisoikeus",
+  "legal.draft": "Luonnos: tekstit ovat vielä juristin tarkistettavana ja voivat muuttua.",
+  "q.terms": "Hyväksyn {terms} ja olen lukenut {info}.",
+  "q.termsLink": "sopimusehdot",
+  "q.infoLink": "ennakkotiedot",
+  "q.earlyStart": "Pyydän aloittamaan työn ennen kuin 14 päivän peruuttamisaikani päättyy.",
+  "q.earlyStartHint": "Jos peruutan sopimuksen työn alettua, maksan siihen asti suoritetusta palvelusta. Ilman pyyntöä aloituspäivän on oltava {date} tai myöhemmin.",
+  "q.earlyStartLater": "Aloita mieluummin {date}",
+  "q.err.terms": "Hyväksy sopimusehdot tehdäksesi tilauksen.",
+  "q.err.earlyStart": "Aloituspäivä on 14 päivän peruuttamisajan sisällä. Rastita ruutu, jos haluat aloittaa, tai valitse {date} tai myöhemmin.",
+  "err.terms_required": "Hyväksy sopimusehdot tehdäksesi tilauksen.",
   "q.privacy": "Käytämme tietojasi vain tähän tilaukseen.",
   "ai.privacy": "Kuvia käytetään vain mittojen lukemiseen.",
   "contact.mapFallback": "Kartta kotialueestamme Helsingin seudulla. Jos se ei näy, avaa suurempi kartta alta.",
@@ -1046,6 +1074,7 @@ export function errText(i: I18n, e: unknown, fmtDate: (iso: string) => string): 
     return i.t("err.invalid_fields", { fields: info.fields.map((f) => i.tk("field." + f)).join(", ") });
   }
   if (err.code === "start_too_early" && info.date) return i.t("err.start_too_early", { date: fmtDate(info.date) });
+  if (err.code === "early_start_required" && info.date) return i.t("q.err.earlyStart", { date: fmtDate(info.date) });
   if (err.code) return i.tk("err." + err.code, undefined, err.message || i.t("err.server_error"));
   return err.message || i.t("err.server_error");
 }

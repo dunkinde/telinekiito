@@ -165,7 +165,7 @@ test("ai: error codes from OpenAI", async () => {
 test("orders: validation, masking and phone check", () => {
   const start = E.earliestStart("standard", O.helsinkiNow());
   const base = { length: 12, width: 9, eave: 4.3, floors: "1.5", roofType: "gable", pitch: 35, jobType: "roof", gables: true,
-    zone: "B", urgency: "standard", start, days: 28, name: "Test", phone: "040 123 4567", address: "Testitie 1, Kerava" };
+    zone: "B", urgency: "standard", start, days: 28, name: "Test", phone: "040 123 4567", address: "Testitie 1, Kerava", acceptTerms: true, earlyStart: true };
   const f = O.parseOrderInput(base);
   const o = O.buildOrder(f, O.mergePricing(null), () => false);
   assert.match(o.ref, /^TK-[A-Z0-9]{6}$/);
@@ -177,6 +177,36 @@ test("orders: validation, masking and phone check", () => {
   assert.throws(() => O.parseOrderInput({ ...base, phone: "12" }), { code: "phone_required" });
   assert.throws(() => O.parseOrderInput({ ...base, start: "2020-01-01" }), { code: "start_too_early" });
   assert.throws(() => O.parseOrderInput({ ...base, length: 500 }), { code: "invalid_fields" });
+});
+
+test("orders: terms acceptance and starting within the withdrawal period", () => {
+  const soon = E.earliestStart("standard", O.helsinkiNow());
+  const later = O.helsinkiDay(O.WITHDRAWAL_DAYS + 1);
+  const base = { length: 12, width: 9, eave: 4.3, floors: "1", roofType: "gable", pitch: 35, jobType: "roof", gables: true,
+    zone: "A", urgency: "standard", start: later, days: 28, name: "Test", phone: "040 123 4567", address: "Testitie 1, Kerava" };
+  // The terms box must be ticked (a truthy string isn't enough).
+  assert.throws(() => O.parseOrderInput(base), { code: "terms_required" });
+  assert.throws(() => O.parseOrderInput({ ...base, acceptTerms: "yes" }), { code: "terms_required" });
+  // A start after the 14 days needs no early-start request.
+  const f = O.parseOrderInput({ ...base, acceptTerms: true });
+  assert.equal(f.terms.accepted, true);
+  assert.equal(f.terms.version, O.TERMS_VERSION);
+  assert.equal(f.terms.withinWithdrawal, false);
+  assert.equal(f.terms.earlyStart, false);
+  assert.equal(f.terms.withdrawalEnds, O.helsinkiDay(O.WITHDRAWAL_DAYS));
+  // A start within the 14 days needs the customer's request, otherwise the first date after the period is offered.
+  assert.throws(() => O.parseOrderInput({ ...base, start: soon, acceptTerms: true }), (e) => e.code === "early_start_required" && e.info.date === later);
+  const early = O.parseOrderInput({ ...base, start: soon, acceptTerms: true, earlyStart: true });
+  assert.equal(early.terms.withinWithdrawal, true);
+  assert.equal(early.terms.earlyStart, true);
+  // Stored on the order.
+  const o = O.buildOrder(early, O.mergePricing(null), () => false);
+  assert.deepEqual(o.terms, early.terms);
+  assert.equal(O.publicView(o).terms, undefined);
+  // Business portal orders are made under the account agreement.
+  const biz = O.parseOrderInput({ ...base, start: soon }, { business: true });
+  assert.equal(biz.terms, null);
+  assert.equal(O.buildOrder(biz, O.mergePricing(null), () => false).terms, undefined);
 });
 
 test("engine: roof and facade = facade scaffold plus roof-catch on the eaves", () => {

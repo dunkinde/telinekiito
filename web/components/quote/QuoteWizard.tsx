@@ -3,7 +3,7 @@
 // The price on the side (bottom bar on phones) is calculated live by the server's /api/quote,
 // with the same engine and prices the order will use.
 import { AnimatePresence, animate, motion } from "framer-motion";
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   EAVE_BY_FLOORS,
   getQuote,
@@ -66,6 +66,8 @@ interface Form {
   notes: string;
   partnerCode: string;
   system: SystemKey;
+  acceptTerms: boolean;
+  earlyStart: boolean;
 }
 
 const JOBS: JobType[] = ["roof", "facade", "roof_facade", "gutters"];
@@ -92,6 +94,24 @@ function localEarliest(u: Urgency): string {
     }
   }
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+/** Local date `days` from today as YYYY-MM-DD. */
+function dayFromToday(days: number): string {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+/** Consumer Protection Act ch. 6: 14-day withdrawal period (the server checks the same rule in lib/orders.js). */
+const WITHDRAWAL_DAYS = 14;
+
+/** A sentence with {name} placeholders replaced by React nodes (for links inside a translated sentence). */
+function withLinks(text: string, links: Record<string, ReactNode>) {
+  return text.split(/(\{\w+\})/).map((part, i) => {
+    const m = /^\{(\w+)\}$/.exec(part);
+    return m && links[m[1]] ? <span key={i}>{links[m[1]]}</span> : part;
+  });
 }
 
 /** A number that tweens to its new value (text updated directly, no re-renders per frame). */
@@ -152,7 +172,7 @@ function NumField({ label, hint, unit, value, onChange, min, max, step = 0.1 }: 
   );
 }
 
-function Choice({ selected, onClick, title, text, extra }: { selected: boolean; onClick: () => void; title: string; text: string; extra?: React.ReactNode }) {
+function Choice({ selected, onClick, title, text, extra }: { selected: boolean; onClick: () => void; title: string; text: string; extra?: ReactNode }) {
   return (
     <motion.button
       type="button"
@@ -344,7 +364,9 @@ function WizardBody({ start }: { start: QuoteStart }) {
       email: "",
       notes: "",
       partnerCode: "",
-      system: "layher"
+      system: "layher",
+      acceptTerms: false,
+      earlyStart: false
     };
   });
   // Scaffold systems the office offers; the chosen one must be among them.
@@ -545,6 +567,10 @@ function WizardBody({ start }: { start: QuoteStart }) {
     }
   }
 
+  // A start within the withdrawal period needs the customer's explicit request (pre-contract information).
+  const afterWithdrawal = dayFromToday(WITHDRAWAL_DAYS + 1);
+  const withinWithdrawal = !!form.start && form.start < afterWithdrawal;
+
   /* ----- navigation ----- */
   const canNext = step === 0 ? house.ok : step === 2 ? !!form.start && Number(form.days) >= 1 : true;
   function go(n: number) {
@@ -558,6 +584,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
     if (!form.name.trim()) return setError(t("q.err.name"));
     if (digits(form.phone).length < 6) return setError(t("q.err.phone"));
     if (!form.address.trim()) return setError(t("err.address_required"));
+    if (!form.acceptTerms) return setError(t("q.err.terms"));
+    if (withinWithdrawal && !form.earlyStart) return setError(t("q.err.earlyStart", { date: fmt(afterWithdrawal) }));
     setSubmitting(true);
     // The map position only if the address is still the one that was looked up.
     const found = lookup.status === "done" && lookup.result && lookup.query === form.address.trim() ? lookup.result : null;
@@ -590,7 +618,9 @@ function WizardBody({ start }: { start: QuoteStart }) {
         partnerCode: form.partnerCode.trim() || undefined,
         storeys: tooTall || undefined,
         checks: checks.length ? checks : undefined,
-        model: modelRef
+        model: modelRef,
+        acceptTerms: form.acceptTerms,
+        earlyStart: withinWithdrawal && form.earlyStart
       });
       setDone({ ref: r.ref, total: r.order.quote.total, phone4: digits(form.phone).slice(-4), review: Boolean(tooTall), photos: checks.length > 0 || Boolean(tooTall) });
     } catch (e) {
@@ -914,6 +944,39 @@ function WizardBody({ start }: { start: QuoteStart }) {
         </p>
         {tooTall ? <p className="mt-2 rounded-lg bg-sun-soft px-3 py-2 text-ink">{t("q.review", { n: tooTall })}</p> : null}
       </div>
+      <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-line">
+        <input type="checkbox" className="mt-1 h-5 w-5 accent-ink" required checked={form.acceptTerms} onChange={(e) => set("acceptTerms", e.target.checked)} />
+        <span className="text-sm text-ink">
+          {withLinks(t("q.terms"), {
+            terms: (
+              <a href="/terms" target="_blank" rel="noopener" className="font-semibold underline underline-offset-2">
+                {t("q.termsLink")}
+              </a>
+            ),
+            info: (
+              <a href="/consumer-info" target="_blank" rel="noopener" className="font-semibold underline underline-offset-2">
+                {t("q.infoLink")}
+              </a>
+            )
+          })}
+        </span>
+      </label>
+      {withinWithdrawal ? (
+        <div className="rounded-2xl bg-white p-4 ring-1 ring-line">
+          <label className="flex cursor-pointer items-start gap-3">
+            <input type="checkbox" className="mt-1 h-5 w-5 accent-ink" checked={form.earlyStart} onChange={(e) => set("earlyStart", e.target.checked)} />
+            <span>
+              <span className="text-sm font-semibold text-ink">{t("q.earlyStart")}</span>
+              <span className="block text-sm text-muted">{t("q.earlyStartHint", { date: fmt(afterWithdrawal) })}</span>
+            </span>
+          </label>
+          {!form.earlyStart ? (
+            <button type="button" className="mt-2 ml-8 text-sm font-semibold text-ink underline underline-offset-2" onClick={() => set("start", afterWithdrawal)}>
+              {t("q.earlyStartLater", { date: fmt(afterWithdrawal) })}
+            </button>
+          ) : null}
+        </div>
+      ) : null}
       <p className="text-xs text-muted">
         {t("q.privacy")}{" "}
         <a href="/privacy" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-ink">

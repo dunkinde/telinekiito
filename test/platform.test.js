@@ -60,7 +60,7 @@ const start = () => E.earliestStart("express", helsinkiNow());
 const orderBody = (over = {}) => ({
   length: 10, width: 8, eave: 3, floors: "1", roofType: "gable", pitch: 30, jobType: "roof", gables: true,
   zone: "A", urgency: "express", start: start(), days: 28, name: "Platform Testi", phone: "040 111 2233",
-  email: "testi@example.fi", address: "Testikatu 2, Espoo", notes: "", lang: "fi", lat: 60.2, lon: 24.7, ...over
+  email: "testi@example.fi", address: "Testikatu 2, Espoo", notes: "", lang: "fi", lat: 60.2, lon: 24.7, acceptTerms: true, earlyStart: true, ...over
 });
 
 test("whole job: team, crew app, change, invoice, review", async () => {

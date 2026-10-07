@@ -57,7 +57,7 @@ test.after(() => {
 
 
 const start = () => E.earliestStart("express", helsinkiNow());
-const house = { length: 12, width: 9, eave: 5.8, floors: "2", roofType: "gable", pitch: 30, jobType: "facade", gables: false, zone: "A", urgency: "express", days: 28 };
+const house = { length: 12, width: 9, eave: 5.8, floors: "2", roofType: "gable", pitch: 30, jobType: "facade", gables: false, zone: "A", urgency: "express", days: 28, acceptTerms: true, earlyStart: true };
 async function bizLogin(phone, pin) {
   const r = await req("POST", "/api/biz/login", { phone, pin });
   assert.equal(r.status, 200, r.text);

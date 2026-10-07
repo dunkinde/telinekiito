@@ -87,7 +87,7 @@ test("pages and config", async () => {
 test("order, tracking and customer actions", async () => {
   const start = E.earliestStart("express", helsinkiNow());
   const order = { length: 10, width: 8, eave: 5.8, floors: "2", roofType: "gable", pitch: 30, jobType: "roof", gables: true,
-    zone: "A", urgency: "express", start, days: 28, name: "Testi Asiakas", phone: "040 765 4321", email: "", address: "Testikatu 1, Espoo", notes: "", source: "form" };
+    zone: "A", urgency: "express", start, days: 28, name: "Testi Asiakas", phone: "040 765 4321", email: "", address: "Testikatu 1, Espoo", notes: "", source: "form", acceptTerms: true, earlyStart: true };
 
   const bad = await req("POST", "/api/orders", { ...order, name: "" });
   assert.equal(bad.status, 400);
@@ -97,6 +97,12 @@ test("order, tracking and customer actions", async () => {
   const missing = await req("POST", "/api/orders", { ...order, length: 900, zone: "Q" });
   assert.deepEqual(missing.json.info.fields, ["length", "zone"]);
   assert.equal((await req("POST", "/api/orders", "x", { "Content-Type": "text/plain" })).status, 400);
+
+  const noTerms = await req("POST", "/api/orders", { ...order, acceptTerms: undefined });
+  assert.equal(noTerms.json.error, "terms_required");
+  const noEarly = await req("POST", "/api/orders", { ...order, earlyStart: false });
+  assert.equal(noEarly.json.error, "early_start_required");
+  assert.ok(noEarly.json.info.date > start);
 
   const r = await req("POST", "/api/orders", order);
   assert.equal(r.status, 200, r.text);
@@ -221,13 +227,15 @@ test("two scaffold systems: options in the quote, the chosen one on the order, o
   assert.deepEqual(cfg.json.systems.map((s) => [s.key, s.enabled]), [["layher", true], ["monzon", true]]);
 
   const start = E.earliestStart("standard", helsinkiNow());
-  const order = { ...house, floors: "1.5", urgency: "standard", start, name: "Monzon Testi", phone: "040 111 2222", address: "Testikatu 9, Hamina", source: "form", system: "monzon" };
+  const order = { ...house, floors: "1.5", urgency: "standard", start, name: "Monzon Testi", phone: "040 111 2222", address: "Testikatu 9, Hamina", source: "form", system: "monzon", acceptTerms: true, earlyStart: true };
   const placed = await req("POST", "/api/orders", order);
   assert.equal(placed.status, 200, placed.text);
   const login = await req("POST", "/api/office/login", { password: PASSWORD });
   const H = { Cookie: login.headers.get("set-cookie").split(";")[0] };
   const detail = await req("GET", `/api/office/orders/${placed.json.ref}`, undefined, H);
   assert.equal(detail.json.order.house.system, "monzon");
+  assert.equal(detail.json.order.terms.accepted, true, "terms acceptance is stored on the order");
+  assert.equal(detail.json.order.terms.earlyStart, true);
   assert.ok(detail.json.order.estimate.parts.mz_standards > 0);
 
   // Office switches MonZon off: no longer offered, and orders for it are refused.
@@ -247,7 +255,7 @@ test("office layout editor: preview, save and reset change the parts and the pri
   const login = await req("POST", "/api/office/login", { password: PASSWORD });
   const H = { Cookie: login.headers.get("set-cookie").split(";")[0] };
   const start = E.earliestStart("standard", helsinkiNow());
-  const order = { length: 12.4, width: 9.9, eave: 2.9, floors: "1.5", roofType: "gable", pitch: 47, jobType: "roof", gables: true, zone: "A", urgency: "standard", start, days: 28, name: "Layout Testi", phone: "040 333 4444", address: "Testikatu 3, Espoo", source: "form" };
+  const order = { length: 12.4, width: 9.9, eave: 2.9, floors: "1.5", roofType: "gable", pitch: 47, jobType: "roof", gables: true, zone: "A", urgency: "standard", start, days: 28, name: "Layout Testi", phone: "040 333 4444", address: "Testikatu 3, Espoo", source: "form", acceptTerms: true, earlyStart: true };
   const placed = await req("POST", "/api/orders", order);
   assert.equal(placed.status, 200, placed.text);
   const ref = placed.json.ref;

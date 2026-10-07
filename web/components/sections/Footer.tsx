@@ -62,6 +62,8 @@ export function Footer() {
               <ul className="mt-4 space-y-3 text-sm">
                 <li><button type="button" onClick={() => openQuote()} className={linkCls}>{t("nav.quote")}</button></li>
                 <li><button type="button" onClick={() => openTrack()} className={linkCls}>{t("nav.track")}</button></li>
+                <li><a href="/terms" className={linkCls}>{t("terms.link")}</a></li>
+                <li><a href="/consumer-info" className={linkCls}>{t("info.link")}</a></li>
                 <li><a href="/privacy" className={linkCls}>{t("privacy.link")}</a></li>
                 <li><a href="/office" className={linkCls}>{t("foot.office")}</a></li>
               </ul>

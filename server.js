@@ -622,7 +622,7 @@ route("POST", /^\/api\/biz\/orders$/, async (req) => {
   const bf = B.parseBizFields(body);
   const contactName = bf.siteContact.name || s.user.name;
   const contactPhone = bf.siteContact.phone || s.user.phone;
-  const f = await withModel(O.parseOrderInput({ ...body, name: `${s.account.name} / ${contactName}`, phone: contactPhone, email: s.user.email || s.account.email || "", lang: s.user.lang === "en" ? "en" : "fi" }), body);
+  const f = await withModel(O.parseOrderInput({ ...body, name: `${s.account.name} / ${contactName}`, phone: contactPhone, email: s.user.email || s.account.email || "", lang: s.user.lang === "en" ? "en" : "fi" }, { business: true }), body);
   const o0 = ops();
   if (f.urgency !== "standard" && !o0.urgencies[f.urgency]) throw new HttpError(409, "urgency_off", "That delivery speed isn't available right now.");
   if (!o0.zones[f.zone]) throw new HttpError(409, "zone_off", "We don't deliver to that area right now. Contact us.");
