@@ -17,6 +17,7 @@ export const COLORS = {
   net: 0x1f2a24,
   ground: 0xe6e8e2,
   sheet: 0xf4f7fa,
+  tarp: 0xdfe9f2,
   truss: 0x9aa3ad,
   selected: 0xffc20e
 };
@@ -181,7 +182,8 @@ function roofObject(T: THREE, r: NonNullable<ScaffoldPlan["roof"]>) {
   }
   for (const v of [-w, 0, w]) tl.push([Q(-half, v, v === 0 ? z0 + rise : z0), Q(half, v, v === 0 ? z0 + rise : z0)]);
   g.add(tubes(T, tl, 0.03, new T.MeshStandardMaterial({ color: COLORS.truss, metalness: 0.4, roughness: 0.5 })));
-  const tarp = new T.MeshStandardMaterial({ color: COLORS.sheet, transparent: true, opacity: 0.6, side: T.DoubleSide, depthWrite: false });
+  // The roof covering: light blue-white and only slightly see-through, so it reads as a roof but the house shows.
+  const tarp = new T.MeshStandardMaterial({ color: COLORS.tarp, transparent: true, opacity: 0.82, roughness: 0.6, side: T.DoubleSide, depthWrite: false });
   const quad = (a: THREE_NS.Vector3, b: THREE_NS.Vector3, c: THREE_NS.Vector3, e: THREE_NS.Vector3) => {
     const geo = new T.BufferGeometry().setFromPoints([a, b, c, a, c, e]);
     geo.computeVertexNormals();

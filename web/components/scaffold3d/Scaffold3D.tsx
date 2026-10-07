@@ -69,7 +69,7 @@ export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onS
         controls.minDistance = radius * 0.6;
         controls.maxDistance = radius * 6;
         const reset = () => {
-          const d = radius / Math.sin((35 * Math.PI) / 360) * 0.95;
+          const d = (radius / Math.sin((35 * Math.PI) / 360)) * (compact ? 0.72 : 0.95);
           camera.position.set(center.x - d * 0.55, center.y + d * 0.5, center.z + d * 0.65);
           controls.target.copy(center);
           controls.update();

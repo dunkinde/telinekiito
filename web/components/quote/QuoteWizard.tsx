@@ -980,7 +980,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
             {showBreakdown && price.quote ? (
               <motion.div key="bd" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="mb-3 max-h-[45vh] overflow-y-auto">
                 {plan && house.ok ? (
-                  <Scaffold3D plan={plan} texts={siteTexts(i18n)} compact className="mb-3 h-44 w-full" />
+                  <Scaffold3D plan={plan} texts={siteTexts(i18n)} compact className="mb-3 h-52 w-full shrink-0" />
                 ) : shownShape ? (
                   <HouseModel shape={shownShape} className="mb-3 h-36 w-full" label={t("q.title")} />
                 ) : null}
@@ -1064,7 +1064,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
       {/* Desktop: live price panel */}
       <aside className="hidden w-[360px] shrink-0 flex-col overflow-y-auto border-l border-line bg-mist p-7 lg:flex xl:w-[400px]">
         {plan && house.ok ? (
-          <Scaffold3D plan={plan} texts={siteTexts(i18n)} compact className="-mx-2 mb-2 h-52 w-[calc(100%+1rem)]" />
+          <Scaffold3D plan={plan} texts={siteTexts(i18n)} compact className="-mx-2 mb-2 h-56 w-[calc(100%+1rem)] shrink-0" />
         ) : shownShape ? (
           <HouseModel shape={shownShape} className="-mx-2 mb-2 h-44 w-[calc(100%+1rem)]" label={t("q.title")} />
         ) : null}
