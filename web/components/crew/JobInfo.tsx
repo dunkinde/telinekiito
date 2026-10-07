@@ -2,7 +2,8 @@
 // Parts of the job card that don't change the job: the house and scaffold, notes and messages, photos,
 // schedule and history.
 import { useRef, useState } from "react";
-import { fileUrl, shrinkImage, type HistoryEntry } from "@/lib/platform";
+import { fileUrl, getJobPlan, shrinkImage, type HistoryEntry } from "@/lib/platform";
+import { Plan3DOverlay } from "../scaffold3d/Plan3DOverlay";
 import { HouseModel } from "../HouseModel";
 import { useApp } from "./context";
 import { fmtDay, fmtNum, fmtStamp, roofLabel, sideLabel, stageLabel, statusLabel, urgencyLabel, jobTypeLabel, type Key } from "./i18n";
@@ -16,6 +17,7 @@ export type Act = (op: Op, okMsg?: string, silent?: boolean) => Promise<boolean>
 /* ---------------- House and scaffold ---------------- */
 export function SiteModel({ view }: { view: ViewCard }) {
   const { t, lang } = useApp();
+  const [show3d, setShow3d] = useState(false);
   const h = view.house, e = view.estimate;
   const shape = { length: h.length, width: h.width, eave: h.eave, roofType: h.roofType, pitch: h.pitch, jobType: h.jobType, gables: h.gables };
   const tiles: [string, string][] = [
@@ -32,6 +34,20 @@ export function SiteModel({ view }: { view: ViewCard }) {
         <HouseModel shape={shape} className="mx-auto block h-[230px] w-full max-w-lg px-2 pt-3 sm:h-[300px]" label={`${t("build.model")}: ${jobTypeLabel(t, h.jobType)}, ${fmtNum(h.length, lang)} × ${fmtNum(h.width, lang)} m`} />
         <p className="px-4 pb-3 text-center text-[15px] font-semibold text-ink-soft">{jobTypeLabel(t, h.jobType)}</p>
       </div>
+      <Btn variant="dark" className="w-full" onClick={() => setShow3d(true)}>
+        {t("p3d.open")}
+      </Btn>
+      {show3d ? (
+        <Plan3DOverlay
+          title={t("p3d.title")}
+          load={() => getJobPlan(view.ref).then((r) => r.plan)}
+          onClose={() => setShow3d(false)}
+          texts={{
+            hint: t("p3d.hint"), reset: t("p3d.reset"), loading: t("p3d.loading"), failed: t("p3d.failed"), close: t("p3d.close"),
+            sideName: (s) => sideLabel(t, s.name), sideInfo: (s) => t("p3d.info", { bays: s.bays, levels: s.lifts, area: s.area })
+          }}
+        />
+      ) : null}
       {e.catchRunM > 0 ? (
         <div className="flex items-start gap-3 rounded-2xl bg-[#fff1e6] p-4 text-[#7c2d12] ring-1 ring-[#fbc59a]" role="note">
           <IWarn className="mt-0.5 h-6 w-6 shrink-0" />

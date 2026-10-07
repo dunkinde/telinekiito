@@ -4,7 +4,9 @@
 // rate us after pickup). A longer rental is a request the office approves; the new price shows before → after.
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getOrder, orderAction, STATUSES, uploadOrderPhoto, type OrderChange, type OrderView } from "@/lib/api";
+import { getOrder, getOrderPlan, orderAction, STATUSES, uploadOrderPhoto, type OrderChange, type OrderView } from "@/lib/api";
+import { Plan3DOverlay } from "../scaffold3d/Plan3DOverlay";
+import { siteTexts } from "../scaffold3d/siteTexts";
 import { shrinkImage } from "@/lib/image";
 import { digits, eur, fmtDate, fmtStamp } from "@/lib/format";
 import { errText, useI18n } from "@/lib/i18n";
@@ -59,6 +61,7 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
   const [rating, setRating] = useState({ stars: 0, text: "", consent: true });
   const [uploading, setUploading] = useState(0);
   const creds = useRef<{ ref: string; phone4: string } | null>(null);
+  const [show3d, setShow3d] = useState(false);
   const phoneInput = useRef<HTMLInputElement>(null);
   const fmt = (iso: string) => fmtDate(iso, lang);
 
@@ -244,6 +247,17 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
             {t("tr.pickup")}
           </Button>
         </div>
+      ) : null}
+
+      {!cancelled && creds.current ? (
+        <div className="mt-6">
+          <Button size="sm" variant="ghost" onClick={() => setShow3d(true)}>
+            {t("p3d.open")}
+          </Button>
+        </div>
+      ) : null}
+      {show3d && creds.current ? (
+        <Plan3DOverlay title={t("p3d.title")} texts={siteTexts(i18n)} onClose={() => setShow3d(false)} load={() => getOrderPlan(creds.current!.ref, creds.current!.phone4).then((r) => r.plan)} />
       ) : null}
 
       {!finished && !cancelled ? (

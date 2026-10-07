@@ -433,6 +433,7 @@ export const getJobs = (opts: { from?: string; to?: string; all?: boolean } = {}
   if (opts.all) q.set("all", "1");
   return call<JobsResponse>("GET", `/api/crew/jobs${q.toString() ? `?${q}` : ""}`);
 };
+export const getJobPlan = (ref: string) => call<{ plan: ScaffoldPlan }>("GET", `/api/crew/jobs/${enc(ref)}/plan`);
 export const getJob = (ref: string) => call<JobCard>("GET", `/api/crew/jobs/${enc(ref)}`);
 export type CrewAction = "loaded" | "on_the_way" | "arrived" | "erected" | "visit" | "dismantled";
 export const jobAction = (ref: string, action: CrewAction, extra: { eta?: string; ok?: boolean; notes?: string } = {}) =>

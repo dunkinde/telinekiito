@@ -298,6 +298,7 @@ export const sendContact = (body: { name: string; email: string; phone: string; 
 export const placeOrder = (body: Record<string, unknown>) => api<{ ref: string; order: OrderView }>("POST", "/api/orders", body);
 // The phone digits go in the request body, never in the web address (they'd end up in logs and history).
 export const getOrder = (ref: string, phone4: string) => api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/view`, { phone: phone4 });
+export const getOrderPlan = (ref: string, phone4: string) => api<{ plan: import("./plan").ScaffoldPlan }>("POST", `/api/orders/${encodeURIComponent(ref)}/plan`, { phone: phone4 });
 export const uploadOrderPhoto = (ref: string, phone4: string, image: string) =>
   api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/photos`, { phone: phone4, image });
 export const orderAction = (ref: string, action: "extend" | "pickup" | "message" | "change" | "review", body: Record<string, unknown>) =>
