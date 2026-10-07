@@ -9,6 +9,9 @@ export type Floors = "1" | "1.5" | "2";
 export type SystemKey = "layher" | "monzon";
 export const SYSTEM_KEYS: SystemKey[] = ["layher", "monzon"];
 export const SYSTEM_NAMES: Record<SystemKey, string> = { layher: "Layher Blitz 70 Alu", monzon: "MonZon Modular Light" };
+/** Weather protection follows the job (same rule as lib/engine.js): temporary roof with roof work, sheeting with facade scaffolding. */
+export const WEATHER_JOBS: Record<"weatherRoof" | "sheeting", JobType[]> = { weatherRoof: ["roof", "roof_facade"], sheeting: ["facade", "roof_facade"] };
+
 /** Bay length of each system, m (same as lib/engine.js). */
 export const SYSTEM_BAY: Record<SystemKey, number> = { layher: 3.07, monzon: 3.07 };
 

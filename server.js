@@ -855,8 +855,9 @@ function baseSides(o) {
   const est = E.estimate(O.houseOf({ ...o.house, adjust: undefined }));
   return est.sides.map((s) => ({ name: s.name, kind: s.kind, bays: s.bays, lifts: s.lifts, deckAll: s.deckAll, catchOn: s.catchOn }));
 }
-function layoutResult(o, adjust) {
+function layoutResult(o, adjust, system) {
   const house = { ...o.house };
+  if (E.SYSTEM_KEYS.includes(system)) house.system = system;
   if (adjust) house.adjust = adjust; else delete house.adjust;
   const r = P.repriceOrder(o, pricing(), { house });
   return { house, r, plan: O.orderPlan({ ...o, house }) };
@@ -866,8 +867,8 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout\/preview$/, async (r
   const o = getOrderOr404(m[1]);
   const body = await readJson(req, 16384);
   const adjust = body.adjust === undefined ? o.house.adjust || null : parseAdjust(o, body);
-  const { r, plan } = layoutResult(o, adjust);
-  return { adjust, base: baseSides(o), plan, estimate: r.estimate, quote: r.quote, before: { total: o.quote.total, area: o.estimate.area } };
+  const { house, r, plan } = layoutResult(o, adjust, body.system);
+  return { adjust, system: house.system || "layher", base: baseSides(o), plan, estimate: r.estimate, quote: r.quote, before: { total: o.quote.total, area: o.estimate.area } };
 });
 route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) => {
   const user = requireOffice(req);
@@ -875,12 +876,12 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) =>
   if (["dismantled", "closed", "cancelled"].includes(o.status)) throw new HttpError(409, "order_finished", "This order is already finished.");
   const body = await readJson(req, 16384);
   const adjust = parseAdjust(o, body);
-  const { house, r } = layoutResult(o, adjust);
+  const { house, r } = layoutResult(o, adjust, body.system);
   const before = o.quote.total;
   o.house = house;
   o.estimate = r.estimate;
   o.quote = r.quote;
-  O.pushHistory(o, { event: "Scaffold layout changed", code: "layout_changed", at: new Date().toISOString(), by: user.name, detail: { before, after: r.quote.total } });
+  O.pushHistory(o, { event: "Scaffold layout changed", code: "layout_changed", at: new Date().toISOString(), by: user.name, detail: { before, after: r.quote.total, system: house.system } });
   o.updatedAt = new Date().toISOString();
   saveOrder(o);
   return { order: officeOrderView(o) };

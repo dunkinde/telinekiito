@@ -19,10 +19,12 @@ export interface Scaffold3DTexts {
   close: string;
 }
 
-export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onSelect }: {
+export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onSelect, compact = false }: {
   plan: ScaffoldPlan;
   texts: Scaffold3DTexts;
   className?: string;
+  /** Small preview: no hint, buttons or side details; the camera still turns. */
+  compact?: boolean;
   selected?: number | null;
   onSelect?: (i: number | null) => void;
 }) {
@@ -180,6 +182,7 @@ export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onS
           {state === "loading" ? texts.loading : texts.failed}
         </p>
       ) : null}
+      {compact ? null : (
       <div className="pointer-events-none absolute inset-x-3 top-3 flex items-start justify-between gap-3">
         <p className="rounded-full bg-white/85 px-3 py-1 text-[12px] text-[#3b434c] shadow-sm backdrop-blur">{texts.hint}</p>
         <button
@@ -190,7 +193,8 @@ export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onS
           {texts.reset}
         </button>
       </div>
-      {side ? (
+      )}
+      {side && !compact ? (
         <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 rounded-xl bg-[#0e1217]/90 px-4 py-3 text-white shadow-lg" role="status">
           <div className="min-w-0">
             <p className="font-semibold">

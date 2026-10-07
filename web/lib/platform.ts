@@ -477,12 +477,12 @@ export const getOrders = () => call<{ orders: FullOrder[]; crews: Crew[] }>("GET
 export interface LayoutSide { off?: boolean; bays?: number; lifts?: number; deckAll?: boolean; catchOn?: boolean }
 export interface LayoutAdjust { sides: Record<string, LayoutSide> }
 export interface LayoutBase { name: string; kind: string; bays: number; lifts: number; deckAll: boolean; catchOn: boolean }
-export interface LayoutEdit { adjust: LayoutAdjust | null; base: LayoutBase[]; total: number; area: number; weightKg: number; before: number }
+export interface LayoutEdit { system: SystemKey; adjust: LayoutAdjust | null; base: LayoutBase[]; total: number; area: number; weightKg: number; before: number }
 /** Price and 3D plan with layout changes; adjust undefined = the order's saved layout. */
-export const previewLayout = (ref: string, adjust: LayoutAdjust | null | undefined) =>
-  call<{ adjust: LayoutAdjust | null; base: LayoutBase[]; plan: ScaffoldPlan; estimate: { area: number; weightKg: number }; quote: Quote; before: { total: number; area: number } }>(
-    "POST", `/api/office/orders/${enc(ref)}/layout/preview`, adjust === undefined ? {} : { adjust });
-export const saveLayout = (ref: string, adjust: LayoutAdjust | null) => call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/layout`, { adjust });
+export const previewLayout = (ref: string, adjust: LayoutAdjust | null | undefined, system?: SystemKey) =>
+  call<{ adjust: LayoutAdjust | null; system: SystemKey; base: LayoutBase[]; plan: ScaffoldPlan; estimate: { area: number; weightKg: number }; quote: Quote; before: { total: number; area: number } }>(
+    "POST", `/api/office/orders/${enc(ref)}/layout/preview`, { ...(adjust === undefined ? {} : { adjust }), ...(system ? { system } : {}) });
+export const saveLayout = (ref: string, adjust: LayoutAdjust | null, system?: SystemKey) => call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/layout`, { adjust, ...(system ? { system } : {}) });
 export const getOrderPlan = (ref: string) => call<{ plan: ScaffoldPlan }>("GET", `/api/office/orders/${enc(ref)}/plan`);
 export const shareOrderPlan = (ref: string) => call<{ token: string }>("POST", `/api/office/orders/${enc(ref)}/share`, {});
 export const getOrderDetail = (ref: string) => call<{ order: OfficeOrderDetail; crews: Crew[] }>("GET", `/api/office/orders/${enc(ref)}`);

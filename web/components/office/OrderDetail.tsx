@@ -1,7 +1,7 @@
 "use client";
 // Order panel: everything about one order, with status, schedule, messages, crew work, money and history.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { SYSTEM_NAMES } from "@/lib/api";
+import { SYSTEM_KEYS, SYSTEM_NAMES, type SystemKey } from "@/lib/api";
 import type { PlanSide, ScaffoldPlan } from "@/lib/plan";
 import { Scaffold3D } from "../scaffold3d/Scaffold3D";
 import {
@@ -764,13 +764,13 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
 
   // Preview: the server prices the changed layout and returns its plan. The newest request wins.
   const seq = useRef(0);
-  const preview = (adjust: LayoutAdjust | null | undefined, base?: LayoutBase[]) => {
+  const preview = (adjust: LayoutAdjust | null | undefined, system?: SystemKey) => {
     const id = ++seq.current;
-    previewLayout(o.ref, adjust)
+    previewLayout(o.ref, adjust, system)
       .then((r) => {
         if (id !== seq.current) return;
         setPlan(r.plan);
-        setEdit((e) => ({ adjust: r.adjust, base: base || r.base || e?.base || [], total: r.quote.total, area: r.estimate.area, weightKg: r.estimate.weightKg, before: r.before.total }));
+        setEdit((e) => ({ system: r.system, adjust: r.adjust, base: r.base || e?.base || [], total: r.quote.total, area: r.estimate.area, weightKg: r.estimate.weightKg, before: r.before.total }));
       })
       .catch(() => {});
   };
@@ -782,11 +782,11 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
     if (Object.keys(next).length) sides[name] = next; else delete sides[name];
     const adjust = Object.keys(sides).length ? { sides } : null;
     setEdit({ ...edit, adjust });
-    preview(adjust);
+    preview(adjust, edit.system);
   };
   const save = async () => {
     if (!edit) return;
-    const r = await run("layout", () => saveLayout(o.ref, edit.adjust));
+    const r = await run("layout", () => saveLayout(o.ref, edit.adjust, edit.system));
     if (r) { setEdit(null); reload?.(); }
   };
   const pickName = pick != null ? plan?.sides.find((s) => s.i === pick)?.name : null;
@@ -804,6 +804,18 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
         )}
         {edit ? (
           <div className="space-y-2">
+            <label className="flex items-center gap-3 text-[14px] text-ink">
+              <span className="font-semibold">{t("od.house.system")}</span>
+              <select
+                className="rounded-lg px-2 py-1.5 ring-1 ring-line"
+                value={edit.system}
+                onChange={(e) => { const system = e.target.value as SystemKey; setEdit({ ...edit, system }); preview(edit.adjust, system); }}
+              >
+                {SYSTEM_KEYS.map((k) => (
+                  <option key={k} value={k}>{SYSTEM_NAMES[k]}</option>
+                ))}
+              </select>
+            </label>
             <ul className="divide-y divide-line rounded-xl ring-1 ring-line">
               {edit.base.map((b) => {
                 const a = edit.adjust?.sides?.[b.name] || {};
@@ -843,7 +855,7 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
               <Btn variant="dark" onClick={() => void save()} busy={busy === "layout"}>
                 {t("od.3d.save")}
               </Btn>
-              <Btn variant="ghost" onClick={() => { setEdit({ ...edit, adjust: null }); preview(null); }}>
+              <Btn variant="ghost" onClick={() => { setEdit({ ...edit, adjust: null }); preview(null, edit.system); }}>
                 {t("od.3d.resetLayout")}
               </Btn>
               <Btn variant="ghost" onClick={() => { setEdit(null); preview(undefined); }}>

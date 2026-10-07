@@ -2,7 +2,7 @@
 // A new site from the portal: address lookup (or the size by hand, or copied from an earlier site), job, timing,
 // and the company's PO / project / site contact. The company's own price and the first free dates update live.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { EAVE_BY_FLOORS, getQuote, lookupAddress, modelRefFor, SYSTEM_NAMES, type AddressResult, type SystemKey, type Floors, type JobType, type QuoteResult, type RoofType, type Urgency, type Zone } from "@/lib/api";
+import { EAVE_BY_FLOORS, getQuote, lookupAddress, modelRefFor, WEATHER_JOBS, type AddressResult, type SystemKey, type Floors, type JobType, type QuoteResult, type RoofType, type Urgency, type Zone } from "@/lib/api";
 import { bizOrder, bizOrders, bizPlaceOrder, type BizDetails } from "@/lib/business";
 import { useT } from "../office/context";
 import { day, money, numText, parseNum } from "../office/format";
@@ -99,7 +99,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
     if (!house.ok) return setPrice(null);
     let alive = true;
     const id = window.setTimeout(() => {
-      getQuote({ length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables, sheeting: f.sheeting, weatherRoof: f.weatherRoof, days, zone: f.zone, urgency: f.urgency, partnerCode: me.account.code, model: modelRef, system: f.system })
+      getQuote({ length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables, sheeting: f.sheeting, weatherRoof: f.weatherRoof, days, zone: f.zone, urgency: f.urgency, partnerCode: me.account.code, model: modelRef })
         .then((r) => alive && setPrice(r))
         .catch(() => alive && setPrice(null));
     }, 300);
@@ -178,7 +178,6 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
         lon: g?.lon,
         checks: g?.checks?.length ? g.checks : undefined,
         model: modelRef,
-        system: f.system,
         ...biz
       });
       go(`#/sites/${r.ref}`);
@@ -263,21 +262,17 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
                 </label>
               ) : null}
               <div className="flex flex-wrap gap-x-5 gap-y-2">
-                <label className="flex items-center gap-2 text-[14px] text-ink-soft">
-                  <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.sheeting} onChange={(e) => set("sheeting", e.target.checked)} /> {t("biz.new.sheeting")}
-                </label>
-                <label className="flex items-center gap-2 text-[14px] text-ink-soft">
-                  <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.weatherRoof} onChange={(e) => set("weatherRoof", e.target.checked)} /> {t("biz.new.weatherRoof")}
-                </label>
+                {WEATHER_JOBS.sheeting.includes(f.jobType) ? (
+                  <label className="flex items-center gap-2 text-[14px] text-ink-soft">
+                    <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.sheeting} onChange={(e) => set("sheeting", e.target.checked)} /> {t("biz.new.sheeting")}
+                  </label>
+                ) : null}
+                {WEATHER_JOBS.weatherRoof.includes(f.jobType) ? (
+                  <label className="flex items-center gap-2 text-[14px] text-ink-soft">
+                    <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.weatherRoof} onChange={(e) => set("weatherRoof", e.target.checked)} /> {t("biz.new.weatherRoof")}
+                  </label>
+                ) : null}
               </div>
-              {(price?.options?.length || 0) > 1 ? (
-                <Chips
-                  label={t("biz.new.system")}
-                  value={f.system}
-                  onChange={(v) => set("system", v)}
-                  options={(price?.options || []).map((o) => ({ key: o.system, label: `${SYSTEM_NAMES[o.system]} · ${money(o.total, lang)}` }))}
-                />
-              ) : null}
               <Chips label={t("biz.new.speed")} value={f.urgency} onChange={(v) => set("urgency", v)} options={urgencies.map((u) => ({ key: u, label: urgLabel(i, u) }))} />
               <div className="grid gap-4 sm:grid-cols-3">
                 <Field label={t("biz.new.start")} hint={firstFree ? t("biz.new.firstFree", { date: day(firstFree, lang) }) : undefined}>

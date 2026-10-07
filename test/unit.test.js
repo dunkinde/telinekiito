@@ -278,15 +278,21 @@ test("weather protection: sheeting area and anchors, temporary roof raises the s
   const E = require("../lib/engine");
   const P = E.DEFAULT_PRICING, sel = { days: 28, zone: "C", urgency: "standard" };
   const h = { length: 12.4, width: 9.9, eave: 2.9, pitch: 47, roofType: "gable", jobType: "roof", gables: true };
-  const plain = E.estimate(h), sheet = E.estimate({ ...h, sheeting: true }), roof = E.estimate({ ...h, weatherRoof: true });
+  const fh = { ...h, jobType: "facade" };
+  const plain = E.estimate(h), sheet = E.estimate({ ...fh, sheeting: true }), roof = E.estimate({ ...h, weatherRoof: true });
+  // Options follow the job: no sheeting on a roof-only job, no temporary roof on a facade-only job.
+  assert.equal(E.estimate({ ...h, sheeting: true }).sheeting, null);
+  assert.equal(E.estimate({ ...fh, weatherRoof: true }).roof, null);
   assert.ok(sheet.sheeting.m2 > 250);
-  assert.ok(sheet.totals.parts.anchors > plain.totals.parts.anchors);
+  assert.ok(sheet.totals.parts.anchors > E.estimate(fh).totals.parts.anchors);
   assert.ok(sheet.totals.parts.wp_sheetRolls >= 3);
   assert.equal(E.quote(sheet, sel, P).lines.find((l) => l.key === "sheeting").vars.m2, sheet.sheeting.m2);
   // The roof spans the scaffold (house width + 2 × (gap + frame)) and its trusses clear the ridge.
   assert.ok(Math.abs(roof.roof.span - (9.9 + 2 * 1.03)) < 0.01);
   assert.ok(roof.roof.support + 1.0 + (roof.roof.span / 2) * Math.tan((18 * Math.PI) / 180) - 0.75 > plain.ridge);
   assert.ok(roof.sides.every((s) => s.lifts >= 4 && !s.catchOn));
+  // Raised sides keep their working deck and get one on top for putting the roof up.
+  assert.deepEqual(roof.sides[0].deckLevels, [1, 4]);
   assert.equal(roof.totals.parts.lr_ridges, roof.roof.sections + 1); // Layher scaffold → Layher Keder Roof XL
   assert.equal(E.estimate({ ...h, weatherRoof: true, system: "monzon" }).totals.parts.wr_ridges > 0, true);
   const q = E.quote(roof, sel, P);

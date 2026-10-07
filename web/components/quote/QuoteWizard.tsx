@@ -11,6 +11,7 @@ import {
   modelRefFor,
   placeOrder,
   SYSTEM_BAY,
+  WEATHER_JOBS,
   SYSTEM_KEYS,
   SYSTEM_NAMES,
   readDrawing,
@@ -263,7 +264,6 @@ function PriceDetails({ quote, estimate, vat }: { quote: Quote; estimate: Estima
   const { t } = i18n;
   return (
     <div className="text-sm">
-      {estimate?.system ? <p className="mb-3 text-xs text-muted">{t("q.systemUsed", { name: SYSTEM_NAMES[estimate.system] })}</p> : null}
       {estimate ? (
         <div className="mb-4 grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-white p-3 ring-1 ring-line">
@@ -454,8 +454,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         zone: form.zone,
         urgency: form.urgency,
         partnerCode: form.partnerCode.trim() || undefined,
-        model: modelRef,
-        system: form.system
+        model: modelRef
       })
         .then((r) => {
           if (id !== reqId.current) return;
@@ -591,8 +590,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         partnerCode: form.partnerCode.trim() || undefined,
         storeys: tooTall || undefined,
         checks: checks.length ? checks : undefined,
-        model: modelRef,
-        system: form.system
+        model: modelRef
       });
       setDone({ ref: r.ref, total: r.order.quote.total, phone4: digits(form.phone).slice(-4), review: Boolean(tooTall), photos: checks.length > 0 || Boolean(tooTall) });
     } catch (e) {
@@ -788,10 +786,11 @@ function WizardBody({ start }: { start: QuoteStart }) {
           </span>
         </label>
       ) : null}
+      {(["sheeting", "weatherRoof"] as const).some((k) => WEATHER_JOBS[k].includes(form.jobType)) ? (
       <div>
         <span className="field-label">{t("q.weather")}</span>
         <div className="grid gap-3 sm:grid-cols-2">
-          {(["sheeting", "weatherRoof"] as const).map((k) => (
+          {(["sheeting", "weatherRoof"] as const).filter((k) => WEATHER_JOBS[k].includes(form.jobType)).map((k) => (
             <label key={k} className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-line">
               <input type="checkbox" className="mt-1 h-5 w-5 accent-ink" checked={form[k]} onChange={(e) => set(k, e.target.checked)} />
               <span>
@@ -802,26 +801,6 @@ function WizardBody({ start }: { start: QuoteStart }) {
           ))}
         </div>
       </div>
-      {systems.length > 1 ? (
-        <div>
-          <span className="field-label">{t("q.system")}</span>
-          <p className="mb-3 text-sm text-muted">{t("q.systemHint")}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {systems.map((k) => {
-              const o = options.find((x) => x.system === k);
-              return (
-                <Choice
-                  key={k}
-                  selected={form.system === k}
-                  onClick={() => set("system", k)}
-                  title={SYSTEM_NAMES[k]}
-                  text={t(`q.sys.${k}`)}
-                  extra={o ? <span className="mt-3 rounded-full bg-mist px-2.5 py-0.5 text-xs font-bold text-ink">{eur(o.total)} · {o.area} m²</span> : null}
-                />
-              );
-            })}
-          </div>
-        </div>
       ) : null}
     </div>,
 
@@ -1000,7 +979,11 @@ function WizardBody({ start }: { start: QuoteStart }) {
           <AnimatePresence initial={false}>
             {showBreakdown && price.quote ? (
               <motion.div key="bd" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="mb-3 max-h-[45vh] overflow-y-auto">
-                {shownShape ? <HouseModel shape={shownShape} className="mb-3 h-36 w-full" label={t("q.title")} /> : null}
+                {plan && house.ok ? (
+                  <Scaffold3D plan={plan} texts={siteTexts(i18n)} compact className="mb-3 h-44 w-full" />
+                ) : shownShape ? (
+                  <HouseModel shape={shownShape} className="mb-3 h-36 w-full" label={t("q.title")} />
+                ) : null}
                 {plan && house.ok ? (
                   <button type="button" onClick={() => setShow3d(true)} className="mb-3 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line">
                     {t("p3d.open")}
@@ -1080,7 +1063,11 @@ function WizardBody({ start }: { start: QuoteStart }) {
       ) : null}
       {/* Desktop: live price panel */}
       <aside className="hidden w-[360px] shrink-0 flex-col overflow-y-auto border-l border-line bg-mist p-7 lg:flex xl:w-[400px]">
-        {shownShape ? <HouseModel shape={shownShape} className="-mx-2 mb-2 h-44 w-[calc(100%+1rem)]" label={t("q.title")} /> : null}
+        {plan && house.ok ? (
+          <Scaffold3D plan={plan} texts={siteTexts(i18n)} compact className="-mx-2 mb-2 h-52 w-[calc(100%+1rem)]" />
+        ) : shownShape ? (
+          <HouseModel shape={shownShape} className="-mx-2 mb-2 h-44 w-[calc(100%+1rem)]" label={t("q.title")} />
+        ) : null}
         {plan && house.ok ? (
           <button type="button" onClick={() => setShow3d(true)} className="mb-4 self-start rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line hover:bg-sun-soft">
             {t("p3d.open")}
