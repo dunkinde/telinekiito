@@ -1,6 +1,7 @@
 // Typed client for the platform API used by the office (/office) and the crew app (/crew).
 // Every call goes to the same server; the login is an HttpOnly session cookie.
 import { ApiError, type Floors, type JobType, type Pricing, type Quote, type RoofType, type Urgency, type Zone, type SystemKey } from "./api";
+import type { ScaffoldPlan } from "./plan";
 
 export { ApiError };
 
@@ -455,6 +456,8 @@ export const decideChange = (id: string, approve: boolean, reason = "") =>
 
 // Office: orders
 export const getOrders = () => call<{ orders: FullOrder[]; crews: Crew[] }>("GET", "/api/office/orders");
+export const getOrderPlan = (ref: string) => call<{ plan: ScaffoldPlan }>("GET", `/api/office/orders/${enc(ref)}/plan`);
+export const shareOrderPlan = (ref: string) => call<{ token: string }>("POST", `/api/office/orders/${enc(ref)}/share`, {});
 export const getOrderDetail = (ref: string) => call<{ order: OfficeOrderDetail; crews: Crew[] }>("GET", `/api/office/orders/${enc(ref)}`);
 export interface OrderPatch {
   status?: OrderStatus;

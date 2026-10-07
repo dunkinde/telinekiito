@@ -32,6 +32,9 @@ import { useSite, type QuoteStart } from "../SiteContext";
 import { Button } from "../ui/Button";
 import { IconArrow, IconCheck, IconChevron, IconPin, IconUpload } from "../ui/Icons";
 import { Modal } from "../ui/Modal";
+import { Scaffold3D } from "../scaffold3d/Scaffold3D";
+import { siteTexts } from "../scaffold3d/siteTexts";
+import type { ScaffoldPlan } from "@/lib/plan";
 import { AddressInput } from "../ui/AddressInput";
 import { HouseModel } from "../HouseModel";
 import { shrinkImage } from "@/lib/image";
@@ -346,6 +349,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
     if (systems.length && !systems.includes(form.system)) setForm((f) => ({ ...f, system: systems[0] }));
   }, [systems, form.system]);
   const [options, setOptions] = useState<SystemOption[]>([]);
+  const [plan, setPlan] = useState<ScaffoldPlan | null>(null);
+  const [show3d, setShow3d] = useState(false);
   const [source, setSource] = useState<"form" | "address" | "ai">("form");
   const [zoneAuto, setZoneAuto] = useState(false);
   // The customer picked the zone by hand: an address picked later doesn't change it.
@@ -450,6 +455,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
           if (id !== reqId.current) return;
           setPrice({ quote: r.quote, estimate: r.estimate, loading: false });
           setOptions(r.options || []);
+          setPlan(r.plan || null);
           setAvail(r.available || null);
           setPartner(r.partner || null);
         })
@@ -973,6 +979,11 @@ function WizardBody({ start }: { start: QuoteStart }) {
             {showBreakdown && price.quote ? (
               <motion.div key="bd" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }} className="mb-3 max-h-[45vh] overflow-y-auto">
                 {shownShape ? <HouseModel shape={shownShape} className="mb-3 h-36 w-full" label={t("q.title")} /> : null}
+                {plan && house.ok ? (
+                  <button type="button" onClick={() => setShow3d(true)} className="mb-3 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line">
+                    {t("p3d.open")}
+                  </button>
+                ) : null}
                 <PriceDetails quote={price.quote} estimate={price.estimate} vat={vat} />
               </motion.div>
             ) : null}
@@ -1034,9 +1045,25 @@ function WizardBody({ start }: { start: QuoteStart }) {
         </div>
       </div>
 
+      {show3d && plan ? (
+        <div className="fixed inset-0 z-[95] flex flex-col bg-ink/80 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label={t("p3d.title")}>
+          <div className="mb-2 flex items-center justify-between gap-3 text-white">
+            <p className="font-semibold">{t("p3d.title")} · {plan.systemName}</p>
+            <button type="button" onClick={() => setShow3d(false)} className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-ink">
+              {t("p3d.close")}
+            </button>
+          </div>
+          <Scaffold3D plan={plan} texts={siteTexts(i18n)} className="flex-1" />
+        </div>
+      ) : null}
       {/* Desktop: live price panel */}
       <aside className="hidden w-[360px] shrink-0 flex-col overflow-y-auto border-l border-line bg-mist p-7 lg:flex xl:w-[400px]">
-        {shownShape ? <HouseModel shape={shownShape} className="-mx-2 mb-4 h-44 w-[calc(100%+1rem)]" label={t("q.title")} /> : null}
+        {shownShape ? <HouseModel shape={shownShape} className="-mx-2 mb-2 h-44 w-[calc(100%+1rem)]" label={t("q.title")} /> : null}
+        {plan && house.ok ? (
+          <button type="button" onClick={() => setShow3d(true)} className="mb-4 self-start rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line hover:bg-sun-soft">
+            {t("p3d.open")}
+          </button>
+        ) : null}
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{t("q.price")}</p>
         <p className="mt-2 font-display text-5xl font-extrabold tracking-[-0.02em] tabular-nums">{price.quote ? <AnimatedEur value={total} /> : tooLarge ? "–" : eur(0)}</p>
         <p className="mt-1 text-sm text-muted">

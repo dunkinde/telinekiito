@@ -2,10 +2,14 @@
 // Order panel: everything about one order, with status, schedule, messages, crew work, money and history.
 import { useEffect, useMemo, useState } from "react";
 import { SYSTEM_NAMES } from "@/lib/api";
+import type { PlanSide, ScaffoldPlan } from "@/lib/plan";
+import { Scaffold3D } from "../scaffold3d/Scaffold3D";
 import {
   INSPECTION_ITEMS,
   ORDER_FLOW,
   PART_KEYS,
+  getOrderPlan,
+  shareOrderPlan,
   createInvoice,
   deleteOrder,
   docUrl,
@@ -674,6 +678,7 @@ function ScaffoldTab({ o }: { o: OfficeOrderDetail }) {
         </Card>
       </div>
       <div className="space-y-4">
+        <PlanCard o={o} />
         <Card aria-labelledby="od-parts">
           <CardHead id="od-parts" title={t("od.parts.title")} sub={t("od.parts.sub", { kg: number(e.weightKg, lang, 0), trucks: q.trucks })} />
           <ul className="divide-y divide-line px-5 pb-3">
@@ -721,6 +726,45 @@ function ScaffoldTab({ o }: { o: OfficeOrderDetail }) {
 }
 
 /* ======================= Crew work ======================= */
+/** The order's scaffold in 3D, loaded when asked for, and a share link for the customer or crew. */
+function PlanCard({ o }: { o: OfficeOrderDetail }) {
+  const i = useT();
+  const { t } = i;
+  const { run } = useAct();
+  const [plan, setPlan] = useState<ScaffoldPlan | null>(null);
+  const [copied, setCopied] = useState(false);
+  const texts = {
+    hint: t("p3d.hint"), reset: t("p3d.reset"), loading: t("p3d.loading"), failed: t("p3d.failed"), close: t("p3d.close"),
+    sideName: (s: PlanSide) => sideText(i, s.name),
+    sideInfo: (s: PlanSide) => t("p3d.info", { bays: s.bays, levels: s.lifts, area: s.area })
+  };
+  const share = async () => {
+    const r = await run("share", () => shareOrderPlan(o.ref));
+    if (!r) return;
+    const url = `${window.location.origin}/3d?t=${r.token}`;
+    try { await navigator.clipboard.writeText(url); } catch { window.prompt(t("od.3d.share"), url); }
+    setCopied(true);
+  };
+  return (
+    <Card aria-labelledby="od-3d">
+      <CardHead id="od-3d" title={t("od.3d.title")} sub={t("od.3d.sub")} />
+      <div className="space-y-3 px-5 pb-5">
+        {plan ? (
+          <Scaffold3D plan={plan} texts={texts} className="h-[380px]" />
+        ) : (
+          <Btn variant="dark" onClick={async () => { const r = await run("plan", () => getOrderPlan(o.ref)); if (r) setPlan(r.plan); }}>
+            {t("od.3d.show")}
+          </Btn>
+        )}
+        <Btn variant="ghost" size="sm" onClick={() => void share()}>
+          {t("od.3d.share")}
+        </Btn>
+        {copied ? <p className="text-[13px] text-[#17663a]" role="status">{t("od.3d.copied")}</p> : null}
+      </div>
+    </Card>
+  );
+}
+
 function PartsList({ parts, empty }: { parts?: Parts; empty?: string }) {
   const i = useT();
   const keys = PART_KEYS.filter((k) => (parts?.[k] || 0) > 0);

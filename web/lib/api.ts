@@ -113,6 +113,8 @@ export interface QuoteResult {
   partner?: { name: string; discountPct: number } | { invalid: true } | null;
   /** The price with each scaffold system that is switched on. */
   options?: SystemOption[];
+  /** The house and scaffold for the 3D view. */
+  plan?: import("./plan").ScaffoldPlan;
 }
 
 export interface AddressResult {
