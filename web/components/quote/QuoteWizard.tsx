@@ -118,15 +118,16 @@ function AnimatedEur({ value, className }: { value: number; className?: string }
 }
 
 /* ---------- Small form pieces ---------- */
-function Seg<T extends string>({ value, options, onChange, label }: { value: T | ""; options: { v: T; label: string }[]; onChange: (v: T) => void; label: string }) {
+function Seg<T extends string>({ value, options, onChange, label, disabled }: { value: T | ""; options: { v: T; label: string }[]; onChange: (v: T) => void; label: string; disabled?: boolean }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex rounded-xl bg-mist p-1 ring-1 ring-line">
+    <div role="radiogroup" aria-label={label} aria-disabled={disabled || undefined} className={`flex rounded-xl bg-mist p-1 ring-1 ring-line ${disabled ? "opacity-60" : ""}`}>
       {options.map((o) => (
         <button
           key={o.v}
           type="button"
           role="radio"
           aria-checked={value === o.v}
+          disabled={disabled}
           onClick={() => onChange(o.v)}
           className={`relative h-10 flex-1 rounded-lg px-3 text-sm font-semibold transition-colors ${value === o.v ? "text-ink" : "text-muted hover:text-ink"}`}
         >
@@ -138,14 +139,14 @@ function Seg<T extends string>({ value, options, onChange, label }: { value: T |
   );
 }
 
-function NumField({ label, hint, unit, value, onChange, min, max, step = 0.1 }: { label: string; hint?: string; unit: string; value: string; onChange: (v: string) => void; min: number; max: number; step?: number }) {
+function NumField({ label, hint, unit, value, onChange, min, max, step = 0.1, disabled }: { label: string; hint?: string; unit: string; value: string; onChange: (v: string) => void; min: number; max: number; step?: number; disabled?: boolean }) {
   return (
     <label className="block">
       <span className="field-label">
         {label} {hint ? <span className="font-normal text-muted">· {hint}</span> : null}
       </span>
       <span className="relative block">
-        <input className="field-input pr-12" type="number" inputMode="decimal" min={min} max={max} step={step} value={value} onChange={(e) => onChange(e.target.value)} />
+        <input className={`field-input pr-12 ${disabled ? "bg-mist text-ink-soft" : ""}`} type="number" inputMode="decimal" min={min} max={max} step={step} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} />
         <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm text-muted">{unit}</span>
       </span>
     </label>
@@ -412,6 +413,10 @@ function WizardBody({ start }: { start: QuoteStart }) {
     [looked, house, form.roofType]
   );
   const modelId = modelRef ? JSON.stringify(modelRef) : "";
+  // A building measured in the 3D model keeps its measured size and roof: the fields are locked so a stray change
+  // doesn't swap the real shape for a box. The customer can unlock them on purpose.
+  const [unlocked, setUnlocked] = useState(false);
+  const locked = Boolean(looked?.model) && !unlocked;
 
   // The house as the 3D model draws it (same scaffold rules as the price).
   const modelShape = useMemo(
@@ -502,6 +507,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         setZoneAuto(true);
         setSource("address");
         setLookup({ status: "done", result: r, query: text });
+        setUnlocked(false);
         // The 3D model for a new area takes a moment to download: look again while the address is unchanged.
         if (r.modelPending && retry < 3) window.setTimeout(() => addressNow.current === text && void runLookup(text, retry + 1), 6000);
       } catch (e) {
@@ -735,9 +741,17 @@ function WizardBody({ start }: { start: QuoteStart }) {
         </div>
       ) : null}
 
+      {locked ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#e8f3ec] px-4 py-3 text-sm text-[#17663a] ring-1 ring-[#bfe0cb]" role="note">
+          <span>{t("q.locked")}</span>
+          <button type="button" onClick={() => setUnlocked(true)} className="font-semibold text-ink underline">
+            {t("q.unlock")}
+          </button>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-4">
-        <NumField label={t("q.length")} hint={t("q.lengthHint")} unit="m" min={3} max={60} value={form.length} onChange={(v) => set("length", v)} />
-        <NumField label={t("q.width")} hint={t("q.widthHint")} unit="m" min={3} max={40} value={form.width} onChange={(v) => set("width", v)} />
+        <NumField label={t("q.length")} hint={t("q.lengthHint")} unit="m" min={3} max={60} value={form.length} onChange={(v) => set("length", v)} disabled={locked} />
+        <NumField label={t("q.width")} hint={t("q.widthHint")} unit="m" min={3} max={40} value={form.width} onChange={(v) => set("width", v)} disabled={locked} />
       </div>
       <div>
         <span className="field-label">{t("q.floors")}</span>
@@ -745,12 +759,13 @@ function WizardBody({ start }: { start: QuoteStart }) {
           label={t("q.floors")}
           value={form.floors}
           options={FLOORS}
+          disabled={locked}
           onChange={(v) => setForm((f) => ({ ...f, floors: v, ...(f.eaveAuto ? { eave: String(EAVE_BY_FLOORS[v]) } : {}) }))}
         />
       </div>
       <div>
         <span className="field-label">{t("q.roof")}</span>
-        <Seg label={t("q.roof")} value={form.roofType} options={ROOFS.map((r) => ({ v: r, label: t(`roof.${r}`) }))} onChange={(v) => set("roofType", v)} />
+        <Seg label={t("q.roof")} value={form.roofType} options={ROOFS.map((r) => ({ v: r, label: t(`roof.${r}`) }))} onChange={(v) => set("roofType", v)} disabled={locked} />
       </div>
       <div>
         <button type="button" onClick={() => setShowMore((s) => !s)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-soft hover:text-ink" aria-expanded={showMore}>
@@ -762,8 +777,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
         <AnimatePresence initial={false}>
           {showMore ? (
             <motion.div key="more" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mt-4 grid grid-cols-2 gap-4">
-              <NumField label={t("q.eave")} hint={form.eaveAuto ? t("q.eaveAuto") : undefined} unit="m" min={2} max={12} value={form.eave} onChange={(v) => setForm((f) => ({ ...f, eave: v, eaveAuto: false }))} />
-              {form.roofType !== "flat" ? <NumField label={t("q.pitch")} unit="°" min={0} max={60} step={1} value={form.pitch} onChange={(v) => set("pitch", v)} /> : null}
+              <NumField label={t("q.eave")} hint={form.eaveAuto ? t("q.eaveAuto") : undefined} unit="m" min={2} max={12} value={form.eave} onChange={(v) => setForm((f) => ({ ...f, eave: v, eaveAuto: false }))} disabled={locked} />
+              {form.roofType !== "flat" ? <NumField label={t("q.pitch")} unit="°" min={0} max={60} step={1} value={form.pitch} onChange={(v) => set("pitch", v)} disabled={locked} /> : null}
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -999,9 +1014,16 @@ function WizardBody({ start }: { start: QuoteStart }) {
               <p className="font-display text-2xl font-extrabold tabular-nums">{price.quote ? <AnimatedEur value={total} /> : tooLarge ? "–" : eur(0)}</p>
             </div>
             {price.quote ? (
-              <button type="button" onClick={() => setShowBreakdown((s) => !s)} className="text-sm font-semibold text-ink-soft underline-offset-4 hover:underline">
-                {showBreakdown ? t("q.breakdownHide") : t("q.breakdown")}
-              </button>
+              <span className="flex items-center gap-3">
+                {plan && house.ok ? (
+                  <button type="button" onClick={() => setShow3d(true)} className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line">
+                    3D
+                  </button>
+                ) : null}
+                <button type="button" onClick={() => setShowBreakdown((s) => !s)} className="text-sm font-semibold text-ink-soft underline-offset-4 hover:underline">
+                  {showBreakdown ? t("q.breakdownHide") : t("q.breakdown")}
+                </button>
+              </span>
             ) : (
               tooLarge ? (
                 <p className="max-w-[60%] text-right text-xs text-ink-soft">

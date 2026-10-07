@@ -104,6 +104,9 @@ export function Pricing() {
                       </span>
                       <span className={`text-sm ${soft}`}>{t("price.incl")}</span>
                     </p>
+                    {config?.examples ? (
+                      <p className={`mt-1 text-xs ${soft}`}>{t("price.forExample", { area: config.examples.area })}</p>
+                    ) : null}
                     <p className={`mt-4 flex flex-1 items-start gap-2 border-t pt-4 text-sm font-medium short:mt-3 short:pt-3 ${featured ? "border-line" : "border-white/10"}`}>
                       <IconCheck className={`mt-0.5 h-4 w-4 shrink-0 ${featured ? "text-sun-deep" : "text-sun"}`} />
                       {pick(PRICE_EXTRA[u])}
@@ -135,7 +138,9 @@ export function Pricing() {
             </button>
           ) : null}
         </div>
-        <p className="mt-2.5 text-xs text-white/50">* {t("price.example")}</p>
+        <p className="mt-3 text-sm text-white/70">
+          * {t("price.example", { area: config?.examples.area ?? "–" })}
+        </p>
       </div>
 
       <Modal open={ratesOpen} onClose={() => setRatesOpen(false)} label={t("price.rates")} closeLabel={t("q.close")} size="md">
