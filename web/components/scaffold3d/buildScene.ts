@@ -2,7 +2,7 @@
 // standards, ledgers, transoms, decks, guardrails, toe boards, diagonals and roof-catch net, bay by bay.
 // Plan coordinates (x east, y north, z up) become three.js coordinates (x, z, -y).
 import type * as THREE_NS from "three";
-import type { P3, PlanSide, ScaffoldPlan } from "@/lib/plan";
+import type { P2, P3, PlanSide, ScaffoldPlan } from "@/lib/plan";
 
 type THREE = typeof THREE_NS;
 
@@ -90,7 +90,41 @@ function boxes(T: THREE, list: { c: THREE_NS.Vector3; size: [number, number, num
   return mesh;
 }
 
-function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects {
+/** How a side's ends meet the scaffolds round it: the other side's top deck height at each end, and coupler tubes. */
+interface Joins { top: [number, number]; ties: { a: P2; b: P2; top: number }[] }
+
+/**
+ * Corners: an end of one side that stops just short of another side (0.1 m, measured corners are seldom square) is
+ * coupled to it with short tubes on every level the two share, and needs no end guardrail up to the other's top.
+ */
+function joinsOf(plan: ScaffoldPlan): Joins[] {
+  const W = plan.width;
+  const runOf = (s: PlanSide) => s.run ?? s.bays * plan.bay;
+  const topOf = (s: PlanSide) => plan.jack + (s.half ? plan.half ?? 1 : 0) + plan.lift * s.lifts;
+  return plan.sides.map((s, i) => {
+    const j: Joins = { top: [-1, -1], ties: [] };
+    const g = s.gap ?? plan.gap, run = runOf(s);
+    for (const k of [0, 1] as const) {
+      const t = k ? run : 0;
+      for (const d of [g, g + W]) {
+        const p: P2 = [s.at[0] + s.dir[0] * t + s.out[0] * d, s.at[1] + s.dir[1] * t + s.out[1] * d];
+        plan.sides.some((o, m) => {
+          if (m === i) return false;
+          const go = o.gap ?? plan.gap, vx = p[0] - o.at[0], vy = p[1] - o.at[1];
+          const to = vx * o.dir[0] + vy * o.dir[1], dd = vx * o.out[0] + vy * o.out[1];
+          if (to < -0.02 || to > runOf(o) + 0.02 || dd < go - 0.35 || dd > go + W + 0.35) return false;
+          const top = Math.min(topOf(s), topOf(o)), dc = Math.min(go + W, Math.max(go, dd));
+          j.top[k] = Math.max(j.top[k], top);
+          if (Math.abs(dc - dd) > 0.01) j.ties.push({ a: p, b: [o.at[0] + o.dir[0] * to + o.out[0] * dc, o.at[1] + o.dir[1] * to + o.out[1] * dc], top });
+          return true;
+        });
+      }
+    }
+    return j;
+  });
+}
+
+function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide, joins: Joins = { top: [-1, -1], ties: [] }): SideObjects {
   const group = new T.Group();
   group.userData.side = side.i;
   const tubeMat = new T.MeshStandardMaterial({ color: COLORS.tube, metalness: 0.4, roughness: 0.5 });
@@ -148,8 +182,9 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
     if (atCatch) continue; // the catch wall is the side protection here
     for (const h of [0.5, 1.0]) {
       tl.push([P(0, outer, z + h), P(run, outer, z + h)]);
-      tl.push([P(0, inner, z + h), P(0, outer, z + h)]);
-      tl.push([P(run, inner, z + h), P(run, outer, z + h)]);
+      // No end rail where the end is coupled to the next scaffold at this level.
+      if (z > joins.top[0] + 0.01) tl.push([P(0, inner, z + h), P(0, outer, z + h)]);
+      if (z > joins.top[1] + 0.01) tl.push([P(run, inner, z + h), P(run, outer, z + h)]);
     }
     for (let k = 0; k < side.bays; k++) {
       const c = P((k + 0.5) * bay, mid, z + 0.03);
@@ -168,6 +203,11 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide): SideObjects 
     for (let k = 0; k < side.bays; k++) toeList.push({ c: P((k + 0.5) * bay, catchD - 0.02, catchZ + 0.08), size: [bay - 0.04, 0.15, 0.025], yaw });
   }
 
+  // Couplers to the scaffold round the corner, on every level both reach.
+  for (const tie of joins.ties) for (let l = 0; l <= side.lifts; l++) {
+    const z = Z(l);
+    if (z <= tie.top + 0.01) tl.push([toV(T, [tie.a[0], tie.a[1], z]), toV(T, [tie.b[0], tie.b[1], z])]);
+  }
   group.add(tubes(T, tl, 0.024, tubeMat));
   if (deckList.length) group.add(boxes(T, deckList, deckMat));
   if (hatchList.length) group.add(boxes(T, hatchList, hatchMat));
@@ -248,7 +288,8 @@ export function buildScene(T: THREE, plan: ScaffoldPlan) {
     }
   }
   root.add(house);
-  const sides = plan.sides.map((s) => sideObjects(T, plan, s));
+  const joins = joinsOf(plan);
+  const sides = plan.sides.map((s, i) => sideObjects(T, plan, s, joins[i]));
   for (const s of sides) root.add(s.group);
 
   if (plan.roof) root.add(roofObject(T, plan.roof));
