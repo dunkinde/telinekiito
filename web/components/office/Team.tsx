@@ -138,7 +138,7 @@ function StaffDialog({ open, person, crews, onClose, onSaved }: { open: boolean;
           {(id, h) => <Input id={id} type="tel" value={d.phone} onChange={(v) => setD({ ...d, phone: v })} maxLength={40} describedBy={h} autoComplete="off" />}
         </Field>
         <Field label={t("team.role")} hint={t(`team.roleHint.${d.role}`)}>
-          {(id, h) => <Select id={id} value={d.role} onChange={(v) => setD({ ...d, role: v as Role })} describedBy={h} options={(["worker", "leader", "owner"] as Role[]).map((r) => ({ value: r, label: roleLabel(i, r) }))} />}
+          {(id, h) => <Select id={id} value={d.role} onChange={(v) => setD({ ...d, role: v as Role })} describedBy={h} options={(["worker", "leader", "sales", "owner"] as Role[]).map((r) => ({ value: r, label: roleLabel(i, r) }))} />}
         </Field>
         <Field label={t("team.crew")}>
           {(id) => <Select id={id} value={d.crewId} onChange={(v) => setD({ ...d, crewId: v })} options={[{ value: "", label: t("team.noCrew") }, ...crews.map((c) => ({ value: c.id, label: c.name }))]} />}
@@ -315,7 +315,7 @@ export function Team() {
                                   ) : null}
                                 </td>
                                 <td className={td}>
-                                  <Badge tone={s.role === "owner" ? "ink" : s.role === "leader" ? "sun" : "neutral"}>{roleLabel(i, s.role)}</Badge>
+                                  <Badge tone={s.role === "owner" ? "ink" : s.role === "leader" || s.role === "sales" ? "sun" : "neutral"}>{roleLabel(i, s.role)}</Badge>
                                 </td>
                                 <td className={td}>{crew ? <span className="inline-flex items-center gap-1.5"><CrewDot color={crew.color} />{crew.name}</span> : <span className="text-muted">{t("team.noCrew")}</span>}</td>
                                 <td className={td}>{LANG_NAMES[s.lang] || s.lang}</td>

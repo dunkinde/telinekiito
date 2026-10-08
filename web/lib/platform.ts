@@ -6,7 +6,7 @@ import type { ScaffoldPlan } from "./plan";
 export { ApiError };
 
 /* ---------------- Types ---------------- */
-export type Role = "owner" | "leader" | "worker";
+export type Role = "owner" | "leader" | "worker" | "sales";
 export type StaffLang = "fi" | "en" | "ru";
 export type OrderStatus = "received" | "confirmed" | "loading" | "en_route" | "erected" | "pickup_requested" | "dismantled" | "closed" | "cancelled";
 export const ORDER_FLOW: OrderStatus[] = ["received", "confirmed", "loading", "en_route", "erected", "pickup_requested", "dismantled", "closed"];

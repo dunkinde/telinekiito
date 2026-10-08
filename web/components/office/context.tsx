@@ -74,10 +74,18 @@ export function useT(): I18n {
 }
 
 /* ---------------- Navigation ---------------- */
-export const SECTIONS = ["overview", "orders", "calendar", "map", "approvals", "messages", "stock", "team", "invoices", "customers", "reviews", "reports", "settings"] as const;
+export const SECTIONS = ["overview", "orders", "calendar", "map", "approvals", "messages", "leads", "crm", "stock", "team", "invoices", "customers", "reviews", "reports", "settings"] as const;
 export type Section = (typeof SECTIONS)[number];
 /** Sections that only the head of company sees (their endpoints refuse team leaders). */
 export const OWNER_ONLY: Section[] = ["invoices", "customers", "reviews", "reports", "settings"];
+/** Sales sections: the head of company and the sales role only. Sales sees nothing else. */
+export const SALES_SECTIONS: Section[] = ["leads", "crm"];
+export function canSee(role: string, s: Section) {
+  if (role === "owner") return true;
+  if (role === "sales") return SALES_SECTIONS.includes(s);
+  return !OWNER_ONLY.includes(s) && !SALES_SECTIONS.includes(s);
+}
+export const homeSection = (role: string): Section => (role === "sales" ? "leads" : "overview");
 export interface Route {
   section: Section;
   params: Record<string, string>;
@@ -127,12 +135,13 @@ export function OfficeProvider({ me, onLogout, onExpired, children }: { me: Me; 
   const i = useT();
   const toast = useToast();
   const owner = me.user.role === "owner";
+  const sales = me.user.role === "sales";
   const [orders, setOrders] = useState<FullOrder[] | null>(null);
   const [crews, setCrews] = useState<Crew[]>(() => me.crews.map((c) => ({ ...c, truck: "" })));
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
   const [pending, setPending] = useState<ChangeRequest[] | null>(null);
   const [version, setVersion] = useState(0);
-  const [route, setRoute] = useState<Route>({ section: "overview", params: {} });
+  const [route, setRoute] = useState<Route>({ section: homeSection(me.user.role), params: {} });
 
   const fail = useCallback(
     (e: unknown) => {
@@ -151,6 +160,8 @@ export function OfficeProvider({ me, onLogout, onExpired, children }: { me: Me; 
     if (busy.current) return;
     busy.current = true;
     try {
+      // Sales has no access to orders, alerts or approvals: its tabs load their own data.
+      if (sales) return;
       const [o, a, c] = await Promise.allSettled([getOrders(), getAlerts(), getChanges("pending")]);
       if (o.status === "fulfilled") {
         setOrders(o.value.orders);
@@ -164,7 +175,7 @@ export function OfficeProvider({ me, onLogout, onExpired, children }: { me: Me; 
       busy.current = false;
       setVersion((v) => v + 1);
     }
-  }, [fail]);
+  }, [fail, sales]);
 
   // First load, then every 45 s while the tab is visible (and right away when it becomes visible again).
   useEffect(() => {
@@ -184,13 +195,13 @@ export function OfficeProvider({ me, onLogout, onExpired, children }: { me: Me; 
   useEffect(() => {
     const on = () => {
       const r = parseHash();
-      if (!owner && OWNER_ONLY.includes(r.section)) r.section = "overview";
+      if (!canSee(me.user.role, r.section)) r.section = homeSection(me.user.role);
       setRoute(r);
     };
     on();
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
-  }, [owner]);
+  }, [me.user.role]);
 
   const go = useCallback((r: Route, replace = false) => {
     const h = hashOf(r);

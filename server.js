@@ -23,6 +23,8 @@ const S = require("./lib/stock");
 const Docs = require("./lib/docs");
 const B = require("./lib/business");
 const { finvoice } = require("./lib/finvoice");
+const PR = require("./lib/prospects");
+const CRM = require("./lib/crm");
 const { HttpError } = O;
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -154,7 +156,9 @@ function sessionUser(req) {
   if (!st || st.active === false || (st.ver || 0) !== (s.ver || 0)) return null;
   return P.publicStaff(st);
 }
-function requireStaff(req, roles) {
+// Without a role list: the operational roles. The sales role passes only where it is named (leads and CRM).
+const OPS_ROLES = ["owner", "leader", "worker"];
+function requireStaff(req, roles = OPS_ROLES) {
   const u = sessionUser(req);
   if (!u) throw new HttpError(401, "login_required", "Log in first.");
   if (roles && !roles.includes(u.role)) throw new HttpError(403, "forbidden", "Your role can't do that.");
@@ -797,13 +801,163 @@ function logout(req, m, url, res) {
   return { ok: true };
 }
 function me(req) {
-  const user = requireStaff(req);
+  const user = requireStaff(req, P.ROLES);
   const o = ops();
   return { user, crews: crews().map((c) => ({ id: c.id, name: c.name, color: c.color, active: c.active !== false })), company: o.company.name, today: P.today() };
 }
 route("POST", /^\/api\/(office|staff)\/login$/, login);
 route("POST", /^\/api\/(office|staff)\/logout$/, logout);
 route("GET", /^\/api\/(office|staff)\/me$/, me);
+
+/* ---------- Sales: prospects from public sources, and the CRM (owner and sales only) ---------- */
+const SALES = ["owner", "sales"];
+const requireSales = (req) => requireStaff(req, SALES);
+// Research done by hand on the strongest projects (evidence, scope, contact route), merged into the prospects.
+let RESEARCH = {};
+try { RESEARCH = JSON.parse(fs.readFileSync(path.join(__dirname, "lib", "prospect-research.json"), "utf8")).prospects || {}; } catch { RESEARCH = {}; }
+const PRIORITIES = ["high", "medium", "low", "hold"];
+function prospectView(p, orgs) {
+  p.research = RESEARCH[p.id] || p.research || null; // the research file is current even before the next rebuild
+  PR.finish(p, store, CRM, P.today());
+  const pr = p.priorityOverride || p.priority;
+  const mgr = orgs && p.links && p.links.managerId ? orgs[p.links.managerId] : null;
+  return {
+    id: p.id, tier: p.tier, source: p.source, date: p.date, addresses: (p.addresses || []).slice(0, 4), moreAddresses: Math.max(0, (p.addresses || []).length - 4),
+    priority: pr, priorityAuto: p.priority, score: p.score, relevance: p.relevance, timing: p.timing, start: p.start, end: p.end, scope: p.scope, reasons: p.reasons,
+    status: p.status, assigneeId: p.assigneeId || null, nextAction: p.nextAction || "", nextDate: p.nextDate || null, firstSeen: p.firstSeen, gone: Boolean(p.gone),
+    built: p.built, apartments: p.apartments, buildings: p.buildings, floors: p.floors, use: p.use, op: p.op,
+    housingName: p.housingName, managerName: p.managerName, contact: p.contact, research: p.research ? { summary: p.research.summary || "" } : null,
+    noteCount: (p.notes || []).filter((n) => n.text).length, links: p.links || {}, coords: p.coords || null,
+    managerPhone: mgr ? mgr.phone || "" : "", managerEmail: mgr ? mgr.email || "" : ""
+  };
+}
+function salesStaff() {
+  const list = store.list("staff", { limit: 500 }).filter((x) => x.active !== false && SALES.includes(x.role)).map((x) => ({ id: x.id, name: x.name, role: x.role }));
+  return [{ id: MASTER_ID, name: "Owner", role: "owner" }, ...list];
+}
+function getProspect(id) {
+  const p = store.get("prospect", id);
+  if (!p) throw new HttpError(404, "not_found", "No such prospect.");
+  return p;
+}
+const prospectOut = (p) => ({ ...p, priority: p.priorityOverride || p.priority, priorityAuto: p.priority });
+route("GET", /^\/api\/office\/prospects$/, (req) => {
+  requireSales(req);
+  const orgs = Object.fromEntries(CRM.list(store).map((o) => [o.id, o]));
+  return { prospects: store.list("prospect", { limit: 20000 }).map((p) => prospectView(p, orgs)), sync: PR.syncStatus(store, P.today()), staff: salesStaff(), statuses: PR.STATUSES };
+});
+route("GET", /^\/api\/office\/prospects\/sync$/, (req) => {
+  requireSales(req);
+  return PR.syncStatus(store, P.today());
+});
+route("POST", /^\/api\/office\/prospects\/sync$/, async (req) => {
+  requireSales(req);
+  const body = await readJson(req, 1024);
+  const force = ["all", ...Object.keys(PR.SOURCES)].includes(body.source) ? body.source : "all";
+  PR.sync(store, { crm: CRM, today: P.today(), force, research: RESEARCH, log: (m) => console.error("[prospects]", m) }).catch((e) => console.error("[prospects]", e.message));
+  return PR.syncStatus(store, P.today());
+});
+route("PATCH", /^\/api\/office\/prospects\/settings$/, async (req) => {
+  requireOwner(req);
+  const body = await readJson(req, 1024);
+  const st = PR.state(store, P.today());
+  if (typeof body.enabled === "boolean") st.enabled = body.enabled;
+  if (body.since && /^\d{4}-\d{2}-\d{2}$/.test(body.since)) st.since = body.since;
+  store.setSetting("prospects.sync", st);
+  return PR.syncStatus(store, P.today());
+});
+route("GET", /^\/api\/office\/prospects\/([^/]+)$/, (req, m) => {
+  requireSales(req);
+  const p = getProspect(decodeURIComponent(m[1]));
+  p.research = RESEARCH[p.id] || p.research || null;
+  PR.finish(p, store, CRM, P.today());
+  const org = (id) => (id ? CRM.get(store, id) : null);
+  const l = p.links || {};
+  return { prospect: prospectOut(p), orgs: { housing: org(l.housingId), manager: org(l.managerId), contractor: org(l.contractorId), owner: org(l.ownerId) }, staff: salesStaff(), statuses: PR.STATUSES };
+});
+route("PATCH", /^\/api\/office\/prospects\/([^/]+)$/, async (req, m) => {
+  const user = requireSales(req);
+  const p = getProspect(decodeURIComponent(m[1]));
+  const body = await readJson(req, 16 * 1024);
+  const log = (entry) => (p.notes = [{ id: store.newId("pnt"), at: new Date().toISOString(), by: user.name, text: "", ...entry }, ...(p.notes || [])].slice(0, 300));
+  if (body.status !== undefined) {
+    if (!PR.STATUSES.includes(body.status)) throw new HttpError(400, "invalid_fields", "Unknown status.", { fields: ["status"] });
+    if (body.status !== p.status) log({ status: body.status });
+    p.status = body.status;
+  }
+  if (body.assigneeId !== undefined) {
+    if (body.assigneeId && !salesStaff().some((x) => x.id === body.assigneeId)) throw new HttpError(400, "invalid_fields", "Pick someone from sales.", { fields: ["assigneeId"] });
+    p.assigneeId = body.assigneeId || null;
+  }
+  if (body.nextAction !== undefined) p.nextAction = String(body.nextAction || "").slice(0, 300);
+  if (body.nextDate !== undefined) p.nextDate = body.nextDate && /^\d{4}-\d{2}-\d{2}$/.test(body.nextDate) ? body.nextDate : null;
+  if (body.priorityOverride !== undefined) {
+    if (body.priorityOverride && !PRIORITIES.includes(body.priorityOverride)) throw new HttpError(400, "invalid_fields", "Unknown priority.", { fields: ["priorityOverride"] });
+    p.priorityOverride = body.priorityOverride || null;
+  }
+  if (body.links && typeof body.links === "object") {
+    p.links = p.links || {};
+    for (const f of ["housingId", "managerId", "contractorId", "ownerId"]) {
+      if (body.links[f] === undefined) continue;
+      if (body.links[f] && !CRM.get(store, body.links[f])) throw new HttpError(400, "invalid_fields", "No such organisation.", { fields: [f] });
+      p.links[f] = body.links[f] || null;
+    }
+    if (p.links.housingId && p.links.managerId) CRM.relate(store, p.links.housingId, p.links.managerId);
+  }
+  if (body.note) {
+    const t = String(body.note).trim().slice(0, 2000);
+    if (t) log({ text: t });
+  }
+  PR.finish(p, store, CRM, P.today());
+  store.put("prospect", p);
+  return { prospect: prospectOut(p) };
+});
+
+route("GET", /^\/api\/office\/crm\/orgs$/, (req) => {
+  const user = requireSales(req);
+  const counts = {};
+  for (const p of store.list("prospect", { limit: 20000 })) for (const id of Object.values(p.links || {})) if (id) counts[id] = (counts[id] || 0) + 1;
+  const orgs = CRM.list(store).map((o) => ({ id: o.id, type: o.type, name: o.name, businessId: o.businessId, email: o.email, phone: o.phone, website: o.website, stage: o.stage || "none", tags: o.tags || [], source: o.source, contacts: (o.contacts || []).length, prospects: counts[o.id] || 0, updatedAt: o.updatedAt, accountId: o.accountId || null }));
+  const accounts = user.role === "owner" ? store.list("account", { limit: 2000 }).map((a) => ({ id: a.id, name: a.name })) : [];
+  return { orgs, types: CRM.TYPES, stages: CRM.STAGES, accounts };
+});
+route("POST", /^\/api\/office\/crm\/orgs$/, async (req) => {
+  const user = requireSales(req);
+  return { org: CRM.save(store, await readJson(req, 16 * 1024), user) };
+});
+route("GET", /^\/api\/office\/crm\/orgs\/([\w-]+)$/, (req, m) => {
+  requireSales(req);
+  const o = CRM.get(store, m[1]);
+  if (!o) throw new HttpError(404, "not_found", "No such organisation.");
+  const orgs = Object.fromEntries(CRM.list(store).map((x) => [x.id, x]));
+  const prospects = store.list("prospect", { limit: 20000 }).filter((p) => Object.values(p.links || {}).includes(o.id)).map((p) => prospectView(p, orgs));
+  return { org: o, related: (o.related || []).map((id) => orgs[id]).filter(Boolean).map((x) => ({ id: x.id, name: x.name, type: x.type })), prospects };
+});
+route("PATCH", /^\/api\/office\/crm\/orgs\/([\w-]+)$/, async (req, m) => {
+  const user = requireSales(req);
+  return { org: CRM.save(store, await readJson(req, 16 * 1024), user, m[1]) };
+});
+route("DELETE", /^\/api\/office\/crm\/orgs\/([\w-]+)$/, (req, m) => {
+  requireOwner(req);
+  return { ok: CRM.remove(store, m[1]) };
+});
+route("POST", /^\/api\/office\/crm\/orgs\/([\w-]+)\/contacts$/, async (req, m) => {
+  const user = requireSales(req);
+  return { org: CRM.saveContact(store, m[1], await readJson(req, 8 * 1024), user) };
+});
+route("PATCH", /^\/api\/office\/crm\/orgs\/([\w-]+)\/contacts\/([\w-]+)$/, async (req, m) => {
+  const user = requireSales(req);
+  return { org: CRM.saveContact(store, m[1], await readJson(req, 8 * 1024), user, m[2]) };
+});
+route("DELETE", /^\/api\/office\/crm\/orgs\/([\w-]+)\/contacts\/([\w-]+)$/, (req, m) => {
+  requireSales(req);
+  return { org: CRM.removeContact(store, m[1], m[2]) };
+});
+route("POST", /^\/api\/office\/crm\/orgs\/([\w-]+)\/activity$/, async (req, m) => {
+  const user = requireSales(req);
+  const body = await readJson(req, 8 * 1024);
+  return { org: CRM.addActivity(store, m[1], body.text, user) };
+});
 
 /* ---------- Crew app ---------- */
 route("GET", /^\/api\/crew\/jobs$/, (req, m, url) => {
@@ -1661,6 +1815,16 @@ if (require.main === module || process.env.RUN_SERVER === "1") {
   }, 10 * 60e3);
   timer.unref();
   setTimeout(() => tick().catch(() => {}), 15e3).unref();
+  // Prospect sources, each on its own schedule (lib/prospects.js). Off in development unless PROSPECTS_SYNC=1.
+  const prospectsAuto = process.env.PROSPECTS_SYNC ? process.env.PROSPECTS_SYNC === "1" : process.env.NODE_ENV === "production";
+  if (prospectsAuto) {
+    const prospectTick = () => {
+      if (PR.state(store, P.today()).enabled === false) return;
+      PR.sync(store, { crm: CRM, today: P.today(), research: RESEARCH, log: (m) => console.error("[prospects]", m) }).catch((e) => console.error("[prospects]", e.message));
+    };
+    setInterval(prospectTick, 10 * 60e3).unref();
+    setTimeout(prospectTick, 2 * 60e3).unref();
+  }
 }
 
 function shutdown() {

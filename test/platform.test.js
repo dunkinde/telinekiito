@@ -285,3 +285,34 @@ test("partner code, switches, content and messaging status", async () => {
   assert.ok(t.templates.confirmed.fi.subject.includes("{ref}"));
   assert.equal((await req("GET", "/healthz/services")).json.email, false);
 });
+
+
+test("sales role: leads and CRM only", async () => {
+  const owner = await loginAs({ password: PASSWORD });
+  const sales = (await req("POST", "/api/office/staff", { name: "Sanna Sales", phone: "040 333 0001", role: "sales", pin: "5678", lang: "fi" }, owner)).json.staff;
+  assert.equal(sales.role, "sales");
+  const s = await loginAs({ phone: "040 333 0001", pin: "5678" });
+  assert.equal((await req("GET", "/api/staff/me", undefined, s)).status, 200);
+  // No orders, crew jobs, money or settings.
+  for (const url of ["/api/office/orders", "/api/crew/jobs", "/api/office/invoices", "/api/office/accounts", "/api/office/alerts"]) assert.equal((await req("GET", url, undefined, s)).status, 403, url);
+  // Leads and CRM work for sales and the owner, not for a team leader.
+  assert.equal((await req("GET", "/api/office/prospects", undefined, s)).status, 200);
+  const leaderRec = (await req("POST", "/api/office/staff", { name: "Leo Leader", phone: "040 333 0002", role: "leader", pin: "2468", lang: "fi" }, owner)).json.staff;
+  assert.ok(leaderRec);
+  const l = await loginAs({ phone: "040 333 0002", pin: "2468" });
+  assert.equal((await req("GET", "/api/office/prospects", undefined, l)).status, 403);
+  assert.equal((await req("GET", "/api/office/crm/orgs", undefined, l)).status, 403);
+  // CRM: an organisation, a person, an activity; duplicates refused; only the owner deletes.
+  const org = (await req("POST", "/api/office/crm/orgs", { name: "Testi Isännöinti Oy", type: "property_manager", email: "info@example.fi" }, s)).json.org;
+  assert.equal(org.type, "property_manager");
+  assert.equal((await req("POST", "/api/office/crm/orgs", { name: "Testi Isännöinti Oy", type: "property_manager" }, s)).status, 409);
+  assert.equal((await req("POST", "/api/office/crm/orgs", { name: "X", type: "property_manager", email: "not-an-email" }, s)).status, 400);
+  let o = (await req("POST", `/api/office/crm/orgs/${org.id}/contacts`, { name: "Maija Isännöitsijä", role: "isännöitsijä", phone: "09 123 456", primary: true }, s)).json.org;
+  assert.equal(o.contacts.length, 1);
+  o = (await req("POST", `/api/office/crm/orgs/${org.id}/activity`, { text: "Soitettu, tarjouspyyntö tulossa" }, s)).json.org;
+  assert.equal(o.activity[0].by, "Sanna Sales");
+  const list = (await req("GET", "/api/office/crm/orgs", undefined, s)).json;
+  assert.ok(list.orgs.some((x) => x.id === org.id && x.contacts === 1));
+  assert.equal((await req("DELETE", `/api/office/crm/orgs/${org.id}`, undefined, s)).status, 403);
+  assert.equal((await req("DELETE", `/api/office/crm/orgs/${org.id}`, undefined, owner)).status, 200);
+});

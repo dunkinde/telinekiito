@@ -436,3 +436,48 @@ test("work on the walls: a walking platform on every level, the top of the 1 m b
   const g = E.estimate({ length: 12, width: 9, eave: 4.3, roofType: "hip", pitch: 30, jobType: "gutters" }).sides[0];
   assert.equal(g.decked, 1);
 });
+
+
+test("prospects: what is a scaffold opportunity, and how sure we are", () => {
+  const PR = require("../lib/prospects");
+  const today = "2026-10-08";
+  const sp = (text, start, end) => ({ id: "AL1", address: "Testikatu 1", text, start, end, timing: PR.timingOf({ start, end }, today) });
+  const base = { tier: "A", ops: ["Muu muutostyö"], notices: [], street: [], date: "2026-09-01", buildings: 1 };
+  // Site work about to start with scaffolds: the best lead.
+  let a = PR.assess({ ...base, street: [sp("Työstä vastaava varaa tilaa julkisivuremontille; telineet", "2026-10-20", "2027-03-31")] }, today);
+  assert.equal(a.priority, "high");
+  assert.deepEqual(a.reasons, ["starts_soon"]);
+  // Scaffolds up for months: someone supplies them already – a relationship lead, not an open purchase.
+  a = PR.assess({ ...base, street: [sp("Kiinteistöremontti; telineet ja varastointi", "2026-05-01", "2026-12-31")] }, today);
+  assert.equal(a.priority, "medium");
+  assert.ok(a.inPlace);
+  // Work from a personnel lift, snow clearing and pipe relining need no scaffolding.
+  for (const t of ["Julkisivutyö henkilönostimella", "Nostotyö: lumenpudotus", "Viemärin saneeraus sukitusmenetelmällä"]) {
+    a = PR.assess({ ...base, tier: "S", street: [sp(t, "2026-10-20", "2026-10-25")] }, today);
+    assert.notEqual(a.priority, "high", t);
+  }
+  // A facade survey is an early signal of a coming renovation.
+  a = PR.assess({ ...base, tier: "S", street: [sp("Nostotyö: julkisivun tutkimus", "2026-10-15", "2026-10-15")] }, today);
+  assert.equal(a.relevance, "future");
+  // A permit notice decides the scope: facade repair is exterior, pipe renovation is not.
+  a = PR.assess({ ...base, notices: [{ id: "LP-1", operation: "", description: "Asuinkerrostalon julkisivujen korjaus" }] }, today);
+  assert.equal(a.priority, "high");
+  a = PR.assess({ ...base, notices: [{ id: "LP-2", operation: "", description: "Linjasaneeraus" }] }, today);
+  assert.equal(a.relevance, "unlikely");
+  // An extension permit alone (often attic or basement floor area) is likely, not confirmed.
+  a = PR.assess({ ...base, ops: ["Laajentaminen"] }, today);
+  assert.equal(a.relevance, "likely");
+  // Homeowners: letters only.
+  a = PR.assess({ ...base, tier: "C" }, today);
+  assert.equal(a.priority, "low");
+});
+
+test("prospects: a housing company name must start with the street (no other towns, no substrings)", () => {
+  const { nameCovers } = require("../lib/prospects");
+  assert.ok(nameCovers("Asunto Oy Helsinginkatu 12", "Helsinginkatu", 12));
+  assert.ok(nameCovers("Asunto Oy Kuparitie 10-12", "Kuparitie", 12));
+  assert.ok(!nameCovers("Asunto Oy Koivikkotie 1-3", "Koivikkotie", 2)); // other side of the street
+  assert.ok(!nameCovers("Asunto Oy Vantaan Koivikkotie 2", "Koivikkotie", 2));
+  assert.ok(!nameCovers("Kiinteistö Oy Karlskronabulevardi 9-11", "Bulevardi", 11));
+  assert.ok(nameCovers("Asunto Oy Helsingin Satamakatu 11", "Satamakatu", 11));
+});

@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { markAlertsRead, type Alert } from "@/lib/platform";
 import { Logo, LogoMark } from "../Logo";
-import { OWNER_ONLY, useOffice, useT, type Section } from "./context";
+import { canSee, useOffice, useT, type Section } from "./context";
+import { Leads } from "./Leads";
+import { Crm } from "./Crm";
 import { ago, initials } from "./format";
 import { alertText, alertTypeLabel, roleLabel } from "./i18n";
 import {
@@ -51,6 +53,8 @@ const ICONS: Record<Section, (p: { className?: string }) => React.ReactNode> = {
   map: IMap,
   approvals: IApprove,
   messages: IMessages,
+  leads: IReports,
+  crm: ICustomers,
   stock: IStock,
   team: ITeam,
   invoices: IInvoice,
@@ -59,8 +63,9 @@ const ICONS: Record<Section, (p: { className?: string }) => React.ReactNode> = {
   reports: IReports,
   settings: ISettings
 };
-const GROUPS: { key: "daily" | "resources" | "money"; items: Section[] }[] = [
+const GROUPS: { key: "daily" | "sales" | "resources" | "money"; items: Section[] }[] = [
   { key: "daily", items: ["overview", "orders", "calendar", "map", "approvals", "messages"] },
+  { key: "sales", items: ["leads", "crm"] },
   { key: "resources", items: ["stock", "team"] },
   { key: "money", items: ["invoices", "customers", "reviews", "reports", "settings"] }
 ];
@@ -84,12 +89,12 @@ function useBadges() {
 
 function NavList({ onPick }: { onPick?: () => void }) {
   const { t, tk } = useT();
-  const { owner, route, nav } = useOffice();
+  const { user, route, nav } = useOffice();
   const badges = useBadges();
   return (
     <nav aria-label={t("nav.label")} className="flex flex-col gap-5">
       {GROUPS.map((g) => {
-        const items = g.items.filter((s) => owner || !OWNER_ONLY.includes(s));
+        const items = g.items.filter((s) => canSee(user.role, s));
         if (!items.length) return null;
         return (
           <div key={g.key}>
@@ -363,7 +368,7 @@ export function Shell() {
             <p className="hidden truncate text-[12.5px] text-muted lg:block">{sub}</p>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
-            {!owner ? <span className="mr-1 hidden rounded-full bg-mist px-2.5 py-1 text-[12px] font-semibold text-ink-soft ring-1 ring-line xl:inline">{t("top.leaderView")}</span> : null}
+            {me.user.role === "leader" ? <span className="mr-1 hidden rounded-full bg-mist px-2.5 py-1 text-[12px] font-semibold text-ink-soft ring-1 ring-line xl:inline">{t("top.leaderView")}</span> : null}
             <LangSwitch className="hidden sm:inline-flex" />
             <Bell />
             <UserMenu />
@@ -415,6 +420,10 @@ function SectionView({ section }: { section: Section }) {
       return <Approvals />;
     case "messages":
       return <Messages />;
+    case "leads":
+      return <Leads />;
+    case "crm":
+      return <Crm />;
     case "stock":
       return <Stock />;
     case "team":
