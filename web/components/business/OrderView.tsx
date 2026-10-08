@@ -3,6 +3,7 @@
 // price before → after (the office approves them), the company's own order details, and messages with the office.
 import { useEffect, useState } from "react";
 import {
+  bizAnswerPriceChange,
   bizChange,
   bizFinvoiceUrl,
   bizMessage,
@@ -26,6 +27,7 @@ import { dateTime, day, daysBetween, money, telHref } from "../office/format";
 import { jobLabel, photoStageLabel, statusLabel, urgLabel } from "../office/i18n";
 import { IDoc, IDownload, IEdit, ILeft, IPickup, ISend } from "../office/icons";
 import { Async, Badge, Btn, Callout, Card, CardHead, Chips, Confirm, Dialog, Field, Input, KV, StatusBadge, TextArea, cx } from "../office/ui";
+import { PriceChangeMeta, PriceCompare } from "../office/PriceChange";
 import { useBiz, useBizAct, useBizLoad } from "./context";
 import { shrinkImage } from "@/lib/image";
 
@@ -93,6 +95,8 @@ function Body({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void })
         {pending ? <p className="mt-3 text-[13px] text-ink-soft">{t("biz.ch.pendingHint")}</p> : null}
         {o.needsPhotos && !finished ? <Callout tone="warn" className="mt-4">{t("biz.photosNeeded")}</Callout> : null}
       </Card>
+
+      {o.priceChange && !o.cancelled && ["pending", "accepted", "declined", "outdated"].includes(o.priceChange.status) ? <PriceChangeCard o={o} onChange={onChange} /> : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-4">
@@ -237,6 +241,67 @@ function Body({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void })
 }
 
 /** Photos of the house from the company, so the office can check the size before confirming. */
+/** The office changed the price after the order: old → new line by line; admins and site managers accept or decline. */
+function PriceChangeCard({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void }) {
+  const { t, lang } = useT();
+  const { canOrder } = useBiz();
+  const { busy, run } = useBizAct();
+  const [declining, setDeclining] = useState(false);
+  const [note, setNote] = useState("");
+  const pc = o.priceChange!;
+  const answer = async (accept: boolean) => {
+    const r = await run(accept ? "pc-accept" : "pc-decline", () => bizAnswerPriceChange(o.ref, accept, pc.id, accept ? undefined : note.trim()), t(accept ? "biz.pc.acceptedToast" : "biz.pc.declinedToast"));
+    if (r) onChange(r.order);
+    // The offer may have changed meanwhile: show the current one.
+    else void bizOrder(o.ref).then((x) => onChange(x.order)).catch(() => {});
+  };
+  if (pc.status !== "pending") {
+    return (
+      <Callout tone={pc.status === "accepted" ? "ok" : "info"} title={t(`biz.pc.${pc.status as "accepted" | "declined" | "outdated"}`)}>
+        <p className="tabular-nums">{t("biz.pc.summary", { before: money(pc.before.total, lang), after: money(pc.after.total, lang) })}</p>
+        <div className="mt-1">
+          <PriceChangeMeta pc={pc} />
+        </div>
+      </Callout>
+    );
+  }
+  return (
+    <Card className="ring-2 ring-sun" aria-labelledby="biz-pc">
+      <CardHead id="biz-pc" title={t("biz.pc.title")} sub={t("biz.pc.sub")} />
+      <div className="px-5 pb-5">
+        <PriceCompare pc={pc} />
+        <p className="mt-3 text-[12.5px] text-muted">{t("biz.pc.valid")}</p>
+        {!canOrder ? (
+          <p className="mt-3 text-[13px] text-ink-soft">{t("biz.pc.noRights")}</p>
+        ) : declining ? (
+          <div className="mt-3">
+            <Field label={t("biz.pc.note")} optional>
+              {(id) => <TextArea id={id} rows={2} maxLength={500} value={note} onChange={setNote} />}
+            </Field>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Btn variant="dark" size="sm" busy={busy === "pc-decline"} onClick={() => void answer(false)}>
+                {t("biz.pc.declineSend")}
+              </Btn>
+              <Btn size="sm" variant="ghost" onClick={() => setDeclining(false)}>
+                {t("ui.cancel")}
+              </Btn>
+            </div>
+          </div>
+        ) : (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Btn variant="dark" size="sm" busy={busy === "pc-accept"} onClick={() => void answer(true)}>
+              {t("biz.pc.accept")}
+            </Btn>
+            <Btn size="sm" onClick={() => setDeclining(true)}>
+              {t("biz.pc.decline")}
+            </Btn>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function PhotoUpload({ o, onDone }: { o: BizOrder; onDone: (o: BizOrder) => void }) {
   const { t } = useT();
   const { fail, notify } = useBiz();

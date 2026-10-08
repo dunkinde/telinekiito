@@ -167,8 +167,14 @@ test("whole job: team, crew app, change, invoice, review", async () => {
   assert.equal((await req("POST", `/api/crew/changes/${change.id}/approve`, {}, w)).status, 403);
   const ok = await req("POST", `/api/crew/changes/${change.id}/approve`, {}, l);
   assert.equal(ok.status, 200, ok.text);
-  assert.equal(ok.json.order.house.length, 14);
-  assert.ok(ok.json.order.estimate.area > before);
+  // The new price waits for the customer; the size and price change once they accept.
+  assert.equal(ok.json.order.house.length, 10);
+  assert.equal(ok.json.order.priceChange.status, "pending");
+  assert.equal(ok.json.order.priceChange.source, "change");
+  const accepted = await req("POST", `/api/orders/${ref}/price-change/accept`, { phone: "2233", id: ok.json.order.priceChange.id });
+  assert.equal(accepted.status, 200, accepted.text);
+  assert.equal(accepted.json.house.length, 14);
+  assert.ok(accepted.json.estimate.area > before);
 
   // Pickup: customer asks, office plans it, the crew counts parts back and dismantles.
   const view = await req("POST", `/api/orders/${ref}/view`, { phone: "2233" });

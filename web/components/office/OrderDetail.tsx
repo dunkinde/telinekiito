@@ -12,6 +12,7 @@ import {
   previewLayout,
   saveLayout,
   shareOrderPlan,
+  withdrawPriceChange,
   type LayoutAdjust,
   type LayoutBase,
   type LayoutEdit,
@@ -49,6 +50,7 @@ import {
 import { ICamera, IDoc, IExternal, IInvoice, ISend, ITrash, IWarn } from "./icons";
 import { KindTag } from "./bits";
 import { ChangeCard } from "./Approvals";
+import { PriceChangeBadge, PriceChangeMeta, PriceCompare } from "./PriceChange";
 import { InvoiceActions, InvoiceStatusBadge } from "./Invoices";
 import { OutboxRow } from "./Messages";
 import { OrderFlags } from "./Orders";
@@ -157,7 +159,7 @@ function Head({ o }: { o: OfficeOrderDetail }) {
     { k: t("od.f.rental"), v: t("od.f.rentalV", { n: o.schedule.days, end: day(o.rentalEnd, lang, { weekday: false }) }) },
     { k: t("od.f.scaffold"), v: `${number(o.estimate.area, lang, 0)} m² · ${number(o.estimate.weightKg, lang, 0)} kg` },
     { k: t("od.f.speed"), v: urgLabel(i, o.schedule.urgency) },
-    { k: t("od.f.total"), v: money(o.quote.total, lang) }
+    { k: t("od.f.total"), v: o.priceChange?.status === "pending" ? `${money(o.quote.total, lang)} → ${money(o.priceChange.after.total, lang)}` : money(o.quote.total, lang) }
   ];
   return (
     <div>
@@ -165,6 +167,7 @@ function Head({ o }: { o: OfficeOrderDetail }) {
         <h2 className="font-mono text-[19px] font-bold tracking-tight text-ink">{o.ref}</h2>
         <StatusBadge status={o.status} />
         <OrderFlags o={o} />
+        {o.priceChange?.status === "pending" ? <PriceChangeBadge pc={o.priceChange} /> : null}
       </div>
       <p className="mt-1 truncate text-[14.5px] text-ink-soft">
         <span className="font-semibold text-ink">{o.customer.name}</span> · {o.site.address}
@@ -196,6 +199,7 @@ function SummaryTab({ o, crews, reload }: { o: OfficeOrderDetail; crews: Crew[];
             {t("od.zoneCheck.text", { zone: o.zoneCheck.zone, chosen: o.zoneCheck.chosen })}
           </Callout>
         ) : null}
+        {o.priceChange ? <PriceChangeCard o={o} reload={reload} /> : null}
         <StatusCard o={o} reload={reload} />
         <ScheduleCard o={o} crews={crews} reload={reload} />
         {changes.length ? (
@@ -500,6 +504,43 @@ function CustomerCard({ o }: { o: OfficeOrderDetail }) {
   );
 }
 
+/** The price change sent to the customer: waiting for their answer (the office can take it back), or how it ended. */
+function PriceChangeCard({ o, reload }: { o: OfficeOrderDetail; reload: () => void }) {
+  const { t } = useT();
+  const { run } = useAct();
+  const [ask, setAsk] = useState(false);
+  const pc = o.priceChange!;
+  const pending = pc.status === "pending";
+  return (
+    <Card aria-labelledby="od-pc" className={pending ? "ring-2 ring-sun" : undefined}>
+      <CardHead id="od-pc" title={t("od.pc.title")} sub={pending ? t("od.pc.waiting") : undefined} actions={<PriceChangeBadge pc={pc} />} />
+      <div className="space-y-3 px-5 pb-5">
+        {pc.status === "declined" ? <Callout tone="warn">{t("od.pc.declinedHint")}</Callout> : null}
+        {pc.status === "outdated" ? <Callout tone="warn">{t("od.pc.outdatedHint")}</Callout> : null}
+        <PriceCompare pc={pc} />
+        <PriceChangeMeta pc={pc} />
+        {pending ? (
+          <Btn variant="ghost" size="sm" onClick={() => setAsk(true)}>
+            {t("od.pc.withdraw")}
+          </Btn>
+        ) : null}
+      </div>
+      <Confirm
+        open={ask}
+        onClose={() => setAsk(false)}
+        title={t("od.pc.withdrawTitle")}
+        text={t("od.pc.withdrawText")}
+        confirmLabel={t("od.pc.withdraw")}
+        onConfirm={async () => {
+          const r = await run("pc-withdraw", () => withdrawPriceChange(o.ref), t("od.pc.withdrawn"));
+          setAsk(false);
+          if (r) reload();
+        }}
+      />
+    </Card>
+  );
+}
+
 /** The size from online data can't be trusted: what to check, a satellite link and the customer's photos. */
 function ReviewCallout({ o }: { o: OfficeOrderDetail }) {
   const i = useT();
@@ -748,6 +789,7 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
   const [copied, setCopied] = useState(false);
   const [edit, setEdit] = useState<LayoutEdit | null>(null);
   const [pick, setPick] = useState<number | null>(null);
+  const [reason, setReason] = useState("");
   const finished = ["dismantled", "closed", "cancelled"].includes(o.status);
   const texts = {
     hint: t("p3d.hint"), reset: t("p3d.reset"), loading: t("p3d.loading"), failed: t("p3d.failed"), close: t("p3d.close"),
@@ -786,14 +828,16 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
   };
   const save = async () => {
     if (!edit) return;
-    const r = await run("layout", () => saveLayout(o.ref, edit.adjust, edit.system));
-    if (r) { setEdit(null); reload?.(); }
+    const priced = edit.total !== edit.before;
+    const r = await run("layout", () => saveLayout(o.ref, edit.adjust, edit.system, priced ? reason.trim() : undefined), priced ? t("od.3d.sentToCustomer") : undefined);
+    if (r) { setEdit(null); setReason(""); reload?.(); }
   };
   const pickName = pick != null ? plan?.sides.find((s) => s.i === pick)?.name : null;
 
   return (
     <Card aria-labelledby="od-3d">
       <CardHead id="od-3d" title={t("od.3d.title")} sub={o.house.adjust ? t("od.3d.adjusted") : t("od.3d.sub")} />
+      {o.priceChange?.status === "pending" ? <p className="-mt-1 px-5 pb-3 text-[13px] text-[#7a5a00]">{t("od.3d.pendingPrice", { total: money(o.priceChange.after.total, lang) })}</p> : null}
       <div className="space-y-3 px-5 pb-5">
         {plan ? (
           <Scaffold3D plan={plan} texts={texts} className="h-[380px]" selected={pick} onSelect={setPick} />
@@ -851,9 +895,14 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
             <p className="text-[14px] text-ink" role="status">
               {t("od.3d.newPrice", { total: money(edit.total, lang), before: money(edit.before, lang), area: number(edit.area, lang, 0), kg: number(edit.weightKg, lang, 0) })}
             </p>
+            {edit.total !== edit.before ? (
+              <Field label={t("od.3d.reason")} hint={t("od.3d.reasonHint")}>
+                {(id, d) => <TextArea id={id} describedBy={d} rows={2} maxLength={500} value={reason} onChange={setReason} />}
+              </Field>
+            ) : null}
             <div className="flex flex-wrap gap-2">
-              <Btn variant="dark" onClick={() => void save()} busy={busy === "layout"}>
-                {t("od.3d.save")}
+              <Btn variant="dark" onClick={() => void save()} busy={busy === "layout"} disabled={edit.total !== edit.before && !reason.trim()}>
+                {edit.total !== edit.before ? t("od.3d.sendToCustomer") : t("od.3d.save")}
               </Btn>
               <Btn variant="ghost" onClick={() => { setEdit({ ...edit, adjust: null }); preview(null, edit.system); }}>
                 {t("od.3d.resetLayout")}

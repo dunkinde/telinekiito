@@ -1538,7 +1538,74 @@ const en = {
   "biz.new.model": "measured from the 3D building model – the price follows each wall",
   "biz.new.modelPending": "checking the 3D building model…",
   "od.house.model": "Measured walls",
-  "od.house.modelVal": "3D building model {date}: priced wall by wall"
+  "od.house.modelVal": "3D building model {date}: priced wall by wall",
+  "pc.status.pending": "Waiting for the customer",
+  "pc.status.accepted": "Accepted",
+  "pc.status.declined": "Declined",
+  "pc.status.replaced": "Replaced",
+  "pc.status.withdrawn": "Withdrawn",
+  "pc.status.outdated": "Outdated",
+  "pc.old": "Current price",
+  "pc.new": "New price",
+  "pc.reason": "Reason",
+  "pc.line": "Price line",
+  "pc.vat": "VAT included",
+  "pc.sent": "Sent by {by} {at}",
+  "pc.outcome.accepted": "accepted by {by} {at}",
+  "pc.outcome.declined": "declined by {by} {at}",
+  "pc.outcome.replaced": "replaced by a newer one {at}",
+  "pc.outcome.withdrawn": "withdrawn by {by} {at}",
+  "pc.outcome.outdated": "outdated {at}",
+  "od.pc.title": "Price change",
+  "od.pc.waiting": "Sent to the customer. The current price stays valid until they accept.",
+  "od.pc.declinedHint": "The customer declined: the order keeps the earlier layout and price. Contact the customer.",
+  "od.pc.outdatedHint": "The price changed before the customer accepted, so nothing was applied. Send a new proposal.",
+  "od.pc.withdraw": "Withdraw",
+  "od.pc.withdrawTitle": "Withdraw the price change?",
+  "od.pc.withdrawText": "The customer can no longer accept it. The order keeps its current price.",
+  "od.pc.withdrawn": "Price change withdrawn.",
+  "od.3d.pendingPrice": "A new price of {total} is waiting for the customer's answer. The editor opens on that layout.",
+  "od.3d.reason": "Reason for the customer",
+  "od.3d.reasonHint": "The price changes, so the customer accepts it first. This text goes in the message and on the tracking page.",
+  "od.3d.sendToCustomer": "Send to the customer",
+  "od.3d.sentToCustomer": "Sent to the customer to accept.",
+  "biz.pc.title": "The price of this order changes",
+  "biz.pc.sub": "We've checked the order and changed it. Please accept or decline the new price.",
+  "biz.pc.valid": "The current price stays valid until you accept the new one. If you decline, we'll contact you.",
+  "biz.pc.noRights": "An admin or site manager of your company can accept or decline it.",
+  "biz.pc.note": "Anything to tell us?",
+  "biz.pc.accept": "Accept the new price",
+  "biz.pc.decline": "Decline",
+  "biz.pc.declineSend": "Decline the new price",
+  "biz.pc.acceptedToast": "New price accepted.",
+  "biz.pc.declinedToast": "Declined. The earlier price stays and the office will contact you.",
+  "biz.pc.accepted": "New price accepted",
+  "biz.pc.declined": "New price declined – the earlier price stays",
+  "biz.pc.outdated": "The price changed in the meantime – the office will send a new offer",
+  "biz.pc.summary": "Price {before} → {after}",
+  "hist.layout_changed": "Scaffold layout changed",
+  "hist.price_change_proposed": "New price sent to the customer",
+  "hist.price_change_accepted": "Customer accepted the new price",
+  "hist.price_change_declined": "Customer declined the new price",
+  "hist.price_change_withdrawn": "Price change withdrawn",
+  "hist.price_change_replaced": "Price change replaced by a newer one",
+  "hist.price_change_outdated": "Price change outdated",
+  "audit.price_change_proposed": "New price sent to the customer",
+  "audit.price_change_accepted": "Customer accepted the new price",
+  "audit.price_change_declined": "Customer declined the new price",
+  "audit.price_change_withdrawn": "Price change withdrawn",
+  "alertType.price_change_accepted": "Price accepted",
+  "alertType.price_change_declined": "Price declined",
+  "alertType.price_change_outdated": "Price change outdated",
+  "al.price_change_accepted": (v) => `${v.ref}: the customer accepted the new price ${v.total}`,
+  "al.price_change_declined": (v) => `${v.ref}: the customer declined the new price ${v.total} (keeps ${v.old})`,
+  "al.price_change_outdated": (v) => `${v.ref}: the price changed before the customer accepted – send a new proposal`,
+  "event.price_change": "Price change to accept",
+  "set.tpl.when.price_change": "When the office changes the price of an order: the customer accepts or declines it.",
+  "err.reason_required": "Tell the customer why the price changes.",
+  "err.no_price_change": "There's no price change waiting for an answer.",
+  "err.price_change_changed": "The office has updated the price change. Check the new one.",
+  "err.price_change_outdated": "The price changed in the meantime. The office will send a new offer."
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -3067,7 +3134,74 @@ const fi: Record<Key, Entry> = {
   "biz.new.model": "mitattu 3D-rakennusmallista – hinta lasketaan seinä kerrallaan",
   "biz.new.modelPending": "haetaan 3D-rakennusmallia…",
   "od.house.model": "Mitatut seinät",
-  "od.house.modelVal": "3D-rakennusmalli {date}: hinnoiteltu seinä kerrallaan"
+  "od.house.modelVal": "3D-rakennusmalli {date}: hinnoiteltu seinä kerrallaan",
+  "pc.status.pending": "Odottaa asiakasta",
+  "pc.status.accepted": "Hyväksytty",
+  "pc.status.declined": "Hylätty",
+  "pc.status.replaced": "Korvattu",
+  "pc.status.withdrawn": "Peruttu",
+  "pc.status.outdated": "Vanhentunut",
+  "pc.old": "Nykyinen hinta",
+  "pc.new": "Uusi hinta",
+  "pc.reason": "Syy",
+  "pc.line": "Hintarivi",
+  "pc.vat": "Sisältää ALV:n",
+  "pc.sent": "Lähetti {by} {at}",
+  "pc.outcome.accepted": "hyväksyi {by} {at}",
+  "pc.outcome.declined": "hylkäsi {by} {at}",
+  "pc.outcome.replaced": "korvattu uudemmalla {at}",
+  "pc.outcome.withdrawn": "perui {by} {at}",
+  "pc.outcome.outdated": "vanhentui {at}",
+  "od.pc.title": "Hinnanmuutos",
+  "od.pc.waiting": "Lähetetty asiakkaalle. Nykyinen hinta on voimassa, kunnes asiakas hyväksyy uuden.",
+  "od.pc.declinedHint": "Asiakas hylkäsi: tilaus pitää aiemman telineen ja hinnan. Ota yhteyttä asiakkaaseen.",
+  "od.pc.outdatedHint": "Hinta muuttui ennen kuin asiakas hyväksyi, joten mitään ei muutettu. Lähetä uusi ehdotus.",
+  "od.pc.withdraw": "Peru",
+  "od.pc.withdrawTitle": "Perutaanko hinnanmuutos?",
+  "od.pc.withdrawText": "Asiakas ei voi enää hyväksyä sitä. Tilaus pitää nykyisen hintansa.",
+  "od.pc.withdrawn": "Hinnanmuutos peruttu.",
+  "od.3d.pendingPrice": "Uusi hinta {total} odottaa asiakkaan vastausta. Muokkain avautuu siihen telineeseen.",
+  "od.3d.reason": "Syy asiakkaalle",
+  "od.3d.reasonHint": "Hinta muuttuu, joten asiakas hyväksyy sen ensin. Teksti näkyy viestissä ja seurantasivulla.",
+  "od.3d.sendToCustomer": "Lähetä asiakkaalle",
+  "od.3d.sentToCustomer": "Lähetetty asiakkaan hyväksyttäväksi.",
+  "biz.pc.title": "Tilauksen hinta muuttuu",
+  "biz.pc.sub": "Olemme tarkistaneet tilauksen ja muuttaneet sitä. Hyväksy tai hylkää uusi hinta.",
+  "biz.pc.valid": "Nykyinen hinta on voimassa, kunnes hyväksytte uuden. Jos hylkäätte, otamme yhteyttä.",
+  "biz.pc.noRights": "Yrityksenne pääkäyttäjä tai työmaapäällikkö voi hyväksyä tai hylätä sen.",
+  "biz.pc.note": "Haluatteko kertoa jotain?",
+  "biz.pc.accept": "Hyväksy uusi hinta",
+  "biz.pc.decline": "Hylkää",
+  "biz.pc.declineSend": "Hylkää uusi hinta",
+  "biz.pc.acceptedToast": "Uusi hinta hyväksytty.",
+  "biz.pc.declinedToast": "Hylätty. Aiempi hinta pysyy, ja toimisto ottaa yhteyttä.",
+  "biz.pc.accepted": "Uusi hinta hyväksytty",
+  "biz.pc.declined": "Uusi hinta hylätty – aiempi hinta pysyy",
+  "biz.pc.outdated": "Hinta muuttui välillä – toimisto lähettää uuden tarjouksen",
+  "biz.pc.summary": "Hinta {before} → {after}",
+  "hist.layout_changed": "Telineen rakennetta muutettu",
+  "hist.price_change_proposed": "Uusi hinta lähetetty asiakkaalle",
+  "hist.price_change_accepted": "Asiakas hyväksyi uuden hinnan",
+  "hist.price_change_declined": "Asiakas hylkäsi uuden hinnan",
+  "hist.price_change_withdrawn": "Hinnanmuutos peruttu",
+  "hist.price_change_replaced": "Hinnanmuutos korvattu uudemmalla",
+  "hist.price_change_outdated": "Hinnanmuutos vanhentui",
+  "audit.price_change_proposed": "Uusi hinta lähetetty asiakkaalle",
+  "audit.price_change_accepted": "Asiakas hyväksyi uuden hinnan",
+  "audit.price_change_declined": "Asiakas hylkäsi uuden hinnan",
+  "audit.price_change_withdrawn": "Hinnanmuutos peruttu",
+  "alertType.price_change_accepted": "Hinta hyväksytty",
+  "alertType.price_change_declined": "Hinta hylätty",
+  "alertType.price_change_outdated": "Hinnanmuutos vanhentui",
+  "al.price_change_accepted": (v) => `${v.ref}: asiakas hyväksyi uuden hinnan ${v.total}`,
+  "al.price_change_declined": (v) => `${v.ref}: asiakas hylkäsi uuden hinnan ${v.total} (pysyy ${v.old})`,
+  "al.price_change_outdated": (v) => `${v.ref}: hinta muuttui ennen asiakkaan hyväksyntää – lähetä uusi ehdotus`,
+  "event.price_change": "Hinnanmuutos hyväksyttäväksi",
+  "set.tpl.when.price_change": "Kun toimisto muuttaa tilauksen hintaa: asiakas hyväksyy tai hylkää sen.",
+  "err.reason_required": "Kerro asiakkaalle, miksi hinta muuttuu.",
+  "err.no_price_change": "Hinnanmuutos ei enää odota vastausta.",
+  "err.price_change_changed": "Toimisto on päivittänyt hinnanmuutosta. Tarkista uusi versio.",
+  "err.price_change_outdated": "Hinta muuttui välillä. Toimisto lähettää uuden tarjouksen."
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };
@@ -3198,6 +3332,15 @@ export function alertText(i: T, a: Alert): string {
     case "visit_due":
       if ((m = /^(\S+): inspection visit due – (.*)$/.exec(s))) return i.t("al.visit_due", { ref: m[1], address: m[2] });
       break;
+    case "price_change_accepted":
+      if ((m = /^(\S+): customer accepted the new price ([\d.]+) €$/.exec(s))) return i.t("al.price_change_accepted", { ref: m[1], total: money(Number(m[2]), i.lang) });
+      break;
+    case "price_change_declined":
+      if ((m = /^(\S+): customer declined the new price ([\d.]+) € \(keeps ([\d.]+) €\)$/.exec(s))) return i.t("al.price_change_declined", { ref: m[1], total: money(Number(m[2]), i.lang), old: money(Number(m[3]), i.lang) });
+      break;
+    case "price_change_outdated":
+      if ((m = /^(\S+): price change outdated/.exec(s))) return i.t("al.price_change_outdated", { ref: m[1] });
+      break;
   }
   return s;
 }
@@ -3211,6 +3354,13 @@ export function historyText(i: T, h: HistoryEntry): string {
     case "change_approved":
     case "change_rejected":
     case "arrived":
+    case "layout_changed":
+    case "price_change_proposed":
+    case "price_change_accepted":
+    case "price_change_declined":
+    case "price_change_withdrawn":
+    case "price_change_replaced":
+    case "price_change_outdated":
       return i.t(`hist.${h.code}`);
     case "visit":
       return /problem/i.test(h.event || "") ? i.t("hist.visitIssue") : i.t("hist.visitOk");

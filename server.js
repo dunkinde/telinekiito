@@ -213,7 +213,7 @@ function customerView(o) {
   const photos = store.list("file", { ref: o.ref }).filter((f) => f.kind === "photo" && f.stage === "customer").map((f) => ({ id: f.id, at: f.createdAt }));
   return O.publicView(o, {
     changes, invoices, photos, needsPhotos: Boolean(o.needsReview) && !photos.length, review: review ? { stars: review.stars, text: review.text } : null,
-    rentalEnd: P.rentalEnd(o),
+    rentalEnd: P.rentalEnd(o), priceChange: P.publicPriceChange(o.priceChange),
     // Signed link key for this order's documents and photos (so phone digits never go into web addresses).
     access: auth.enabled ? auth.issue(`c:${o.ref}`, 0) : null
   });
@@ -505,6 +505,26 @@ route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/(extend|pickup|message|change)$/, a
   return customerView(o);
 });
 
+/** The customer's answer to an office price change (tracking page and business portal). */
+function answerPriceChange(o, accept, body, who, actor) {
+  const pc = P.decidePriceChange(o, accept, { id: body.id, by: who, note: body.note });
+  saveOrder(o);
+  if (pc.status === "outdated") {
+    notify.alert("price_change_outdated", o.ref, `${o.ref}: price change outdated – the price changed before the customer accepted`, { id: pc.id });
+    throw new HttpError(409, "price_change_outdated", "The price has changed since. The office will send a new offer.");
+  }
+  if (accept) notify.alert("price_change_accepted", o.ref, `${o.ref}: customer accepted the new price ${pc.after.total} €`, { id: pc.id });
+  else notify.alert("price_change_declined", o.ref, `${o.ref}: customer declined the new price ${pc.after.total} € (keeps ${pc.before.total} €)`, { id: pc.id, note: pc.note });
+  P.audit(store, actor || null, accept ? "price_change_accepted" : "price_change_declined", o.ref, { id: pc.id, before: pc.before.total, after: pc.after.total });
+}
+route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/price-change\/(accept|decline)$/, async (req, m) => {
+  limit(req, "track-action", 20, 10 * 60e3);
+  const body = await readJson(req, 4096);
+  const o = customerOrder(m[1], body.phone);
+  answerPriceChange(o, m[2] === "accept", body, o.customer.name, null);
+  return customerView(o);
+});
+
 /** Photos of the house from the customer (each side), so the office can check the size before confirming. */
 const MAX_CUSTOMER_PHOTOS = 12;
 function addCustomerPhoto(o, image) {
@@ -574,7 +594,7 @@ function bizInvoices(ref) {
     .map((iv) => ({ id: iv.id, no: iv.no, ref: iv.ref, date: iv.date, due: iv.due, net: iv.net, vat: iv.vat, total: iv.total, status: iv.status, reference: iv.reference }));
 }
 function bizDetail(o) {
-  return B.detail(o, { store, rentalEnd: P.rentalEnd(o), today: P.today(), access: auth.enabled ? auth.issue(`c:${o.ref}`, 0) : null, changes: bizChanges(o), invoices: bizInvoices(o.ref) });
+  return { ...B.detail(o, { store, rentalEnd: P.rentalEnd(o), today: P.today(), access: auth.enabled ? auth.issue(`c:${o.ref}`, 0) : null, changes: bizChanges(o), invoices: bizInvoices(o.ref) }), priceChange: P.publicPriceChange(o.priceChange) };
 }
 function bizAccountView(a) {
   return { id: a.id, name: a.name, businessId: a.businessId || "", code: a.code, discountPct: a.discountPct || 0, paymentDays: a.paymentDays,
@@ -681,6 +701,15 @@ route("POST", /^\/api\/biz\/orders\/([A-Z0-9-]+)\/change$/, async (req, m) => {
   const c = P.createChange(store, o, body, { source: "customer", user: { id: `biz:${s.user.id}`, name: `${s.user.name} (${s.account.name})`, role: "customer" }, pricing: pricing(), orders: store.listOrders() });
   saveOrder(o);
   notify.alert("change_request", o.ref, `${o.ref}: customer asks for ${P.describeChange(c, "en")}`, { id: c.id });
+  return { order: bizDetail(o) };
+});
+
+route("POST", /^\/api\/biz\/orders\/([A-Z0-9-]+)\/price-change\/(accept|decline)$/, async (req, m) => {
+  const s = requireBiz(req, BIZ_ORDERING);
+  limit(req, "biz-change", 30, 10 * 60e3);
+  const o = bizOrder(s, m[1]);
+  const body = await readJson(req, 4096);
+  answerPriceChange(o, m[2] === "accept", body, bizActor(s).name, bizActor(s));
   return { order: bizDetail(o) };
 });
 
@@ -866,8 +895,11 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout\/preview$/, async (r
   requireOffice(req);
   const o = getOrderOr404(m[1]);
   const body = await readJson(req, 16384);
-  const adjust = body.adjust === undefined ? o.house.adjust || null : parseAdjust(o, body);
-  const { house, r, plan } = layoutResult(o, adjust, body.system);
+  // The editor starts from the layout waiting for the customer's answer, if there is one.
+  const pc = o.priceChange && o.priceChange.status === "pending" && o.priceChange.source === "layout" ? o.priceChange : null;
+  const from = body.adjust === undefined && pc ? pc.after.house : o.house;
+  const adjust = body.adjust === undefined ? from.adjust || null : parseAdjust(o, body);
+  const { house, r, plan } = layoutResult(o, adjust, body.system || from.system);
   return { adjust, system: house.system || "layher", base: baseSides(o), plan, estimate: r.estimate, quote: r.quote, before: { total: o.quote.total, area: o.estimate.area } };
 });
 route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) => {
@@ -878,12 +910,34 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) =>
   const adjust = parseAdjust(o, body);
   const { house, r } = layoutResult(o, adjust, body.system);
   const before = o.quote.total;
+  if (r.quote.total !== before) {
+    // A new price: the customer accepts it first; the old one stays valid until then.
+    const reason = O.str(body.reason, 500);
+    if (!reason) throw new HttpError(400, "reason_required", "Tell the customer why the price changes.");
+    const pc = P.proposePriceChange(o, { house, estimate: r.estimate, quote: r.quote, reason, user, source: "layout" });
+    saveOrder(o);
+    notify.event(o, "price_change", { newTotal: pc.after.total, vars: { reason } });
+    P.audit(store, user, "price_change_proposed", o.ref, { id: pc.id, before, after: pc.after.total });
+    return { order: officeOrderView(o) };
+  }
+  P.closePriceChange(o, "replaced", { by: user.name });
   o.house = house;
   o.estimate = r.estimate;
   o.quote = r.quote;
   O.pushHistory(o, { event: "Scaffold layout changed", code: "layout_changed", at: new Date().toISOString(), by: user.name, detail: { before, after: r.quote.total, system: house.system } });
   o.updatedAt = new Date().toISOString();
   saveOrder(o);
+  return { order: officeOrderView(o) };
+});
+// The office takes back a price change the customer hasn't answered yet.
+route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/price-change\/withdraw$/, (req, m) => {
+  const user = requireOffice(req);
+  const o = getOrderOr404(m[1]);
+  const pc = P.closePriceChange(o, "withdrawn", { by: user.name });
+  if (!pc) throw new HttpError(409, "no_price_change", "There is no price change waiting for the customer.");
+  o.updatedAt = new Date().toISOString();
+  saveOrder(o);
+  P.audit(store, user, "price_change_withdrawn", o.ref, { id: pc.id });
   return { order: officeOrderView(o) };
 });
 
@@ -1003,6 +1057,20 @@ route("POST", /^\/api\/(office|crew)\/changes\/([\w-]+)\/(approve|reject)$/, asy
   if (!c) throw new HttpError(404, "not_found", "Change request not found.");
   const o = getOrderOr404(c.ref);
   const approve = m[3] === "approve";
+  // A size the crew (or anyone but the customer) found that moves the price: the office approves the size,
+  // the customer accepts the new price. A change the customer asked for was priced for them already.
+  if (approve && c.status === "pending" && c.type === "house" && c.source !== "customer") {
+    const after = P.repriceOrder(o, pricing(), { house: c.proposed.house });
+    if (after.quote.total !== o.quote.total) {
+      const reason = O.str(body.reason, 500) || c.note || P.describeChange(c, o.lang);
+      P.decideChange(store, o, c, true, { user, pricing: pricing(), reason: body.reason, apply: false });
+      const pc = P.proposePriceChange(o, { house: { ...c.proposed.house }, estimate: after.estimate, quote: after.quote, reason, user, source: "change", changeId: c.id });
+      saveOrder(o);
+      notify.event(o, "price_change", { newTotal: pc.after.total, vars: { reason } });
+      P.audit(store, user, "change_approved", o.ref, { id: c.id, priceChange: pc.id });
+      return { change: P.publicChange(c), order: o };
+    }
+  }
   P.decideChange(store, o, c, approve, { user, pricing: pricing(), reason: body.reason });
   saveOrder(o);
   if (c.source === "customer" || c.type !== "other") {
@@ -1027,7 +1095,7 @@ function officeOrderView(o) {
     audit: store.list("audit", { ref: o.ref, limit: 200 }),
     files: store.list("file", { ref: o.ref }),
     review: store.get("review", `rev_${o.ref}`),
-    rentalEnd: P.rentalEnd(o),
+    rentalEnd: P.rentalEnd(o), priceChange: P.publicPriceChange(o.priceChange),
     checks: orderChecks(o)
   };
 }

@@ -256,11 +256,89 @@ test("office layout editor: preview, save and reset change the parts and the pri
   assert.deepEqual(Object.keys(pre.json.adjust.sides).sort(), ["Gable end B", "Long side A"]);
   assert.equal(pre.json.plan.sides.length, 3);
   assert.equal(pre.json.base.length, 4);
-  const saved = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: pre.json.adjust }, H);
+  assert.notEqual(pre.json.quote.total, placed.json.order.quote.total);
+  // A new price needs a reason for the customer, then waits for them; the old price stays.
+  assert.equal((await req("POST", `/api/office/orders/${ref}/layout`, { adjust: pre.json.adjust }, H)).json.error, "reason_required");
+  const saved = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: pre.json.adjust, reason: "Pääty B jää pois" }, H);
   assert.equal(saved.status, 200, saved.text);
-  assert.equal(saved.json.order.estimate.sides.find((s) => s.name === "Long side A").bays, 7);
-  assert.equal(saved.json.order.history.at(-1).code, "layout_changed");
-  const reset = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: null }, H);
-  assert.equal(reset.json.order.house.adjust, undefined);
-  assert.equal(reset.json.order.estimate.sides.length, 4);
+  assert.equal(saved.json.order.quote.total, placed.json.order.quote.total);
+  assert.equal(saved.json.order.priceChange.status, "pending");
+  assert.equal(saved.json.order.priceChange.after.total, pre.json.quote.total);
+  assert.equal(saved.json.order.history.at(-1).code, "price_change_proposed");
+  // The editor reopens on the waiting layout.
+  const again = await req("POST", `/api/office/orders/${ref}/layout/preview`, {}, H);
+  assert.equal(again.json.adjust.sides["Long side A"].bays, 7);
+  assert.equal(again.json.quote.total, pre.json.quote.total);
+  const pc = (await req("POST", `/api/orders/${ref}/view`, { phone: "4444" })).json.priceChange;
+  assert.equal(pc.reason, "Pääty B jää pois");
+  assert.equal(pc.after.quote.total, pre.json.quote.total);
+  assert.equal(pc.after.house, undefined, "the customer sees prices, not the stored layout");
+  const accepted = await req("POST", `/api/orders/${ref}/price-change/accept`, { phone: "4444", id: pc.id });
+  assert.equal(accepted.status, 200, accepted.text);
+  assert.equal(accepted.json.quote.total, pre.json.quote.total);
+  assert.equal(accepted.json.priceChange.status, "accepted");
+  assert.equal(accepted.json.history.at(-1).code, "price_change_accepted");
+  assert.equal((await req("POST", `/api/orders/${ref}/price-change/accept`, { phone: "4444", id: pc.id })).json.error, "no_price_change");
+  const office = (await req("GET", `/api/office/orders/${ref}`, undefined, H)).json.order;
+  assert.equal(office.estimate.sides.find((s) => s.name === "Long side A").bays, 7);
+  assert.equal(office.priceChange.decidedBy, "Layout Testi");
+  // Reset: back to the calculated layout (and price), again for the customer to accept.
+  const reset = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: null, reason: "Takaisin alkuperäiseen" }, H);
+  assert.equal(reset.json.order.priceChange.status, "pending");
+  assert.equal((await req("POST", `/api/orders/${ref}/price-change/accept`, { phone: "4444" })).status, 200);
+  const back = (await req("GET", `/api/office/orders/${ref}`, undefined, H)).json.order;
+  assert.equal(back.house.adjust, undefined);
+  assert.equal(back.estimate.sides.length, 4);
+  assert.equal(back.quote.total, placed.json.order.quote.total);
+});
+
+test("office price change: the customer declines, the old price stays and the office is alerted", async () => {
+  const login = await req("POST", "/api/office/login", { password: PASSWORD });
+  const H = { Cookie: login.headers.get("set-cookie").split(";")[0] };
+  const start = E.earliestStart("standard", helsinkiNow());
+  const order = { length: 12.4, width: 9.9, eave: 2.9, floors: "1.5", roofType: "gable", pitch: 47, jobType: "roof", gables: true, zone: "A", urgency: "standard", start, days: 28, name: "Hinta Testi", phone: "040 333 5555", email: "hinta@example.com", address: "Testikatu 5, Espoo", source: "form" };
+  const placed = await req("POST", "/api/orders", order);
+  assert.equal(placed.status, 200, placed.text);
+  const ref = placed.json.ref;
+  const total0 = placed.json.order.quote.total;
+  assert.equal((await req("PATCH", `/api/office/orders/${ref}`, { status: "confirmed" }, H)).status, 200);
+
+  // A layout change moves the price: proposed, and the customer is told with a link.
+  const first = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: { sides: { "Long side A": { bays: 7, lifts: 2 } } }, reason: "Pitkä sivu A lyhyempi" }, H);
+  assert.equal(first.status, 200, first.text);
+  const firstId = first.json.order.priceChange.id;
+  assert.equal(first.json.order.house.adjust, undefined);
+  const msg = first.json.order.outbox.find((m) => m.event === "price_change" && m.channel === "email");
+  assert.ok(msg, "email waits in the outbox without SMTP");
+  assert.match(msg.body, /Pitkä sivu A lyhyempi/);
+  assert.ok(first.json.order.outbox.some((m) => m.event === "price_change" && m.channel === "sms"));
+
+  // A newer proposal replaces the first; answering the old one is refused.
+  const second = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: { sides: { "Gable end B": { off: true } } }, reason: "Pääty B pois" }, H);
+  const pcId = second.json.order.priceChange.id;
+  assert.notEqual(pcId, firstId);
+  assert.ok(second.json.order.history.some((h) => h.code === "price_change_replaced"));
+  assert.equal((await req("POST", `/api/orders/${ref}/price-change/decline`, { phone: "5555", id: firstId })).json.error, "price_change_changed");
+  assert.equal((await req("POST", `/api/orders/${ref}/price-change/decline`, { phone: "0000", id: pcId })).status, 404);
+
+  const declined = await req("POST", `/api/orders/${ref}/price-change/decline`, { phone: "5555", id: pcId, note: "Liian kallis" });
+  assert.equal(declined.status, 200, declined.text);
+  assert.equal(declined.json.quote.total, total0);
+  assert.equal(declined.json.priceChange.status, "declined");
+  assert.equal(declined.json.history.at(-1).code, "price_change_declined");
+  const office = (await req("GET", `/api/office/orders/${ref}`, undefined, H)).json.order;
+  assert.equal(office.quote.total, total0);
+  assert.equal(office.house.adjust, undefined);
+  assert.equal(office.priceChange.note, "Liian kallis");
+  assert.ok(office.audit.some((a) => a.action === "price_change_declined"));
+  const alerts = (await req("GET", "/api/office/alerts", undefined, H)).json.alerts;
+  assert.ok(alerts.some((a) => a.type === "price_change_declined" && a.ref === ref));
+
+  // The office can withdraw a proposal; a layout change that keeps the price applies directly.
+  await req("POST", `/api/office/orders/${ref}/layout`, { adjust: { sides: { "Long side A": { lifts: 2 } } }, reason: "Uusi ehdotus" }, H);
+  const w = await req("POST", `/api/office/orders/${ref}/price-change/withdraw`, {}, H);
+  assert.equal(w.json.order.priceChange.status, "withdrawn");
+  assert.equal((await req("POST", `/api/office/orders/${ref}/price-change/withdraw`, {}, H)).json.error, "no_price_change");
+  const same = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: null }, H);
+  assert.equal(same.json.order.history.at(-1).code, "layout_changed");
 });

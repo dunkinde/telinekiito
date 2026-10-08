@@ -200,7 +200,7 @@ function PricesTab() {
 /* ======================= Operations and company ======================= */
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const URL_RE = /^https?:\/\/[^\s]+$/;
-const SMS_EVENTS: TemplateEvent[] = ["order_received", "confirmed", "on_the_way", "ready", "rental_ending", "pickup_scheduled", "collected", "invoice", "change_approved", "change_rejected", "office_reply"];
+const SMS_EVENTS: TemplateEvent[] = ["order_received", "confirmed", "on_the_way", "ready", "rental_ending", "pickup_scheduled", "collected", "invoice", "change_approved", "change_rejected", "price_change", "office_reply"];
 
 function useOps() {
   const st = useLoad(getSettings, []);
@@ -386,6 +386,7 @@ const EXTRA_VARS: Partial<Record<TemplateEvent, string[]>> = {
   invoice: ["invoiceNo", "due", "reference"],
   change_approved: ["change"],
   change_rejected: ["change", "reason"],
+  price_change: ["newTotal", "reason"],
   office_reply: ["text"]
 };
 
