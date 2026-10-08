@@ -9,11 +9,13 @@ import { useI18n } from "@/lib/i18n";
 import { IconArrow } from "../ui/Icons";
 import { Reveal, SectionHead } from "../ui/motion";
 import { ScaffoldScene, sceneSky } from "./ScaffoldScene";
+import { useRichMotion } from "../ui/useMedia";
 
 function ProjectCard({ p }: { p: Project }) {
   const { pick } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
-  const reduce = useReducedMotion();
+  const rich = useRichMotion();
+  const reduce = useReducedMotion() || !rich;
   const { scrollYProgress } = useScroll({ target: ref, offset: ["start end", "end start"] });
   const y = useTransform(scrollYProgress, [0, 1], reduce ? ["0%", "0%"] : ["-6%", "6%"]);
   const title = pick(p.title);

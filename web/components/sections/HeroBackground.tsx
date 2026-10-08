@@ -4,12 +4,15 @@
 import { motion, useReducedMotion, useScroll, useTransform } from "framer-motion";
 import { useMemo } from "react";
 import { seeded } from "@/lib/random";
+import { useRichMotion } from "../ui/useMedia";
 
 const BAY = 96; // px between scaffold standards
 const LIFT = 80; // px between levels
 
 export function HeroBackground({ start }: { start: boolean }) {
-  const reduce = useReducedMotion();
+  const rich = useRichMotion();
+  const userReduce = useReducedMotion();
+  const reduce = userReduce || !rich;
   const { scrollY } = useScroll();
   const latticeY = useTransform(scrollY, [0, 800], [0, reduce ? 0 : 140]);
   const meshY = useTransform(scrollY, [0, 800], [0, reduce ? 0 : 60]);
@@ -77,7 +80,7 @@ export function HeroBackground({ start }: { start: boolean }) {
             strokeOpacity={p.kind === "deck" ? 0.75 : p.kind === "brace" ? 0.07 : 0.09}
             strokeWidth={p.kind === "deck" ? 5 : 1.5}
             strokeLinecap="round"
-            initial={{ pathLength: reduce ? 1 : 0 }}
+            initial={{ pathLength: userReduce ? 1 : 0 }}
             animate={start ? { pathLength: 1 } : undefined}
             transition={{ duration: 1.1, delay: 0.2 + (i % 24) * 0.035, ease: [0.65, 0, 0.35, 1] }}
           />

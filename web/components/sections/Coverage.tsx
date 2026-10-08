@@ -6,6 +6,7 @@ import { COVERAGE } from "@/lib/content";
 import { useI18n } from "@/lib/i18n";
 import { CountUp } from "../ui/CountUp";
 import { SectionHead, Stagger, StaggerItem } from "../ui/motion";
+import { useRichMotion } from "../ui/useMedia";
 
 // [lon, lat]
 const FINLAND: [number, number][] = [
@@ -40,6 +41,7 @@ const RING_FILL = ["rgba(255,194,14,0.35)", "rgba(255,194,14,0.2)", "rgba(255,19
 export function Coverage() {
   const { t, pick } = useI18n();
   const reduce = useReducedMotion();
+  const rich = useRichMotion();
   return (
     <section id="coverage" className="snap-screen section-pad overflow-hidden bg-white">
       <div className="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-12 lg:gap-12 lg:px-8">
@@ -102,7 +104,7 @@ export function Coverage() {
                 );
               })}
               {/* Pulse at the base */}
-              {!reduce ? (
+              {!reduce && rich ? (
                 <motion.circle
                   cx={HKI[0]}
                   cy={HKI[1]}

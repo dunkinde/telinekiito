@@ -1,9 +1,10 @@
 "use client";
 // Page-load intro (about 1.4 s): the logo frame draws itself, the name rises letter by letter, then the panel lifts away.
-// Shown once per browser session, and skipped for visitors who prefer reduced motion.
+// Shown once per browser session on desktop; skipped on phones and tablets and for visitors who prefer reduced motion.
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
 import { useSite } from "./SiteContext";
+import { RICH_MOTION } from "./ui/useMedia";
 
 const NAME = "TelineKiito";
 
@@ -20,7 +21,7 @@ export function Intro() {
     } catch {
       /* storage blocked: just play it */
     }
-    if (reduce || seen) {
+    if (reduce || seen || !window.matchMedia(RICH_MOTION).matches) {
       setShow(false);
       return;
     }

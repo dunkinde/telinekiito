@@ -85,7 +85,7 @@ export function Header() {
     <header className="fixed inset-x-0 top-0 z-50 h-20">
       <motion.div
         aria-hidden
-        className="absolute inset-0 origin-top border-b border-line/80 bg-white/80 backdrop-blur-xl backdrop-saturate-150"
+        className="absolute inset-0 origin-top border-b border-line/80 bg-white/95 lg:bg-white/80 lg:backdrop-blur-xl lg:backdrop-saturate-150"
         initial={false}
         animate={{ opacity: scrolled || menu ? 1 : 0, scaleY: scrolled && !menu ? 0.8 : 1 }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}

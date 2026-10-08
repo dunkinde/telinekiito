@@ -13,3 +13,7 @@ export function useMedia(query: string): boolean {
   }, [query]);
   return match;
 }
+
+/** Desktop with a mouse. Only there do the intro, looping background motion and parallax run; phones and tablets stay light. */
+export const RICH_MOTION = "(min-width: 1024px) and (pointer: fine)";
+export const useRichMotion = () => useMedia(RICH_MOTION);

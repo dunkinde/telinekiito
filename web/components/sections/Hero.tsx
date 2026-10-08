@@ -14,6 +14,7 @@ import { IconArrow, IconCheck, IconPin } from "../ui/Icons";
 import { EASE_OUT } from "../ui/motion";
 import { HouseModel } from "../HouseModel";
 import { HeroBackground } from "./HeroBackground";
+import { useRichMotion } from "../ui/useMedia";
 
 const container: Variants = {
   hidden: {},
@@ -35,7 +36,7 @@ function Line({ text }: { text: string }) {
     <>
       {words.map((w, i) => (
         <span key={`${w}-${i}`} className="inline-block overflow-hidden pb-[0.08em] align-bottom">
-          <motion.span className="inline-block" variants={word}>
+          <motion.span className="hero-in inline-block" variants={word}>
             {w}
             {i < words.length - 1 ? " " : ""}
           </motion.span>
@@ -146,7 +147,8 @@ export function Hero() {
   const { t, lang } = useI18n();
   const { introDone, openTrack, quote } = useSite();
   const morphing = quote.open && quote.start.origin === "hero";
-  const reduce = useReducedMotion();
+  const rich = useRichMotion();
+  const reduce = useReducedMotion() || !rich;
   const { scrollY } = useScroll();
   // Gentle parallax: the text column moves a little slower than the page, the card a little more.
   const textY = useTransform(scrollY, [0, 700], [0, reduce ? 0 : -40]);
@@ -159,7 +161,7 @@ export function Hero() {
 
       <div className="relative mx-auto grid w-full max-w-7xl items-center gap-14 px-4 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-8">
         <motion.div className="lg:col-span-7" style={{ y: textY }} initial="hidden" animate={state} variants={container}>
-          <motion.p variants={fadeUp} className="mb-6 inline-flex items-center gap-2 rounded-full lg:mb-[clamp(0.75rem,2.6svh,1.5rem)] bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink-soft ring-1 ring-line backdrop-blur">
+          <motion.p variants={fadeUp} className="hero-in mb-6 inline-flex items-center gap-2 rounded-full lg:mb-[clamp(0.75rem,2.6svh,1.5rem)] bg-white/80 px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.16em] text-ink-soft ring-1 ring-line backdrop-blur">
             <span className="relative flex h-2 w-2">
               <span className="motion-loop absolute inline-flex h-full w-full animate-ping rounded-full bg-sun opacity-75" />
               <span className="relative inline-flex h-2 w-2 rounded-full bg-sun-deep" />
@@ -174,7 +176,7 @@ export function Hero() {
             <span className="relative mt-1 inline-block">
               <motion.span
                 aria-hidden
-                className="absolute inset-x-[-0.08em] bottom-[0.08em] h-[0.32em] origin-left rounded-sm bg-sun"
+                className="hero-in absolute inset-x-[-0.08em] bottom-[0.08em] h-[0.32em] origin-left rounded-sm bg-sun"
                 variants={{ hidden: { scaleX: 0 }, show: { scaleX: 1, transition: { duration: 0.8, delay: 0.55, ease: EASE_OUT } } }}
               />
               <span className="relative">
@@ -183,15 +185,15 @@ export function Hero() {
             </span>
           </motion.h1>
 
-          <motion.p variants={fadeUp} className="mt-7 max-w-xl text-lg leading-relaxed text-muted sm:text-xl lg:mt-[clamp(0.75rem,2.6svh,1.75rem)] lg:max-w-[38rem] lg:text-[clamp(1rem,2.4svh,1.25rem)]">
+          <motion.p variants={fadeUp} className="hero-in mt-7 max-w-xl text-lg leading-relaxed text-muted sm:text-xl lg:mt-[clamp(0.75rem,2.6svh,1.75rem)] lg:max-w-[38rem] lg:text-[clamp(1rem,2.4svh,1.25rem)]">
             {t("hero.sub")}
           </motion.p>
 
-          <motion.div variants={fadeUp}>
+          <motion.div variants={fadeUp} className="hero-in">
             <AddressBar />
           </motion.div>
 
-          <motion.ul variants={fadeUp} className="mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-soft lg:mt-[clamp(0.75rem,2.2svh,1.25rem)]">
+          <motion.ul variants={fadeUp} className="hero-in mt-5 flex flex-wrap gap-x-6 gap-y-2 text-sm text-ink-soft lg:mt-[clamp(0.75rem,2.2svh,1.25rem)]">
             {(["hero.trust1", "hero.trust2", "hero.trust3"] as const).map((k) => (
               <li key={k} className="inline-flex items-center gap-1.5">
                 <IconCheck className="h-4 w-4 text-sun-deep" />
@@ -200,7 +202,7 @@ export function Hero() {
             ))}
           </motion.ul>
 
-          <motion.div variants={fadeUp} className="mt-10 grid max-w-xl grid-cols-3 gap-4 border-t border-line pt-7 lg:mt-[clamp(1rem,3.6svh,2.5rem)] lg:pt-[clamp(0.85rem,3svh,1.75rem)]">
+          <motion.div variants={fadeUp} className="hero-in mt-10 grid max-w-xl grid-cols-3 gap-4 border-t border-line pt-7 lg:mt-[clamp(1rem,3.6svh,2.5rem)] lg:pt-[clamp(0.85rem,3svh,1.75rem)]">
             {[
               { n: 24, u: "h", k: "hero.stat1" as const },
               { n: 48, u: "h", k: "hero.stat2" as const },
@@ -216,13 +218,13 @@ export function Hero() {
             ))}
           </motion.div>
 
-          <motion.button variants={fadeUp} type="button" onClick={() => openTrack()} className="nav-link mt-8 text-sm font-semibold text-ink-soft hover:text-ink lg:mt-[clamp(0.75rem,2.6svh,2rem)]">
+          <motion.button variants={fadeUp} type="button" onClick={() => openTrack()} className="hero-in nav-link mt-8 text-sm font-semibold text-ink-soft hover:text-ink lg:mt-[clamp(0.75rem,2.6svh,2rem)]">
             {t("hero.track")} →
           </motion.button>
         </motion.div>
 
         <motion.div
-          className="relative mx-auto w-full max-w-md lg:col-span-5 lg:max-w-none"
+          className="hero-in relative mx-auto w-full max-w-md lg:col-span-5 lg:max-w-none"
           style={{ y: cardY }}
           initial={{ opacity: 0, y: 40 }}
           animate={introDone ? { opacity: 1, y: 0 } : undefined}
@@ -238,7 +240,7 @@ export function Hero() {
             </motion.div>
           </motion.div>
           <motion.div
-            className="absolute top-[22%] -left-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-xl sm:-left-8"
+            className="hero-in-tilt absolute top-[22%] -left-3 rounded-2xl bg-ink px-4 py-3 text-white shadow-xl sm:-left-8"
             initial={{ opacity: 0, scale: 0.8, rotate: -6 }}
             animate={introDone ? { opacity: 1, scale: 1, rotate: -4 } : undefined}
             transition={{ duration: 0.6, delay: 0.9, ease: EASE_OUT }}
