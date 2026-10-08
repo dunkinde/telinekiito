@@ -4,12 +4,12 @@
 // rate us after pickup). A longer rental is a request the office approves; the new price shows before → after.
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getOrder, getOrderPlan, orderAction, STATUSES, uploadOrderPhoto, type OrderChange, type OrderView } from "@/lib/api";
+import { answerPriceChange, getOrder, getOrderPlan, orderAction, STATUSES, uploadOrderPhoto, type OrderChange, type OrderView, type PriceChange } from "@/lib/api";
 import { Plan3DOverlay } from "../scaffold3d/Plan3DOverlay";
 import { siteTexts } from "../scaffold3d/siteTexts";
 import { shrinkImage } from "@/lib/image";
 import { digits, eur, fmtDate, fmtStamp } from "@/lib/format";
-import { errText, useI18n } from "@/lib/i18n";
+import { errText, lineLabel, useI18n } from "@/lib/i18n";
 import { useSite } from "../SiteContext";
 import { Button } from "../ui/Button";
 import { Modal } from "../ui/Modal";
@@ -204,6 +204,29 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
           <b>{t("tr.arrival")}:</b> {order.eta}
           {order.crew ? ` · ${order.crew}` : ""}
         </p>
+      ) : null}
+
+      {order.priceChange && !cancelled && ["pending", "accepted", "declined", "outdated"].includes(order.priceChange.status) ? (
+        <PriceChangeCard
+          pc={order.priceChange}
+          fmt={(iso) => fmtStamp(iso, lang)}
+          onAnswer={async (accept, note) => {
+            const c = creds.current;
+            if (!c || !order.priceChange) return;
+            try {
+              setOrder(await answerPriceChange(c.ref, c.phone4, accept, order.priceChange.id, note));
+              toast(accept ? t("tr.pc.acceptedToast") : t("tr.pc.declinedToast"));
+            } catch (e) {
+              toast(errText(i18n, e, fmt));
+              // The offer may have changed meanwhile: show the current one.
+              try {
+                setOrder(await getOrder(c.ref, c.phone4));
+              } catch {
+                /* keep the last state */
+              }
+            }
+          }}
+        />
       ) : null}
 
       {!cancelled ? (
@@ -445,6 +468,117 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
         {t("tr.another")}
       </button>
     </div>
+  );
+}
+
+/** The office changed the price after the order: old → new with the lines, and Accept / Decline while it waits. */
+function PriceChangeCard({ pc, fmt, onAnswer }: { pc: PriceChange; fmt: (iso: string) => string; onAnswer: (accept: boolean, note?: string) => Promise<void> }) {
+  const i18n = useI18n();
+  const { t } = i18n;
+  const [busy, setBusy] = useState(false);
+  const [declining, setDeclining] = useState(false);
+  const [note, setNote] = useState("");
+  const pending = pc.status === "pending";
+  const answer = async (accept: boolean) => {
+    setBusy(true);
+    await onAnswer(accept, accept ? undefined : note.trim());
+    setBusy(false);
+  };
+  if (!pending) {
+    const tone = pc.status === "accepted" ? "bg-emerald-50 text-emerald-800" : pc.status === "declined" ? "bg-mist text-ink-soft" : "bg-sun-soft text-ink";
+    return (
+      <p className={`mt-4 rounded-xl px-4 py-2.5 text-sm ${tone}`}>
+        <b>{t(`tr.pc.${pc.status as "accepted" | "declined" | "outdated"}`)}</b> · {t("tr.change.price", { before: eur(pc.before.total), after: eur(pc.after.total) })}
+        {pc.decidedAt ? <span className="text-muted"> · {fmt(pc.decidedAt)}</span> : null}
+      </p>
+    );
+  }
+  // Lines of both quotes side by side, matched by their key.
+  const keys = [...new Set([...pc.before.quote.lines.map((l) => l.key), ...pc.after.quote.lines.map((l) => l.key)])];
+  const rows = keys.map((k) => {
+    const b = pc.before.quote.lines.find((l) => l.key === k);
+    const a = pc.after.quote.lines.find((l) => l.key === k);
+    return { k, label: lineLabel(i18n, (a || b)!, a ? pc.after.quote : pc.before.quote), before: b?.amount, after: a?.amount };
+  });
+  const up = pc.after.total > pc.before.total;
+  return (
+    <section className="mt-5 rounded-2xl bg-sun-soft p-4 ring-2 ring-sun sm:p-5" aria-labelledby="tr-pc">
+      <h3 id="tr-pc" className="font-display text-lg font-bold text-ink">
+        {t("tr.pc.title")}
+      </h3>
+      <p className="mt-1 text-sm text-ink-soft">{t("tr.pc.intro")}</p>
+      <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+        <div className="rounded-xl bg-white/70 p-3">
+          <p className="text-xs text-muted">{t("tr.pc.old")}</p>
+          <p className="font-display text-xl font-bold tabular-nums text-ink-soft line-through decoration-1">{eur(pc.before.total)}</p>
+        </div>
+        <div className="rounded-xl bg-white p-3 ring-1 ring-line">
+          <p className="text-xs text-muted">{t("tr.pc.new")}</p>
+          <p className="font-display text-xl font-bold tabular-nums text-ink">
+            {eur(pc.after.total)} <span className={`text-sm ${up ? "text-signal" : "text-emerald-700"}`}>{up ? "▲" : "▼"} {eur(Math.abs(pc.after.total - pc.before.total))}</span>
+          </p>
+        </div>
+      </div>
+      {pc.reason ? (
+        <p className="mt-3 text-sm">
+          <b>{t("tr.pc.reason")}:</b> {pc.reason}
+        </p>
+      ) : null}
+      <details className="mt-3 text-sm">
+        <summary className="cursor-pointer font-semibold text-ink">{t("tr.pc.lines")}</summary>
+        <table className="mt-2 w-full tabular-nums">
+          <thead>
+            <tr className="text-xs text-muted">
+              <th className="py-1 text-left font-medium">
+                <span className="sr-only">{t("tr.pc.line")}</span>
+              </th>
+              <th className="py-1 text-right font-medium">{t("tr.pc.old")}</th>
+              <th className="py-1 text-right font-medium">{t("tr.pc.new")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.k} className={r.before === r.after ? "text-muted" : "font-semibold text-ink"}>
+                <td className="py-1 pr-2">{r.label}</td>
+                <td className="py-1 text-right">{r.before === undefined ? "—" : eur(r.before)}</td>
+                <td className="py-1 text-right">{r.after === undefined ? "—" : eur(r.after)}</td>
+              </tr>
+            ))}
+            <tr className="border-t border-line text-xs text-muted">
+              <td className="py-1">{t("tr.pc.vat")}</td>
+              <td className="py-1 text-right">{eur(pc.before.quote.vat)}</td>
+              <td className="py-1 text-right">{eur(pc.after.quote.vat)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </details>
+      <p className="mt-3 text-xs text-muted">{t("tr.pc.valid")}</p>
+      {declining ? (
+        <div className="mt-3">
+          <label className="block">
+            <span className="field-label">{t("tr.pc.note")}</span>
+            <textarea className="field-input min-h-16 bg-white" maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
+          </label>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant="dark" disabled={busy} onClick={() => void answer(false)}>
+              {t("tr.pc.declineSend")}
+            </Button>
+            <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDeclining(false)}>
+              {t("tr.pc.back")}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button size="sm" variant="dark" disabled={busy} onClick={() => void answer(true)}>
+            {t("tr.pc.accept", { total: eur(pc.after.total) })}
+          </Button>
+          <Button size="sm" variant="ghost" disabled={busy} onClick={() => setDeclining(true)}>
+            {t("tr.pc.decline")}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 

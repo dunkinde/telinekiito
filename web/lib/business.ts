@@ -1,5 +1,5 @@
 // Typed client for the business customer portal (/business) and the office's management of portal users.
-import type { JobType, Quote, Urgency, Zone } from "./api";
+import type { JobType, PriceChange, Quote, Urgency, Zone } from "./api";
 import { call, type House, type OrderStatus, type StaffLang } from "./platform";
 
 export type BizRole = "admin" | "manager" | "accountant";
@@ -93,6 +93,8 @@ export interface BizOrder extends BizOrderSummary {
   business: BizDetails;
   photos: { id: string; stage: string; at: string }[];
   changes: BizChange[];
+  /** A price change from the office waiting for the company's answer (or the latest outcome). */
+  priceChange: PriceChange | null;
   invoices: BizInvoiceRef[];
   docs: { confirmation: boolean; inspection: boolean };
   access: string | null;
@@ -116,6 +118,8 @@ export const bizPlaceOrder = (body: Record<string, unknown>) => call<{ ref: stri
 export const bizSaveDetails = (ref: string, body: Partial<BizDetails>) => call<{ order: BizOrder }>("PATCH", `/api/biz/orders/${enc(ref)}`, body);
 export const bizPreview = (ref: string, body: ChangeBody) => call<ChangePreview>("POST", `/api/biz/orders/${enc(ref)}/preview`, body);
 export const bizChange = (ref: string, body: ChangeBody) => call<{ order: BizOrder }>("POST", `/api/biz/orders/${enc(ref)}/change`, body);
+export const bizAnswerPriceChange = (ref: string, accept: boolean, id: string, note?: string) =>
+  call<{ order: BizOrder }>("POST", `/api/biz/orders/${enc(ref)}/price-change/${accept ? "accept" : "decline"}`, { id, note });
 export const bizPickup = (ref: string) => call<{ order: BizOrder }>("POST", `/api/biz/orders/${enc(ref)}/pickup`, {});
 export const bizUploadPhoto = (ref: string, image: string) => call<{ order: BizOrder }>("POST", `/api/biz/orders/${enc(ref)}/photos`, { image });
 export const bizMessage = (ref: string, text: string) => call<{ order: BizOrder }>("POST", `/api/biz/orders/${enc(ref)}/message`, { text });

@@ -220,6 +220,23 @@ export interface OrderView {
   photos?: { id: string; at: string }[];
   /** The office needs to check the size: photos of each side are asked for. */
   needsPhotos?: boolean;
+  /** The office's latest price change; while pending, the customer accepts or declines it. */
+  priceChange?: PriceChange | null;
+}
+
+/** A price change the office made after the order (layout, scaffold system, size). The old price holds until accepted. */
+export interface PriceChange {
+  id: string;
+  status: "pending" | "accepted" | "declined" | "replaced" | "withdrawn" | "outdated";
+  source: "layout" | "change";
+  reason: string;
+  at: string;
+  by: string;
+  before: { total: number; area: number; quote: Quote };
+  after: { total: number; area: number; quote: Quote };
+  decidedAt: string | null;
+  decidedBy: string | null;
+  note: string;
 }
 
 export interface OrderChange {
@@ -314,6 +331,8 @@ export const getOrder = (ref: string, phone4: string) => api<OrderView>("POST", 
 export const getOrderPlan = (ref: string, phone4: string) => api<{ plan: import("./plan").ScaffoldPlan }>("POST", `/api/orders/${encodeURIComponent(ref)}/plan`, { phone: phone4 });
 export const uploadOrderPhoto = (ref: string, phone4: string, image: string) =>
   api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/photos`, { phone: phone4, image });
+export const answerPriceChange = (ref: string, phone4: string, accept: boolean, id: string, note?: string) =>
+  api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/price-change/${accept ? "accept" : "decline"}`, { phone: phone4, id, note });
 export const orderAction = (ref: string, action: "extend" | "pickup" | "message" | "change" | "review", body: Record<string, unknown>) =>
   api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/${action}`, body);
 

@@ -1,6 +1,6 @@
 // Typed client for the platform API used by the office (/office) and the crew app (/crew).
 // Every call goes to the same server; the login is an HttpOnly session cookie.
-import { ApiError, type Floors, type JobType, type Pricing, type Quote, type RoofType, type Urgency, type Zone, type SystemKey } from "./api";
+import { ApiError, type Floors, type JobType, type PriceChange, type Pricing, type Quote, type RoofType, type Urgency, type Zone, type SystemKey } from "./api";
 import type { ScaffoldPlan } from "./plan";
 
 export { ApiError };
@@ -205,6 +205,8 @@ export interface OfficeOrderDetail extends FullOrder {
   files: FileRec[];
   review: Review | null;
   rentalEnd: string;
+  /** The latest price change sent to the customer, and its outcome. */
+  priceChange: PriceChange | null;
 }
 
 export interface Job {
@@ -398,7 +400,7 @@ export interface Margins { rows: MarginRow[]; byZone: { zone: Zone; jobs: number
 
 export type TemplateEvent =
   | "order_received" | "confirmed" | "on_the_way" | "ready" | "rental_ending" | "pickup_scheduled"
-  | "collected" | "invoice" | "change_approved" | "change_rejected" | "office_reply";
+  | "collected" | "invoice" | "change_approved" | "change_rejected" | "price_change" | "office_reply";
 export type Templates = Record<TemplateEvent, Record<"fi" | "en", { subject: string; body: string; sms: string }>>;
 
 export interface Content {
@@ -482,7 +484,10 @@ export interface LayoutEdit { system: SystemKey; adjust: LayoutAdjust | null; ba
 export const previewLayout = (ref: string, adjust: LayoutAdjust | null | undefined, system?: SystemKey) =>
   call<{ adjust: LayoutAdjust | null; system: SystemKey; base: LayoutBase[]; plan: ScaffoldPlan; estimate: { area: number; weightKg: number }; quote: Quote; before: { total: number; area: number } }>(
     "POST", `/api/office/orders/${enc(ref)}/layout/preview`, { ...(adjust === undefined ? {} : { adjust }), ...(system ? { system } : {}) });
-export const saveLayout = (ref: string, adjust: LayoutAdjust | null, system?: SystemKey) => call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/layout`, { adjust, ...(system ? { system } : {}) });
+/** Saves the layout; when the price moves it goes to the customer to accept, with the reason. */
+export const saveLayout = (ref: string, adjust: LayoutAdjust | null, system?: SystemKey, reason?: string) =>
+  call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/layout`, { adjust, ...(system ? { system } : {}), ...(reason ? { reason } : {}) });
+export const withdrawPriceChange = (ref: string) => call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/price-change/withdraw`, {});
 export const getOrderPlan = (ref: string) => call<{ plan: ScaffoldPlan }>("GET", `/api/office/orders/${enc(ref)}/plan`);
 export const shareOrderPlan = (ref: string) => call<{ token: string }>("POST", `/api/office/orders/${enc(ref)}/share`, {});
 export const getOrderDetail = (ref: string) => call<{ order: OfficeOrderDetail; crews: Crew[] }>("GET", `/api/office/orders/${enc(ref)}`);

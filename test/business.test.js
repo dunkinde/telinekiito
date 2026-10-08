@@ -118,6 +118,24 @@ test("business portal: users, own orders only, ordering, changes, invoices, Finv
   assert.equal((await req("POST", `/api/office/changes/${ch.id}/approve`, {}, owner)).status, 200);
   assert.equal((await req("GET", `/api/biz/orders/${ref}`, undefined, a)).json.order.days, 42);
 
+  // The office changes the layout and the price: the company sees old → new and accepts in the portal.
+  const total0 = (await req("GET", `/api/biz/orders/${ref}`, undefined, a)).json.order.total;
+  const side = (await req("POST", `/api/office/orders/${ref}/layout/preview`, {}, owner)).json.base[0].name;
+  const lay = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: { sides: { [side]: { off: true } } }, reason: "Yksi sivu jää pois" }, owner);
+  assert.equal(lay.status, 200, lay.text);
+  const seen = (await req("GET", `/api/biz/orders/${ref}`, undefined, a)).json.order;
+  assert.equal(seen.total, total0, "the old price stays until accepted");
+  assert.equal(seen.priceChange.status, "pending");
+  assert.equal(seen.priceChange.before.total, total0);
+  assert.ok(seen.priceChange.after.total < total0);
+  assert.equal(seen.priceChange.after.quote.discountPct, 15);
+  assert.equal((await req("POST", `/api/biz/orders/${ref}/price-change/accept`, { id: seen.priceChange.id }, acct)).status, 403, "accountants don't accept prices");
+  const acc2 = await req("POST", `/api/biz/orders/${ref}/price-change/accept`, { id: seen.priceChange.id }, a);
+  assert.equal(acc2.status, 200, acc2.text);
+  assert.equal(acc2.json.order.total, seen.priceChange.after.total);
+  assert.equal(acc2.json.order.priceChange.decidedBy, "Anna Admin (Rakennus Oy)");
+  assert.equal(acc2.json.order.history.at(-1).code, "price_change_accepted");
+
   // Pickup only once the scaffold is up; messages reach the office.
   assert.equal((await req("POST", `/api/biz/orders/${ref}/pickup`, {}, a)).json.error, "not_erected");
   assert.equal((await req("POST", `/api/biz/orders/${ref}/message`, { text: "Portti auki klo 7" }, a)).json.order.messages.at(-1).by, "Anna Admin");
