@@ -141,6 +141,20 @@ function readJson(req, limitBytes) {
   });
 }
 
+/**
+ * Logins count only the failed tries (10 wrong passwords or PINs per address in 15 minutes), so a whole team
+ * starting the day on one network can all log in.
+ */
+async function loginLimited(req, fn) {
+  const key = `login:${clientIp(req)}`;
+  if (allow.full(key, 10, 15 * 60e3)) throw new HttpError(429, "rate_limited", "Too many requests. Wait a moment and try again.");
+  try {
+    return await fn();
+  } catch (e) {
+    if (e.status === 401) allow.add(key);
+    throw e;
+  }
+}
 function limit(req, bucket, max, windowMs) {
   if (!allow(`${bucket}:${clientIp(req)}`, max, windowMs)) {
     throw new HttpError(429, "rate_limited", "Too many requests. Wait a moment and try again.");
@@ -607,9 +621,8 @@ function bizAccountView(a) {
 
 route("POST", /^\/api\/biz\/login$/, async (req, m, url, res) => {
   if (!auth.enabled) throw new HttpError(503, "office_disabled", "Logins are switched off on the server.");
-  limit(req, "login", 10, 15 * 60e3);
   const body = await readJson(req, 2048);
-  const u = B.bizLogin(store, body.phone, body.pin);
+  const u = await loginLimited(req, () => B.bizLogin(store, body.phone, body.pin));
   res.setHeader("Set-Cookie", auth.cookie(auth.issue(`b:${u.id}`, u.ver || 0), isSecure(req), auth.BIZ_COOKIE));
   return { ok: true, user: B.publicBizUser(u) };
 });
@@ -809,15 +822,14 @@ function finvoiceFile(iv, o) {
 /* ---------- Logins (office and crew) ---------- */
 async function login(req, m, url, res) {
   if (!auth.enabled) throw new HttpError(503, "office_disabled", "Set OFFICE_PASSWORD on the server to enable logins.");
-  limit(req, "login", 10, 15 * 60e3);
   const body = await readJson(req, 2048);
   let token, user;
   if (body.password !== undefined && !body.phone) {
-    if (!auth.checkPassword(body.password)) throw new HttpError(401, "wrong_password", "Wrong password.");
+    await loginLimited(req, () => { if (!auth.checkPassword(body.password)) throw new HttpError(401, "wrong_password", "Wrong password."); });
     token = auth.issue(MASTER_ID, 0);
     user = { id: MASTER_ID, name: "Owner", role: "owner", lang: "fi", crewId: null, master: true };
   } else {
-    const s = P.staffLogin(store, body.phone, body.pin);
+    const s = await loginLimited(req, () => P.staffLogin(store, body.phone, body.pin));
     token = auth.issue(s.id, s.ver || 0);
     user = P.publicStaff(s);
   }
