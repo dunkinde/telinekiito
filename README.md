@@ -116,6 +116,18 @@ OFFICE_PASSWORD=localpassword npm start   # http://localhost:3000
 npm test                                  # unit + API tests
 ```
 
+### End-to-end tests
+
+`e2e/` is a Playwright suite with its own `package.json` (the server stays dependency-free). It starts `server.js` on a temp `DATA_DIR` with the built site, seeds it with `dev/seed.mjs` and covers the calculator (order + tracking + 3D view), office login + layout editor, the business portal and the crew app.
+
+```bash
+cd web && npm install && npm run build && cd ..   # the suite serves web/out
+cd e2e && npm ci && npx playwright install chromium
+npx playwright test                               # E2E_CHANNEL=msedge uses installed Edge, E2E_PORT changes the port (default 4318)
+```
+
+CI (`.github/workflows/ci.yml`) runs `npm test`, the web typecheck and build on every push and pull request, then this suite as a separate job. It never deploys.
+
 ## Settings (`.env`)
 
 | Variable | Meaning |
