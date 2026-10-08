@@ -408,15 +408,21 @@ function WizardBody({ start }: { start: QuoteStart }) {
 
   // The measured 3D building prices the house wall by wall, while the size still matches what the lookup found.
   const looked = lookup.status === "done" && lookup.result && lookup.query === form.address.trim() ? lookup.result : null;
-  const modelRef = useMemo(
-    () => (house.ok ? modelRefFor(looked, { length: house.L, width: house.W, eave: house.eave, pitch: house.pitch, roofType: form.roofType }) : undefined),
-    [looked, house, form.roofType]
-  );
-  const modelId = modelRef ? JSON.stringify(modelRef) : "";
   // A building measured in the 3D model keeps its measured size and roof: the fields are locked so a stray change
   // doesn't swap the real shape for a box. The customer can unlock them on purpose.
   const [unlocked, setUnlocked] = useState(false);
   const locked = Boolean(looked?.model) && !unlocked;
+  // While locked the measured building is always used; after unlocking, only while the size still matches it.
+  const modelRef = useMemo(
+    () =>
+      locked && looked?.model
+        ? { id: looked.model.id, lat: looked.model.lat, lon: looked.model.lon }
+        : house.ok
+          ? modelRefFor(looked, { length: house.L, width: house.W, eave: house.eave, pitch: house.pitch, roofType: form.roofType })
+          : undefined,
+    [locked, looked, house, form.roofType]
+  );
+  const modelId = modelRef ? JSON.stringify(modelRef) : "";
 
   // The house as the 3D model draws it (same scaffold rules as the price).
   const modelShape = useMemo(
@@ -499,7 +505,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
           if (h.length && h.width) Object.assign(next, { length: String(h.length), width: String(h.width) });
           if (floors) next.floors = floors;
           if (h.roofType) next.roofType = h.roofType;
-          if (h.pitch) next.pitch = String(h.pitch);
+          if (h.pitch != null) next.pitch = String(h.pitch);
           if (h.eave) Object.assign(next, { eave: String(h.eave), eaveAuto: false });
           else if (floors) Object.assign(next, { eave: String(EAVE_BY_FLOORS[floors]), eaveAuto: true });
           return next;

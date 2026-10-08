@@ -18,6 +18,7 @@ export function siteTexts(i: I18n): Scaffold3DTexts {
     loading: i.t("p3d.loading"),
     failed: i.t("p3d.failed"),
     close: i.t("p3d.close"),
+    notice: i.t("p3d.notice"),
     sideName: (s) => siteSideName(i, s),
     sideInfo: (s) => i.t("p3d.info", { bays: s.bays, levels: s.lifts, area: s.area })
   };

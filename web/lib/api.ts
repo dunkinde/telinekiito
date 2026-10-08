@@ -173,7 +173,8 @@ export function modelRefFor(
 ): ModelRef | undefined {
   const m = r?.model, s = r?.house;
   if (!m || !s) return undefined;
-  const same = s.length === h.length && s.width === h.width && s.eave === h.eave && (s.roofType ?? h.roofType) === h.roofType && (h.roofType === "flat" || s.pitch === h.pitch);
+  const near = (x: number | null | undefined, y: number) => x == null || Math.abs(x - y) < 0.051;
+  const same = near(s.length, h.length) && near(s.width, h.width) && near(s.eave, h.eave) && (s.roofType ?? h.roofType) === h.roofType && (h.roofType === "flat" || near(s.pitch, h.pitch));
   return same ? { id: m.id, lat: m.lat, lon: m.lon } : undefined;
 }
 

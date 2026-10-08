@@ -17,6 +17,8 @@ export interface Scaffold3DTexts {
   /** One line about a side, e.g. "8 bays · 1 level · 96 m²". */
   sideInfo: (s: PlanSide) => string;
   close: string;
+  /** Shown on every customer-facing view: the model is a preliminary plan, not the final structure. */
+  notice?: string;
 }
 
 export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onSelect, compact = false }: {
@@ -194,6 +196,14 @@ export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onS
         </button>
       </div>
       )}
+      {texts.notice ? (
+        <p
+          className={`pointer-events-none absolute inset-x-2 rounded-lg bg-white/90 px-2.5 py-1.5 leading-snug text-[#3b434c] shadow-sm backdrop-blur ${compact ? "bottom-2 text-[10.5px]" : side ? "bottom-[84px] text-[12px] sm:inset-x-3" : "bottom-3 text-[12px] sm:inset-x-3"}`}
+          role="note"
+        >
+          {texts.notice}
+        </p>
+      ) : null}
       {side && !compact ? (
         <div className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-3 rounded-xl bg-[#0e1217]/90 px-4 py-3 text-white shadow-lg" role="status">
           <div className="min-w-0">

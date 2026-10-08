@@ -132,7 +132,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
           ...(h.length && h.width ? { length: String(h.length), width: String(h.width) } : {}),
           ...(floors ? { floors } : {}),
           ...(h.roofType ? { roofType: h.roofType } : {}),
-          ...(h.pitch ? { pitch: String(h.pitch) } : {}),
+          ...(h.pitch != null ? { pitch: String(h.pitch) } : {}),
           eave: h.eave ? String(h.eave) : floors ? String(EAVE_BY_FLOORS[floors]) : x.eave
         };
       });
