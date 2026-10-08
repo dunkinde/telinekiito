@@ -50,14 +50,44 @@ test("calculator: size by hand, job, price, order and tracking", async ({ page }
   expect(errors).toEqual([]);
 });
 
-test("calculator: Näytä 3D:nä opens the 3D view", async ({ page }) => {
+test("calculator: Näytä 3D:nä opens the 3D view, which draws only when it changes", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  // Count WebGL draw calls, to see when the 3D views draw.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __draws: number };
+    w.__draws = 0;
+    for (const C of [WebGLRenderingContext, WebGL2RenderingContext]) {
+      for (const fn of ["drawElements", "drawArrays"] as const) {
+        const orig = C.prototype[fn] as (...a: unknown[]) => void;
+        (C.prototype as unknown as Record<string, unknown>)[fn] = function (this: unknown, ...a: unknown[]) {
+          w.__draws++;
+          return orig.apply(this, a);
+        };
+      }
+    }
+  });
+  const draws = () => page.evaluate(() => (window as unknown as { __draws: number }).__draws);
+
   const wizard = await fillHouse(page);
   await wizard.getByRole("button", { name: "Näytä 3D:nä" }).click();
   const view = page.getByRole("dialog", { name: "Telinesuunnitelma" });
-  await expect(view.locator("canvas")).toBeVisible();
-  // Give the renderer a moment to draw a few frames.
-  await page.waitForTimeout(1500);
+  const canvas = view.locator("canvas");
+  await expect(canvas).toBeVisible();
+  await expect.poll(draws).toBeGreaterThan(0);
+
+  // Idle: once the first frames are out, nothing more is drawn.
+  await page.waitForTimeout(1000);
+  const idle = await draws();
+  await page.waitForTimeout(1000);
+  expect(await draws()).toBe(idle);
+
+  // Dragging turns the camera and draws again.
+  const box = (await canvas.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 120, box.y + box.height / 2 + 20, { steps: 8 });
+  await page.mouse.up();
+  await expect.poll(draws).toBeGreaterThan(idle);
   expect(errors).toEqual([]);
 });

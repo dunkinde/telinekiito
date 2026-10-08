@@ -68,6 +68,20 @@ export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onS
         controls.maxPolarAngle = Math.PI / 2 - 0.04;
         controls.minDistance = radius * 0.6;
         controls.maxDistance = radius * 6;
+
+        // Draw only when something changes: the camera moves (the controls fire "change", and keep firing from
+        // update() while the damping settles), the view resizes or resets, or a side is picked.
+        let raf = 0;
+        const frame = () => {
+          raf = 0;
+          controls.update();
+          renderer.render(scene, camera);
+        };
+        const invalidate = () => {
+          if (!raf) raf = requestAnimationFrame(frame);
+        };
+        controls.addEventListener("change", invalidate);
+
         const reset = () => {
           const d = radius / Math.sin((35 * Math.PI) / 360) * 0.95;
           camera.position.set(center.x - d * 0.55, center.y + d * 0.5, center.z + d * 0.65);
@@ -106,6 +120,7 @@ export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onS
               m.emissiveIntensity = s.side.i === i ? 0.45 : 0;
             }
           });
+          invalidate();
         };
         api.current = { reset, select };
         select(pick);
@@ -133,20 +148,16 @@ export function Scaffold3D({ plan, texts, className = "h-[420px]", selected, onS
           renderer.setSize(w, h);
           camera.aspect = w / h;
           camera.updateProjectionMatrix();
+          invalidate();
         });
         ro.observe(el);
 
-        let raf = 0;
-        const loop = () => {
-          raf = requestAnimationFrame(loop);
-          controls.update();
-          renderer.render(scene, camera);
-        };
-        loop();
+        invalidate();
         setState("ready");
 
         cleanup = () => {
-          cancelAnimationFrame(raf);
+          if (raf) cancelAnimationFrame(raf);
+          controls.removeEventListener("change", invalidate);
           ro.disconnect();
           renderer.domElement.removeEventListener("pointerdown", onDown);
           renderer.domElement.removeEventListener("pointerup", onUp);
