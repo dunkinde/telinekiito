@@ -14,7 +14,9 @@ export interface StreetPermit { id: string; address: string; start: string; end:
 export interface PermitNotice { id: string; address: string; operation: string; description: string; state: string; verdictAt: string | null; appealEnds: string | null }
 export interface ProspectNote { id: string; at: string; by: string; text: string; status?: ProspectStatus }
 export interface Evidence { url: string; title?: string; note: string; checked: string }
-export interface Research { summary: string; scope?: string; timing?: string; buyer?: string; contactRoute?: string; question?: string; checked?: string; evidence?: Evidence[]; gaps?: string[] }
+export interface Research { summary: string; scope?: string; timing?: string; buyer?: string; contactRoute?: string; question?: string; checked?: string; evidence?: Evidence[]; gaps?: string[];
+  /** The same notes in Finnish. */
+  fi?: Partial<Omit<Research, "fi" | "checked">> }
 export interface Links { housingId?: string | null; managerId?: string | null; contractorId?: string | null; ownerId?: string | null }
 
 export interface ProspectRow {

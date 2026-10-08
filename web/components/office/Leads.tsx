@@ -293,7 +293,9 @@ function ProspectDetail({ id, onClose, onChanged }: { id: string; onClose: () =>
   const orgs = useLoad(getOrgs, []);
   const [form, setForm] = useState<{ key: string; status: ProspectStatus; assigneeId: string; nextAction: string; nextDate: string; priorityOverride: string } | null>(null);
   const [note, setNote] = useState("");
-  const p = d.data?.prospect;
+  const raw = d.data?.prospect;
+  // Research notes in Finnish when the office is in Finnish (English otherwise).
+  const p = raw && lang === "fi" && raw.research?.fi ? { ...raw, research: { ...raw.research, ...raw.research.fi } } : raw;
   if (p && (!form || form.key !== p.id + p.status + (p.assigneeId || "") + p.nextAction + (p.nextDate || "") + (p.priorityOverride || ""))) {
     setForm({ key: p.id + p.status + (p.assigneeId || "") + p.nextAction + (p.nextDate || "") + (p.priorityOverride || ""), status: p.status, assigneeId: p.assigneeId || "", nextAction: p.nextAction, nextDate: p.nextDate || "", priorityOverride: p.priorityOverride || "" });
   }

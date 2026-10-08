@@ -1,5 +1,5 @@
 {
-  "note": "Research done by hand on the strongest prospects (8 Oct 2026). Facts come from the linked public sources; anything not confirmed is listed under gaps. Keyed by prospect id (lib/prospects.js). Company contacts only; no private persons.",
+  "note": "Research done by hand on the strongest prospects (8 Oct 2026). Facts come from the linked public sources; anything not confirmed is listed under gaps. Keyed by prospect id (lib/prospects.js). Texts in English, with the Finnish version under \"fi\". Company contacts only; no private persons.",
   "prospects": {
     "P:09102509520002": {
       "checked": "2026-10-08",
@@ -9,12 +9,64 @@
       "buyer": "Owner not identified: PRH has no housing company named after these addresses, so the owner is probably a rental or public owner. Neighbouring Kisakylä housing companies are managed by Olympiakylän Huolto Oy (PRH c/o) – an inference, not confirmed for these buildings.",
       "contactRoute": "Find the owner (site board, the owner's property department). If the owner is public, watch Hilma for the contract notice.",
       "question": "Has the facade repair been tendered yet, is scaffolding part of the main contract or bought separately, and when does work start?",
-      "gaps": ["Owner and decision-maker", "Tender status and schedule", "Main contractor"],
+      "gaps": [
+        "Owner and decision-maker",
+        "Tender status and schedule",
+        "Main contractor"
+      ],
       "evidence": [
-        { "url": "https://julkipano.lupapiste.fi/app/fi/bulletins", "title": "Lupapiste notice LP-091-2026-03652", "note": "Kisakylän suojeltujen asuinkerrostalojen julkisivujen korjaus- ja muutostyöt (permit notice)", "checked": "2026-10-08" },
-        { "url": "https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset/items?f=application/json&filter-lang=cql-text&filter=pysyva_lupatunnus%3D%27302412779X%27", "title": "Ryhti permit 302412779X", "note": "Decided 2026-09-28, state planned (not started)", "checked": "2026-10-08" },
-        { "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?name=Koskelantie", "title": "PRH search: Koskelantie", "note": "No housing company for Koskelantie 17–27; Koskelantie 35-37 and 56 c/o Olympiakylän Huolto Oy", "checked": "2026-10-08" }
-      ]
+        {
+          "url": "https://julkipano.lupapiste.fi/app/fi/bulletins",
+          "title": "Lupapiste notice LP-091-2026-03652",
+          "note": "Kisakylän suojeltujen asuinkerrostalojen julkisivujen korjaus- ja muutostyöt (permit notice)",
+          "checked": "2026-10-08"
+        },
+        {
+          "url": "https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset/items?f=application/json&filter-lang=cql-text&filter=pysyva_lupatunnus%3D%27302412779X%27",
+          "title": "Ryhti permit 302412779X",
+          "note": "Decided 2026-09-28, state planned (not started)",
+          "checked": "2026-10-08"
+        },
+        {
+          "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?name=Koskelantie",
+          "title": "PRH search: Koskelantie",
+          "note": "No housing company for Koskelantie 17–27; Koskelantie 35-37 and 56 c/o Olympiakylän Huolto Oy",
+          "checked": "2026-10-08"
+        }
+      ],
+      "fi": {
+        "summary": "Kisakylän suojeltujen kerrostalojen julkisivujen korjaus ja muutostyöt (Koskelantie 17 ja 19). Rakennuslupa myönnetty 28.9.2026; Ryhtin mukaan työ ei ole alkanut.",
+        "scope": "Suojeltujen rakennusten julkisivujen korjaus- ja muutostyöt – yleensä koko julkisivu telineillä.",
+        "timing": "Lupa 28.9.2026, ei aloitettu. Aloituspäivä ei julkinen.",
+        "buyer": "Omistaja ei tiedossa: PRH:sta ei löydy näiden osoitteiden mukaan nimettyä taloyhtiötä, joten omistaja on todennäköisesti vuokratalo- tai julkinen omistaja. Naapuritaloyhtiöitä Kisakylässä isännöi Olympiakylän Huolto Oy (PRH c/o) – päätelmä, ei vahvistettu näille taloille.",
+        "contactRoute": "Selvitä omistaja (työmaataulu, omistajan kiinteistöyksikkö). Jos omistaja on julkinen, seuraa hankintailmoitusta Hilmassa.",
+        "question": "Onko julkisivuremontti jo kilpailutettu, kuuluvatko telineet pääurakkaan vai hankitaanko ne erikseen, ja milloin työ alkaa?",
+        "gaps": [
+          "Omistaja ja päättäjä",
+          "Kilpailutuksen tila ja aikataulu",
+          "Pääurakoitsija"
+        ],
+        "evidence": [
+          {
+            "url": "https://julkipano.lupapiste.fi/app/fi/bulletins",
+            "title": "Lupapiste-kuulutus LP-091-2026-03652",
+            "note": "Kisakylän suojeltujen asuinkerrostalojen julkisivujen korjaus- ja muutostyöt (lupakuulutus)",
+            "checked": "2026-10-08"
+          },
+          {
+            "url": "https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset/items?f=application/json&filter-lang=cql-text&filter=pysyva_lupatunnus%3D%27302412779X%27",
+            "title": "Ryhti-lupa 302412779X",
+            "note": "Päätös 28.9.2026, tila suunniteltu (ei aloitettu)",
+            "checked": "2026-10-08"
+          },
+          {
+            "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?name=Koskelantie",
+            "title": "PRH-haku: Koskelantie",
+            "note": "Ei taloyhtiötä osoitteille Koskelantie 17–27; Koskelantie 35-37 ja 56 c/o Olympiakylän Huolto Oy",
+            "checked": "2026-10-08"
+          }
+        ]
+      }
     },
     "P:09102509520004": {
       "checked": "2026-10-08",
@@ -24,11 +76,50 @@
       "buyer": "As for Koskelantie 17–19: owner not identified in PRH; probably one owner for the whole Kisakylä project.",
       "contactRoute": "Same as Koskelantie 17–19 – treat the two permits as one opportunity.",
       "question": "Is this one contract with Koskelantie 17–19, and is scaffolding bought separately?",
-      "gaps": ["Owner", "Tender status and schedule"],
+      "gaps": [
+        "Owner",
+        "Tender status and schedule"
+      ],
       "evidence": [
-        { "url": "https://julkipano.lupapiste.fi/app/fi/bulletins", "title": "Lupapiste notice LP-091-2026-03654", "note": "Kisakylän suojeltujen asuinkerrostalojen julkisivujen korjaus- ja muutostyöt", "checked": "2026-10-08" },
-        { "url": "https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset/items?f=application/json&filter-lang=cql-text&filter=pysyva_lupatunnus%3D%27302412780Y%27", "title": "Ryhti permit 302412780Y", "note": "Decided 2026-09-28, state planned", "checked": "2026-10-08" }
-      ]
+        {
+          "url": "https://julkipano.lupapiste.fi/app/fi/bulletins",
+          "title": "Lupapiste notice LP-091-2026-03654",
+          "note": "Kisakylän suojeltujen asuinkerrostalojen julkisivujen korjaus- ja muutostyöt",
+          "checked": "2026-10-08"
+        },
+        {
+          "url": "https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset/items?f=application/json&filter-lang=cql-text&filter=pysyva_lupatunnus%3D%27302412780Y%27",
+          "title": "Ryhti permit 302412780Y",
+          "note": "Decided 2026-09-28, state planned",
+          "checked": "2026-10-08"
+        }
+      ],
+      "fi": {
+        "summary": "Saman Kisakylän julkisivuhankkeen toinen lupa: suojellut talot Koskelantie 23, 25 ja 27. Päätös 28.9.2026, ei aloitettu.",
+        "scope": "Suojeltujen rakennusten julkisivujen korjaus- ja muutostyöt.",
+        "timing": "Lupa 28.9.2026, ei aloitettu.",
+        "buyer": "Kuten Koskelantie 17–19: omistajaa ei löydy PRH:sta; todennäköisesti koko Kisakylän hankkeella on sama omistaja.",
+        "contactRoute": "Sama kuin Koskelantie 17–19 – käsittele molemmat luvat yhtenä mahdollisuutena.",
+        "question": "Onko tämä samaa urakkaa kuin Koskelantie 17–19, ja hankitaanko telineet erikseen?",
+        "gaps": [
+          "Omistaja",
+          "Kilpailutuksen tila ja aikataulu"
+        ],
+        "evidence": [
+          {
+            "url": "https://julkipano.lupapiste.fi/app/fi/bulletins",
+            "title": "Lupapiste-kuulutus LP-091-2026-03654",
+            "note": "Kisakylän suojeltujen asuinkerrostalojen julkisivujen korjaus- ja muutostyöt",
+            "checked": "2026-10-08"
+          },
+          {
+            "url": "https://paikkatiedot.ymparisto.fi/geoserver/ryhti_building/ogc/features/v1/collections/avoimet_lupa_rakennukset/items?f=application/json&filter-lang=cql-text&filter=pysyva_lupatunnus%3D%27302412780Y%27",
+            "title": "Ryhti-lupa 302412780Y",
+            "note": "Päätös 28.9.2026, tila suunniteltu",
+            "checked": "2026-10-08"
+          }
+        ]
+      }
     },
     "P:09100602180004": {
       "checked": "2026-10-08",
@@ -38,11 +129,52 @@
       "buyer": "Asunto Oy Tehtaankatu 32 a Bostads Ab (0117689-2), property manager 10+ Isännöinti Oy according to PRH (c/o).",
       "contactRoute": "10+ Isännöinti Oy – ask for the property manager of Asunto Oy Tehtaankatu 32 a.",
       "question": "Is the balcony renewal tendered, who designs/supervises it, and can scaffolding be quoted as a separate line?",
-      "gaps": ["A sales listing for 'Tehtaankatu 32' names another manager (Pääovi) – probably a different company; confirm", "Schedule", "Contractor"],
+      "gaps": [
+        "A sales listing for 'Tehtaankatu 32' names another manager (Pääovi) – probably a different company; confirm",
+        "Schedule",
+        "Contractor"
+      ],
       "evidence": [
-        { "url": "https://julkipano.lupapiste.fi/app/fi/bulletins", "title": "Lupapiste notice LP-091-2026-03883", "note": "Asuinkerrostalon parvekkeiden uusiminen, laajentaminen ja kattaminen, uuden parvekkeen rakentaminen", "checked": "2026-10-08" },
-        { "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0117689-2", "title": "PRH 0117689-2", "note": "Asunto Oy Tehtaankatu 32 a Bostads Ab, c/o 10+ Isännöinti Oy", "checked": "2026-10-08" }
-      ]
+        {
+          "url": "https://julkipano.lupapiste.fi/app/fi/bulletins",
+          "title": "Lupapiste notice LP-091-2026-03883",
+          "note": "Asuinkerrostalon parvekkeiden uusiminen, laajentaminen ja kattaminen, uuden parvekkeen rakentaminen",
+          "checked": "2026-10-08"
+        },
+        {
+          "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0117689-2",
+          "title": "PRH 0117689-2",
+          "note": "Asunto Oy Tehtaankatu 32 a Bostads Ab, c/o 10+ Isännöinti Oy",
+          "checked": "2026-10-08"
+        }
+      ],
+      "fi": {
+        "summary": "Parvekkeiden uusiminen, laajentaminen ja lasitus sekä uusi parveke, Tehtaankatu 32 e / Edelfeltintie 9 / Hornintie 3. Lupa myönnetty 18.9.2026, ei aloitettu.",
+        "scope": "Parvekkeet uusitaan ja laajennetaan – yleensä julkisivutelineet parvekejulkisivuille (tai nosturi ja telineet).",
+        "timing": "Lupa 18.9.2026, ei aloitettu; aloitus ei julkinen.",
+        "buyer": "Asunto Oy Tehtaankatu 32 a Bostads Ab (0117689-2), isännöitsijä PRH:n mukaan 10+ Isännöinti Oy (c/o).",
+        "contactRoute": "10+ Isännöinti Oy – kysy Asunto Oy Tehtaankatu 32 a:n isännöitsijää.",
+        "question": "Onko parvekeremontti kilpailutettu, kuka suunnittelee/valvoo, ja voiko telineet tarjota omana rivinään?",
+        "gaps": [
+          "Myynti-ilmoituksessa 'Tehtaankatu 32' isännöitsijänä on toinen yritys (Pääovi) – todennäköisesti eri yhtiö; varmista",
+          "Aikataulu",
+          "Urakoitsija"
+        ],
+        "evidence": [
+          {
+            "url": "https://julkipano.lupapiste.fi/app/fi/bulletins",
+            "title": "Lupapiste-kuulutus LP-091-2026-03883",
+            "note": "Asuinkerrostalon parvekkeiden uusiminen, laajentaminen ja kattaminen, uuden parvekkeen rakentaminen",
+            "checked": "2026-10-08"
+          },
+          {
+            "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0117689-2",
+            "title": "PRH 0117689-2",
+            "note": "Asunto Oy Tehtaankatu 32 a Bostads Ab, c/o 10+ Isännöinti Oy",
+            "checked": "2026-10-08"
+          }
+        ]
+      }
     },
     "P:09100400710007": {
       "checked": "2026-10-08",
@@ -52,10 +184,38 @@
       "buyer": "Main contractor (not public in the open data) – housing company not found in PRH by address.",
       "contactRoute": "Site board on Bulevardi 11 names the contractor; contact the contractor's site manager.",
       "question": "Who supplies the scaffolding here, and are there later phases (courtyard facades, roof) where you need capacity?",
-      "gaps": ["Contractor", "Owner / housing company"],
+      "gaps": [
+        "Contractor",
+        "Owner / housing company"
+      ],
       "evidence": [
-        { "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2602472%27", "title": "Street permit AL2602472", "note": "21.9.2026–30.4.2027, gateway plaster renewal", "checked": "2026-10-08" }
-      ]
+        {
+          "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2602472%27",
+          "title": "Street permit AL2602472",
+          "note": "21.9.2026–30.4.2027, gateway plaster renewal",
+          "checked": "2026-10-08"
+        }
+      ],
+      "fi": {
+        "summary": "Bulevardi 11 / Fredrikinkatu 39 (valmistunut 1903): työmaa käynnissä telineillä. Aiempi aluevuokraus 9.7.–9.10.2026 (telineet ja kulkukäytävä); uusi 21.9.2026–30.4.2027 porttikäytävän rappauksen uusimiseen.",
+        "scope": "Rappaus- ja julkisivutyöt telineiltä; pitkä työmaa kevääseen 2027.",
+        "timing": "Käynnissä 30.4.2027 asti.",
+        "buyer": "Pääurakoitsija (ei avoimessa datassa) – taloyhtiötä ei löydy PRH:sta osoitteella.",
+        "contactRoute": "Bulevardi 11:n työmaataulussa on urakoitsijan nimi; ota yhteys urakoitsijan vastaavaan työnjohtajaan.",
+        "question": "Kuka toimittaa telineet tähän kohteeseen, ja onko tulossa myöhempiä vaiheita (pihajulkisivut, katto), joihin tarvitsette kapasiteettia?",
+        "gaps": [
+          "Urakoitsija",
+          "Omistaja / taloyhtiö"
+        ],
+        "evidence": [
+          {
+            "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2602472%27",
+            "title": "Aluevuokraus AL2602472",
+            "note": "21.9.2026–30.4.2027, porttikäytävän rappauksen uusiminen",
+            "checked": "2026-10-08"
+          }
+        ]
+      }
     },
     "P:09100400670005": {
       "checked": "2026-10-08",
@@ -65,10 +225,38 @@
       "buyer": "Main contractor or owner – not public in the open data.",
       "contactRoute": "Site board names the contractor.",
       "question": "Who supplies the scaffolding, and is weather protection (sheeting) needed for the winter?",
-      "gaps": ["Contractor", "Owner"],
+      "gaps": [
+        "Contractor",
+        "Owner"
+      ],
       "evidence": [
-        { "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2602344%27", "title": "Street permit AL2602344", "note": "7.9.2026–31.1.2027: scaffolds, waste handling, storage", "checked": "2026-10-08" }
-      ]
+        {
+          "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2602344%27",
+          "title": "Street permit AL2602344",
+          "note": "7.9.2026–31.1.2027: scaffolds, waste handling, storage",
+          "checked": "2026-10-08"
+        }
+      ],
+      "fi": {
+        "summary": "Kalevankatu 11 (valmistunut 1895, toimisto- tai muu käyttö): aluevuokraus 7.9.2026–31.1.2027 telineille, jätehuollolle ja varastoinnille.",
+        "scope": "Korjaushanke, jolle telineet on jo luvitettu.",
+        "timing": "Käynnissä 31.1.2027 asti.",
+        "buyer": "Pääurakoitsija tai omistaja – ei avoimessa datassa.",
+        "contactRoute": "Urakoitsijan nimi on työmaataulussa.",
+        "question": "Kuka toimittaa telineet, ja tarvitaanko talveksi sääsuojaa (peitteitä)?",
+        "gaps": [
+          "Urakoitsija",
+          "Omistaja"
+        ],
+        "evidence": [
+          {
+            "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2602344%27",
+            "title": "Aluevuokraus AL2602344",
+            "note": "7.9.2026–31.1.2027: telineet, jätehuolto, varastointi",
+            "checked": "2026-10-08"
+          }
+        ]
+      }
     },
     "P:09100200370019": {
       "checked": "2026-10-08",
@@ -78,10 +266,38 @@
       "buyer": "Public owner – contract probably tendered already; the main contractor buys scaffolding.",
       "contactRoute": "Contractor named on the site board; check Hilma for the original contract notice.",
       "question": "Does the contractor need extra scaffold capacity or weather protection for later phases?",
-      "gaps": ["Owner", "Contractor"],
+      "gaps": [
+        "Owner",
+        "Contractor"
+      ],
       "evidence": [
-        { "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2601571-3%27", "title": "Street permit AL2601571-3", "note": "18.6.2026–30.4.2027: site hoist, skip, scaffolds", "checked": "2026-10-08" }
-      ]
+        {
+          "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2601571-3%27",
+          "title": "Street permit AL2601571-3",
+          "note": "18.6.2026–30.4.2027: site hoist, skip, scaffolds",
+          "checked": "2026-10-08"
+        }
+      ],
+      "fi": {
+        "summary": "Fabianinkatu 28 (julkinen rakennus, 1909): laajennuslupa ja aluevuokraus 18.6.2026–30.4.2027 rakennushissille, lavalle ja telineille.",
+        "scope": "Iso korjaushanke telineillä ja hissillä.",
+        "timing": "Käynnissä 30.4.2027 asti.",
+        "buyer": "Julkinen omistaja – urakka todennäköisesti jo kilpailutettu; pääurakoitsija hankkii telineet.",
+        "contactRoute": "Urakoitsija työmaataulussa; tarkista alkuperäinen hankintailmoitus Hilmasta.",
+        "question": "Tarvitseeko urakoitsija lisää telinekapasiteettia tai sääsuojaa myöhempiin vaiheisiin?",
+        "gaps": [
+          "Omistaja",
+          "Urakoitsija"
+        ],
+        "evidence": [
+          {
+            "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2601571-3%27",
+            "title": "Aluevuokraus AL2601571-3",
+            "note": "18.6.2026–30.4.2027: rakennushissi, lava, telineet",
+            "checked": "2026-10-08"
+          }
+        ]
+      }
     },
     "P:09101100020012": {
       "checked": "2026-10-08",
@@ -91,11 +307,48 @@
       "buyer": "Asunto Oy Helsinginkatu 12 (0234584-6), property manager Karhupuiston Isännöinti Oy according to PRH (c/o, registered 31 Oct 2025).",
       "contactRoute": "Karhupuiston Isännöinti Oy – not for this site (nearly done) but for the manager's other buildings.",
       "question": "Which other buildings you manage have facade or roof work planned for 2027?",
-      "gaps": ["Contractor"],
+      "gaps": [
+        "Contractor"
+      ],
       "evidence": [
-        { "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0234584-6", "title": "PRH 0234584-6", "note": "Asunto Oy Helsinginkatu 12, c/o Karhupuiston Isännöinti Oy", "checked": "2026-10-08" },
-        { "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2601862-2%27", "title": "Street permit AL2601862-2", "note": "5.8.–30.10.2026: storage area and scaffolds", "checked": "2026-10-08" }
-      ]
+        {
+          "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0234584-6",
+          "title": "PRH 0234584-6",
+          "note": "Asunto Oy Helsinginkatu 12, c/o Karhupuiston Isännöinti Oy",
+          "checked": "2026-10-08"
+        },
+        {
+          "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2601862-2%27",
+          "title": "Street permit AL2601862-2",
+          "note": "5.8.–30.10.2026: storage area and scaffolds",
+          "checked": "2026-10-08"
+        }
+      ],
+      "fi": {
+        "summary": "Helsinginkatu 12 (valmistunut 1927, 87 asuntoa): korjaus telineillä, aluevuokraus 5.8.–30.10.2026 – päättyy kolmen viikon päästä.",
+        "scope": "Kiinteistön korjaus telineillä ja nostoilla.",
+        "timing": "Päättyy 30.10.2026.",
+        "buyer": "Asunto Oy Helsinginkatu 12 (0234584-6), isännöitsijä PRH:n mukaan Karhupuiston Isännöinti Oy (c/o, rekisteröity 31.10.2025).",
+        "contactRoute": "Karhupuiston Isännöinti Oy – ei tätä kohdetta (lähes valmis) vaan isännöitsijän muita taloja varten.",
+        "question": "Missä isännöimissänne taloissa on julkisivu- tai kattoremontti suunnitteilla vuodelle 2027?",
+        "gaps": [
+          "Urakoitsija"
+        ],
+        "evidence": [
+          {
+            "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0234584-6",
+            "title": "PRH 0234584-6",
+            "note": "Asunto Oy Helsinginkatu 12, c/o Karhupuiston Isännöinti Oy",
+            "checked": "2026-10-08"
+          },
+          {
+            "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2601862-2%27",
+            "title": "Aluevuokraus AL2601862-2",
+            "note": "5.8.–30.10.2026: varastoalue ja telineet",
+            "checked": "2026-10-08"
+          }
+        ]
+      }
     },
     "P:09104200550002": {
       "checked": "2026-10-08",
@@ -105,11 +358,48 @@
       "buyer": "Asunto Oy Tupavuori 3 (0122800-7), property manager Kiinteistötahkola Helsinki Oy according to PRH (c/o).",
       "contactRoute": "Kiinteistötahkola Helsinki Oy – relationship for the manager's other buildings; the contractor for this site.",
       "question": "Which of your buildings have roof or facade renovations coming in 2027, and who handles scaffolding procurement?",
-      "gaps": ["Contractor"],
+      "gaps": [
+        "Contractor"
+      ],
       "evidence": [
-        { "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0122800-7", "title": "PRH 0122800-7", "note": "Asunto Oy Tupavuori 3, c/o Kiinteistötahkola Helsinki Oy", "checked": "2026-10-08" },
-        { "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2601917-3%27", "title": "Street permit AL2601917-3", "note": "20.7.–31.12.2026: lifting weather protection / roof trusses and materials", "checked": "2026-10-08" }
-      ]
+        {
+          "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0122800-7",
+          "title": "PRH 0122800-7",
+          "note": "Asunto Oy Tupavuori 3, c/o Kiinteistötahkola Helsinki Oy",
+          "checked": "2026-10-08"
+        },
+        {
+          "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2601917-3%27",
+          "title": "Street permit AL2601917-3",
+          "note": "20.7.–31.12.2026: lifting weather protection / roof trusses and materials",
+          "checked": "2026-10-08"
+        }
+      ],
+      "fi": {
+        "summary": "Tupavuori 3 (1978, 89 asuntoa): kattoremontti sääsuojan alla – aluevuokraus 20.7.–31.12.2026 sääsuojan, kattoristikoiden ja materiaalien nostoon katolle.",
+        "scope": "Kattoremontti, tilapäinen sääsuoja jo pystyssä.",
+        "timing": "Käynnissä 31.12.2026 asti.",
+        "buyer": "Asunto Oy Tupavuori 3 (0122800-7), isännöitsijä PRH:n mukaan Kiinteistötahkola Helsinki Oy (c/o).",
+        "contactRoute": "Kiinteistötahkola Helsinki Oy – suhde isännöitsijän muita taloja varten; tämän kohteen osalta urakoitsija.",
+        "question": "Missä taloissanne on katto- tai julkisivuremontti tulossa 2027, ja kuka hoitaa telinehankinnat?",
+        "gaps": [
+          "Urakoitsija"
+        ],
+        "evidence": [
+          {
+            "url": "https://avoindata.prh.fi/opendata-ytj-api/v3/companies?businessId=0122800-7",
+            "title": "PRH 0122800-7",
+            "note": "Asunto Oy Tupavuori 3, c/o Kiinteistötahkola Helsinki Oy",
+            "checked": "2026-10-08"
+          },
+          {
+            "url": "https://kartta.hel.fi/ws/geoserver/avoindata/wfs?service=WFS&version=2.0.0&request=GetFeature&typeNames=avoindata:Aluevuokraus_alue&outputFormat=application/json&CQL_FILTER=hakemustunnus%3D%27AL2601917-3%27",
+            "title": "Aluevuokraus AL2601917-3",
+            "note": "20.7.–31.12.2026: sääsuojan / kattoristikoiden ja materiaalien nosto",
+            "checked": "2026-10-08"
+          }
+        ]
+      }
     }
   }
 }
