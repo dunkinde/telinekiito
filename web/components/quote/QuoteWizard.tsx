@@ -79,11 +79,20 @@ const ROOFS: RoofType[] = ["gable", "hip", "flat"];
 const STEP_KEYS: Key[] = ["q.step1", "q.step2", "q.step3", "q.step4"];
 
 /** Earliest start if the server's dates aren't loaded yet (same rule as the engine). */
+const isWeekendISO = (iso: string) => {
+  if (!iso) return false;
+  const wd = new Date(iso + "T12:00:00Z").getUTCDay();
+  return wd === 0 || wd === 6;
+};
+
 function localEarliest(u: Urgency): string {
   const d = new Date();
   d.setHours(0, 0, 0, 0);
   if (u === "emergency") d.setDate(d.getDate() + 1);
-  else if (u === "express") d.setDate(d.getDate() + 2);
+  else if (u === "express") {
+    d.setDate(d.getDate() + 2);
+    while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+  }
   else {
     let added = 0;
     while (added < 3) {
@@ -206,7 +215,9 @@ function AddressCard({ r }: { r: AddressResult }) {
     if (m.eaveMin != null && m.eaveMax != null) facts.push([m.eaveMax - m.eaveMin < 0.3 ? t("a.eave", { h: num(m.eaveMax) }) : t("a.eaves", { a: num(m.eaveMin), b: num(m.eaveMax) }), t("a.model3d")]);
     if (m.ridge) facts.push([t("a.ridge", { h: num(m.ridge) }), hs.pitch ? t("a.roofPitch", { p: hs.pitch }) : t("a.model3d")]);
   } else if (hs.length && hs.width) facts.push([`${num(hs.length)} × ${num(hs.width)} m`, estimated ? t("a.estimated") : d.footprintM2 ? t("a.measuredArea", { m2: d.footprintM2 }) : t("a.measured")]);
-  if (hs.floors) facts.push([t("a.floors", { n: hs.floors === "2" ? 2 : 1 }), d.floorsSource === "OpenStreetMap" ? t("a.fromMap") : t("a.register")]);
+  // A building taller than the online price covers: its real storeys, not the 2 the price is figured for.
+  if (reg?.storeys && reg.storeys >= 3) facts.push([t("a.floors", { n: reg.storeys }), t("a.registerOver")]);
+  else if (hs.floors) facts.push([t("a.floors", { n: hs.floors === "2" ? 2 : 1 }), d.floorsSource === "OpenStreetMap" ? t("a.fromMap") : t("a.register")]);
   if (reg?.floorArea || reg?.grossFloorArea) facts.push([t("a.floorArea", { m2: num(reg.floorArea || reg.grossFloorArea || 0) }), t("a.register")]);
   if (reg?.completed) facts.push([t("a.built", { year: reg.completed }), t("a.register")]);
   const notes = (r.noteCodes || []).filter((n) => n.code !== "roof_assumed").map((n) => tk("note." + n.code, { n: n.n ?? "", map: (n as { map?: number }).map ?? "", reg: (n as { reg?: number }).reg ?? "", l: (n as { l?: number }).l ?? "", w: (n as { w?: number }).w ?? "" }));
@@ -263,6 +274,7 @@ function AddressCard({ r }: { r: AddressResult }) {
 function PriceDetails({ quote, estimate, vat }: { quote: Quote; estimate: Estimate | null; vat: number }) {
   const i18n = useI18n();
   const { t } = i18n;
+  const { config } = useSite();
   return (
     <div className="text-sm">
       {estimate ? (
@@ -295,6 +307,7 @@ function PriceDetails({ quote, estimate, vat }: { quote: Quote; estimate: Estima
       </ul>
       <p className="mt-4 rounded-xl bg-sun-soft px-3 py-2 text-xs text-ink-soft">{t("q.priceLabour", { amount: eur(quote.labourGross) })}</p>
       <p className="mt-3 text-xs leading-relaxed text-muted">{t("q.priceNote", { low: eur(quote.low), high: eur(quote.high) })}</p>
+      <p className="mt-2 text-xs leading-relaxed text-muted">{t("q.rentNote", { min: config?.pricing.minRentDays ?? 7 })}</p>
     </div>
   );
 }
@@ -558,7 +571,9 @@ function WizardBody({ start }: { start: QuoteStart }) {
   }
 
   /* ----- navigation ----- */
-  const canNext = step === 0 ? house.ok : step === 2 ? !!form.start && Number(form.days) >= 1 : true;
+  // Only emergency deliveries start on a Saturday or Sunday.
+  const weekendStart = form.urgency !== "emergency" && isWeekendISO(form.start);
+  const canNext = step === 0 ? house.ok : step === 2 ? !!form.start && Number(form.days) >= 1 && !weekendStart : true;
   function go(n: number) {
     setDir(n > step ? 1 : -1);
     setError("");
@@ -852,6 +867,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         </label>
         <NumField label={t("q.days")} unit={t("q.daysUnit")} min={1} max={365} step={1} value={form.days} onChange={(v) => set("days", v)} />
       </div>
+      {weekendStart ? <p className="rounded-xl bg-sun-soft px-4 py-2.5 text-sm text-ink" role="alert">{t("q.weekend")}</p> : null}
       {firstFree ? <p className="rounded-xl bg-sun-soft px-4 py-2.5 text-sm text-ink">{t("q.firstFree", { date: fmt(firstFree) })}</p> : null}
       <div className="flex flex-wrap gap-2">
         {[2, 4, 6, 8].map((w) => (

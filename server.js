@@ -291,7 +291,7 @@ function availableDates(needParts, days, extraOrders) {
   const out = {};
   for (const u of ["standard", "express", "emergency"]) {
     if (u !== "standard" && !o.urgencies[u]) { out[u] = null; continue; }
-    out[u] = needParts ? S.earliestStart(orders, st, o, cr, needParts, days, base[u], t) : base[u];
+    out[u] = needParts ? S.earliestStart(orders, st, o, cr, needParts, days, base[u], t, { weekends: u === "emergency" }) : base[u];
   }
   return out;
 }
@@ -309,7 +309,7 @@ route("GET", /^\/api\/config$/, () => {
   const base = O.earliestDates();
   const earliest = {};
   for (const u of ["standard", "express", "emergency"]) {
-    earliest[u] = u !== "standard" && !o.urgencies[u] ? null : S.earliestStart(store.listOrders(), { ...stockCfg(), enabled: false }, o, cr, {}, 1, base[u], P.today()) || base[u];
+    earliest[u] = u !== "standard" && !o.urgencies[u] ? null : S.earliestStart(store.listOrders(), { ...stockCfg(), enabled: false }, o, cr, {}, 1, base[u], P.today(), { weekends: u === "emergency" }) || base[u];
   }
   return {
     pricing: p,
@@ -684,7 +684,7 @@ route("GET", /^\/api\/biz\/me$/, (req) => {
   const s = requireBiz(req);
   const o = ops();
   return { user: B.publicBizUser(s.user), account: bizAccountView(s.account), today: P.today(), company: { name: o.company.name, phone: o.company.phone, email: o.company.email },
-    urgencies: { standard: true, express: o.urgencies.express, emergency: o.urgencies.emergency } };
+    urgencies: { standard: true, express: o.urgencies.express, emergency: o.urgencies.emergency }, minRentDays: pricing().minRentDays };
 });
 
 route("GET", /^\/api\/biz\/orders$/, (req) => {

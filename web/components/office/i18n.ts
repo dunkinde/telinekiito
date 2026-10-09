@@ -431,6 +431,8 @@ const en = {
   "err.bad_date": "Pick a date after the start.",
   "err.bad_days": "Rental length must be 1–365 days.",
   "err.wrong_step": "That step isn't possible for this job right now.",
+  "err.not_confirmed": "The office hasn't confirmed this order yet.",
+  "err.weekend_start": "Weekend starts are only for emergency deliveries. Pick a weekday.",
   "err.server_error": "Something went wrong. Try again.",
 
   "ov.attention": "Needs attention",
@@ -1470,6 +1472,7 @@ const en = {
   "biz.new.notesPh": "Anything we should know",
   "biz.new.price": "Your price",
   "biz.new.discount": "Includes your {pct} % discount",
+  "biz.new.rentNote": "Rent is charged for the days the scaffold is up, from installation until you ask for pickup – at least {min} days.",
   "biz.new.inclVat": "incl. VAT",
   "biz.new.area": "Scaffold {area} m² · {t} t",
   "biz.new.priceEmpty": "Fill in the size and floors to see the price.",
@@ -2071,6 +2074,8 @@ const fi: Record<Key, Entry> = {
   "err.bad_date": "Valitse päivä aloituksen jälkeen.",
   "err.bad_days": "Vuokra-ajan pitää olla 1–365 päivää.",
   "err.wrong_step": "Vaihe ei ole juuri nyt mahdollinen tälle keikalle.",
+  "err.not_confirmed": "Toimisto ei ole vielä vahvistanut tilausta.",
+  "err.weekend_start": "Viikonloppuna aloitetaan vain kiiretoimituksena. Valitse arkipäivä.",
   "err.server_error": "Jotain meni pieleen. Yritä uudelleen.",
 
   "ov.attention": "Vaatii huomiota",
@@ -3108,6 +3113,7 @@ const fi: Record<Key, Entry> = {
   "biz.new.notesPh": "Mitä meidän pitäisi tietää",
   "biz.new.price": "Hintanne",
   "biz.new.discount": "Sisältää {pct} %:n alennuksenne",
+  "biz.new.rentNote": "Vuokra lasketaan päiviltä, jolloin telineet ovat pystyssä: pystytyksestä noutopyyntöön, kuitenkin vähintään {min} päivää.",
   "biz.new.inclVat": "sis. ALV",
   "biz.new.area": "Teline {area} m² · {t} t",
   "biz.new.priceEmpty": "Täytä mitat ja kerrokset nähdäksesi hinnan.",

@@ -310,6 +310,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
                     ))}
                   </ul>
                   <p className="mt-3 text-[12.5px] text-muted">{t("biz.new.area", { area: numText(price.estimate.area, lang), t: numText(Math.round(price.estimate.weightKg / 100) / 10, lang) })}</p>
+                  <p className="mt-2 text-[12.5px] text-muted">{t("biz.new.rentNote", { min: me.minRentDays ?? 7 })}</p>
                 </>
               ) : (
                 <p className="text-[13px] text-muted">{t("biz.new.priceEmpty")}</p>

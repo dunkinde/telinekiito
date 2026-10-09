@@ -578,3 +578,39 @@ test("house from its map outline: roof faces tile the outline, gable ends rise t
   assert.equal(outlineHouse([[0, 0], [10, 0], [10, 6], [0, 6]], { length: 10, width: 6, eave: 3, pitch: 30, roofType: "gable" }), null);
   assert.equal(outlineHouse(shapes.L, { length: 13, width: 10, eave: 3, pitch: 30, roofType: "gable" }), null);
 });
+
+test("rent is billed for the days up: erection → pickup request (or dismantling), at least the minimum", () => {
+  const P = require("../lib/platform");
+  const pricing = O.mergePricing({});
+  const settings = {};
+  const store = { get: () => null, getSetting: (k) => settings[k], setSetting: (k, v) => (settings[k] = v) };
+  const ago = (d) => new Date(Date.now() - d * 864e5).toISOString();
+  const order = (rental, history = []) => {
+    const o = O.exampleOrders(pricing)[0];
+    return { ...o, example: false, schedule: { ...o.schedule, days: 42 }, rental, history };
+  };
+  const rent = (o) => P.buildInvoice(store, o, { pricing, ops: { paymentDays: 14 }, stock: { prices: {} } }).rentDays;
+  // Up 20 days, asked for pickup after 12: billed 12 (our pickup lag isn't theirs), not the 42 booked.
+  assert.equal(rent(order({ startedAt: ago(20), endedAt: ago(0) }, [{ status: "pickup_requested", at: ago(8) }])), 12);
+  // Never asked: until it came down.
+  assert.equal(rent(order({ startedAt: ago(20), endedAt: ago(0) })), 20);
+  // Kept past the booking: the days used.
+  assert.equal(rent(order({ startedAt: ago(50), endedAt: ago(0) })), 50);
+  // A day or two: the minimum rental.
+  assert.equal(rent(order({ startedAt: ago(2), endedAt: ago(0) })), pricing.minRentDays);
+  // No crew records: the booked days.
+  assert.equal(rent(order({})), 42);
+});
+
+test("weekends: only emergency deliveries start on a Saturday or Sunday", () => {
+  const fri = new Date(2026, 9, 9, 12), thu = new Date(2026, 9, 8, 12);
+  assert.equal(E.earliestStart("emergency", fri), "2026-10-10"); // Saturday is fine for an emergency
+  assert.equal(E.earliestStart("express", fri), "2026-10-12"); // Sunday → Monday
+  assert.equal(E.earliestStart("express", thu), "2026-10-12"); // Saturday → Monday
+  assert.equal(E.isWeekend("2026-10-11"), true);
+  assert.equal(E.isWeekend("2026-10-12"), false);
+  const S = require("../lib/stock");
+  const free = { enabled: false, bufferDays: 0 };
+  assert.equal(S.earliestStart([], free, {}, [], {}, 7, "2026-10-10", "2026-10-09"), "2026-10-12");
+  assert.equal(S.earliestStart([], free, {}, [], {}, 7, "2026-10-10", "2026-10-09", { weekends: true }), "2026-10-10");
+});

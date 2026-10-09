@@ -35,6 +35,8 @@ export interface BizMe {
   today: string;
   company: { name: string; phone: string; email: string };
   urgencies: Record<Urgency, boolean>;
+  /** Rent is charged for at least this many days. */
+  minRentDays?: number;
 }
 
 export interface NextEvent { kind: "delivery" | "pickup" | "rentalEnd"; date: string; time: string; planned: boolean }

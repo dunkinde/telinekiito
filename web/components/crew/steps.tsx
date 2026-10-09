@@ -223,8 +223,8 @@ export function LoadStep({ view, act, isCurrent, backBar }: StepProps) {
       />
 
       {isCurrent ? (
-        <ActionBar>
-          <Btn variant="primary" size="lg" block busy={busy} onClick={() => void loaded()}>
+        <ActionBar hint={view.status === "received" ? t("jv.notConfirmed") : undefined}>
+          <Btn variant="primary" size="lg" block busy={busy} disabled={view.status === "received"} onClick={() => void loaded()}>
             <IBox className="h-6 w-6" />
             {t("load.cta")}
           </Btn>

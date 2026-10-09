@@ -151,7 +151,7 @@ test("business portal: users, own orders only, ordering, changes, invoices, Finv
   const xml = await req("GET", `/api/biz/invoices/${iv.id}/finvoice`, undefined, acct);
   assert.equal(xml.status, 200);
   assert.match(xml.headers.get("content-type"), /xml/);
-  for (const re of [/<Finvoice Version="3.0"/, /<ToIdentifier>003712345678<\/ToIdentifier>/, /<ToIntermediator>003721291126<\/ToIntermediator>/, /<OrderIdentifier>PO-78<\/OrderIdentifier>/, /<EpiRemittanceInfoIdentifier IdentificationSchemeName="SPY">\d+<\/EpiRemittanceInfoIdentifier>/, /<ArticleName>Vuokra, 42 päivää<\/ArticleName>/]) assert.match(xml.text, re);
+  for (const re of [/<Finvoice Version="3.0"/, /<ToIdentifier>003712345678<\/ToIdentifier>/, /<ToIntermediator>003721291126<\/ToIntermediator>/, /<OrderIdentifier>PO-78<\/OrderIdentifier>/, /<EpiRemittanceInfoIdentifier IdentificationSchemeName="SPY">\d+<\/EpiRemittanceInfoIdentifier>/, /<ArticleName>Vuokra, 7 päivää<\/ArticleName>/]) assert.match(xml.text, re); // up and down the same day: the 7-day minimum, not the 42 booked
   assert.equal((await req("GET", `/api/office/invoices/${iv.id}/finvoice`, undefined, owner)).status, 200);
 
   // Switching a user off ends their session.
