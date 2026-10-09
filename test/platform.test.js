@@ -215,6 +215,10 @@ test("whole job: team, crew app, change, invoice, review", async () => {
   assert.equal(closed.json.invoices[0].no, iv.no);
   const csv = await fetch(`${base}/api/office/invoices.csv`, { headers: { Cookie: owner } });
   assert.match(await csv.text(), new RegExp(iv.no));
+  // A sent invoice keeps its order: it can't be deleted until the invoice is voided.
+  const del = await req("DELETE", `/api/office/orders/${ref}`, undefined, owner);
+  assert.equal(del.status, 409);
+  assert.equal(del.json.error, "has_invoice");
 
   // Review: published only with consent, then shown on the website.
   await req("POST", `/api/orders/${ref}/review`, { phone: "2233", stars: 5, text: "Nopeaa ja siistiä", consent: true });

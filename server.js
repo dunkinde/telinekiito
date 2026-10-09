@@ -1365,7 +1365,11 @@ route("PATCH", /^\/api\/office\/orders\/([A-Z0-9-]+)$/, async (req, m) => {
 
 route("DELETE", /^\/api\/office\/orders\/([A-Z0-9-]+)$/, (req, m) => {
   const user = requireOwner(req);
+  // Sent and paid invoices stay in the books with their order: void them first. Drafts are voided with it.
+  const invoices = store.list("invoice", { ref: m[1] });
+  if (invoices.some((iv) => iv.status === "sent" || iv.status === "paid")) throw new HttpError(409, "has_invoice", "This order has a sent invoice. Void the invoice first.");
   if (!store.deleteOrder(m[1])) throw new HttpError(404, "not_found", "Order not found.");
+  for (const iv of invoices) if (iv.status === "draft") store.put("invoice", { ...iv, status: "void" });
   // Its unsent messages never go out (they'd tell the customer about an order that's gone), its alerts go away.
   for (const msg of store.list("msg", { ref: m[1], limit: 500 })) {
     if (msg.status === "waiting" || msg.status === "failed") store.put("msg", { ...msg, status: "skipped", error: "Order deleted" });
