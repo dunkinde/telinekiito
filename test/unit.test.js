@@ -161,6 +161,14 @@ test("address: Nominatim slow -> the lookup doesn't wait for it", async () => {
   assert.equal((await ok.svc.lookup("Testitie 5, Vantaa")).details.osmWayId, 999);
 });
 
+test("address: the map's match is at another postal code than written -> flagged", async () => {
+  const { svc } = mockMaps(LAT, LON);
+  const r = await svc.lookup("Testitie 5, 00100 Helsinki");
+  assert.ok(r.noteCodes.some((n) => n.code === "other_place" && n.n === "01400 Vantaa"));
+  const same = await svc.lookup("Testitie 5, 01400 Vantaa");
+  assert.ok(!same.noteCodes.some((n) => n.code === "other_place"));
+});
+
 test("address: unknown address", async () => {
   const svc = createAddressService({ fetchImpl: async () => ({ ok: true, status: 200, json: async () => [] }) });
   const r = await svc.lookup("Nowhere 123, Atlantis");

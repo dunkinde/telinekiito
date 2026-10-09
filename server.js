@@ -158,6 +158,16 @@ async function loginLimited(req, fn) {
     throw e;
   }
 }
+/** The business account of a partner code. Wrong codes are counted per visitor: after 20 in an hour no code works
+ * from there for a while, so codes (and the company names they reveal) can't be guessed by trying them all. */
+function partnerByCode(req, code) {
+  if (!code) return null;
+  const key = `partner:${clientIp(req)}`;
+  if (allow.full(key, 20, 3600e3)) return null;
+  const a = P.accountByCode(store, code);
+  if (!a) allow.add(key);
+  return a;
+}
 function limit(req, bucket, max, windowMs) {
   if (!allow(`${bucket}:${clientIp(req)}`, max, windowMs)) {
     throw new HttpError(429, "rate_limited", "Too many requests. Wait a moment and try again.");
@@ -369,7 +379,7 @@ route("POST", /^\/api\/quote$/, async (req) => {
   const p = pricing();
   if (!O.systemsOn(p).includes(f.system)) f.system = O.systemsOn(p)[0];
   const out = O.quoteFor(f, p);
-  const account = body.partnerCode ? P.accountByCode(store, body.partnerCode) : null;
+  const account = partnerByCode(req, body.partnerCode);
   if (account && account.discountPct) out.quote = P.applyDiscount(out.quote, account.discountPct, p);
   // The same house with each scaffold system, so the customer can pick one.
   out.options = O.quoteOptions(f, p).map((o) => (account && account.discountPct ? { ...o, total: P.applyDiscount({ net: o.net, lines: [], labourGross: 0 }, account.discountPct, p).total } : o));
@@ -464,6 +474,7 @@ const REVIEW_CHECKS = {
   not_rectangle: "the building is not a simple rectangle",
   size_estimated: "the size is estimated from the register floor area, not measured",
   street_only: "the address matched only the street, not the house",
+  other_place: "the map found the address at another postal code than the customer wrote",
   outbuilding: "the matched building may be an outbuilding",
   model_mismatch: "the 3D model doesn't match the city's outline of the house, so it isn't used",
   model_old: "the house was completed after the 3D model was measured, so it isn't used",
@@ -500,7 +511,7 @@ route("POST", /^\/api\/orders$/, async (req) => {
   if (!O.systemsOn(pricing()).includes(f.system)) throw new HttpError(409, "system_off", "That scaffold system isn't available right now.");
   const p = pricing();
   const order = O.buildOrder(f, p, (ref) => Boolean(store.getOrder(ref)));
-  const account = f.partnerCode ? P.accountByCode(store, f.partnerCode) : null;
+  const account = partnerByCode(req, f.partnerCode);
   if (account) {
     order.accountId = account.id;
     order.discountPct = account.discountPct || 0;

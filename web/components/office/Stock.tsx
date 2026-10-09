@@ -55,7 +55,7 @@ function StockBody({ d, set }: { d: StockOverview; set: (d: StockOverview) => vo
                 <label htmlFor="stock-part" className="sr-only">
                   {t("stock.part")}
                 </label>
-                <Select id="stock-part" className="!w-auto max-w-full !py-2" value={part} onChange={(v) => setPart(v as PartKey)} options={d.parts.map((p) => ({ value: p.key, label: partLabel(i, p.key) }))} />
+                <Select id="stock-part" className="!w-auto max-w-[16rem] !py-2 sm:max-w-none" value={part} onChange={(v) => setPart(v as PartKey)} options={d.parts.map((p) => ({ value: p.key, label: partLabel(i, p.key) }))} />
               </div>
             }
           />

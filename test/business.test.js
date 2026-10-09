@@ -182,3 +182,14 @@ test("size check: lookup warnings flag the order, the customer adds photos", asy
   assert.ok(files.some((f) => f.kind === "photo" && f.stage === "customer"));
   assert.equal((await req("POST", `/api/orders/${flagged}/photos`, { phone: "7788", image: "data:text/plain;base64,aGk=" })).json.error, "bad_image");
 });
+
+test("partner codes: new codes are hard to guess, guessing codes stops working", async () => {
+  const owner = await loginAs({ password: PASSWORD });
+  const acc = (await req("POST", "/api/office/accounts", { name: "Arvaus Oy", discountPct: 8 }, owner)).json.account;
+  assert.match(acc.code, /^ARVA[A-HJ-NP-Z2-9]{5}$/);
+  const q = { length: 12, width: 8, eave: 3, floors: "1", roofType: "gable", pitch: 30, jobType: "roof", zone: "A", urgency: "standard", days: 28 };
+  assert.equal((await req("POST", "/api/quote", { ...q, partnerCode: acc.code })).json.partner.discountPct, 8);
+  for (let i = 0; i < 20; i++) assert.equal((await req("POST", "/api/quote", { ...q, partnerCode: `ARVA${i}` })).json.partner.invalid, true);
+  // After 20 wrong codes, even a right one no longer shows the company or its discount from this visitor.
+  assert.equal((await req("POST", "/api/quote", { ...q, partnerCode: acc.code })).json.partner.invalid, true);
+});
