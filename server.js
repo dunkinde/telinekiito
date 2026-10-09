@@ -43,7 +43,7 @@ const auth = makeAuth({ password: process.env.OFFICE_PASSWORD, secret: process.e
 const allow = makeLimiter();
 // National Land Survey 3D buildings (needs NLS_API_KEY); map sheets are cached in DATA_DIR/nls3d.
 const nls3d = createNls3d({ apiKey: process.env.NLS_API_KEY, dir: path.join(DATA_DIR, "nls3d"), log: (m) => console.log("[3d] " + m) });
-const addressSvc = createAddressService({ nls3d });
+const addressSvc = createAddressService({ nls3d, official: (text) => suggestSvc.match(text) });
 const suggestSvc = createSuggest({ apiKey: process.env.NLS_API_KEY, log: (m) => console.warn("[suggest] " + m) });
 const ai = createAI({ apiKey: process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || "gpt-6-luna" });
 const weather = createWeather();

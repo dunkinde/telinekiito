@@ -43,7 +43,7 @@ test("address: zones and roof tags", () => {
 });
 
 // Mock of Nominatim, Overpass and Ryhti. `opts` switches the scenarios.
-function mockMaps(lat, lon, opts = {}) {
+function mockMaps(lat, lon, opts = {}, svcOpts = {}) {
   const calls = [];
   const json = (body) => ({ ok: true, status: 200, json: async () => body });
   const house = rectRing(lat, lon, 14, 9, 20, 2, 1);
@@ -52,6 +52,8 @@ function mockMaps(lat, lon, opts = {}) {
     const u = String(url);
     calls.push(u);
     if (u.includes("nominatim") && u.includes("/search")) {
+      if (opts.nominatimHangs) return new Promise(() => {});
+      if (opts.nominatimDown) return { ok: false, status: 503, json: async () => ({}) };
       const base = { lat: String(lat), lon: String(lon), display_name: "5, Testitie, Asola, Vantaa, Uusimaa, Suomi", address };
       if (opts.addressOnBuilding) {
         return json([{ ...base, osm_type: "way", osm_id: 999, category: "building", type: "house", extratags: { "building:levels": "1" },
@@ -79,7 +81,7 @@ function mockMaps(lat, lon, opts = {}) {
     }
     throw new Error("unexpected url " + url);
   };
-  return { calls, svc: createAddressService({ fetchImpl, log: () => {} }) };
+  return { calls, svc: createAddressService({ fetchImpl, log: () => {}, ...svcOpts }) };
 }
 const LAT = 60.25, LON = 25.0;
 const near = (a, b, tol = 0.3) => Math.abs(a - b) < tol;
@@ -132,6 +134,31 @@ test("address: no outline anywhere -> size estimated from register, not cached",
   const n = calls.length;
   await svc.lookup("Testitie 5, Vantaa");
   assert.ok(calls.length > n, "a result missing the outline because of an outage isn't cached");
+});
+
+// The official register's address point (lib/suggest.js match) for "Testitie 5, Vantaa".
+const official = async () => ({ label: "Testitie 5, 01400 Vantaa", street: "Testitie 5", road: "Testitie", number: "5", postcode: "01400", city: "Vantaa", zone: "A", lat: LAT, lon: LON });
+
+test("address: Nominatim down -> the official address point is used", async () => {
+  const { svc } = mockMaps(LAT, LON, { nominatimDown: true }, { official });
+  const r = await svc.lookup("Testitie 5, Vantaa");
+  assert.equal(r.found, true);
+  assert.equal(r.zone, "A");
+  assert.equal(r.match.short, "Testitie 5, 01400 Vantaa");
+  assert.equal(r.match.houseLevel, true);
+  assert.equal(r.details.osmWayId, 111);
+  assert.ok(near(r.house.length, 14) && near(r.house.width, 9));
+});
+
+test("address: Nominatim slow -> the lookup doesn't wait for it", async () => {
+  const { svc } = mockMaps(LAT, LON, { nominatimHangs: true }, { official, geocodeWaitMs: 50 });
+  const r = await Promise.race([svc.lookup("Testitie 5, Vantaa"), new Promise((res) => setTimeout(() => res("hung"), 3000))]);
+  assert.notEqual(r, "hung");
+  assert.equal(r.found, true);
+  assert.equal(r.details.osmWayId, 111);
+  // With Nominatim answering, its building (with the outline) is still used.
+  const ok = mockMaps(LAT, LON, { addressOnBuilding: true }, { official });
+  assert.equal((await ok.svc.lookup("Testitie 5, Vantaa")).details.osmWayId, 999);
 });
 
 test("address: unknown address", async () => {
