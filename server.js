@@ -119,8 +119,9 @@ function cookies(req) {
 
 function readJson(req, limitBytes) {
   return new Promise((resolve, reject) => {
-    const type = String(req.headers["content-type"] || "");
-    if (!type.includes("application/json")) return reject(new HttpError(415, "json_required", "Send JSON."));
+    // Exactly application/json: a browser can't send that to another site without asking it first (CORS preflight).
+    const type = String(req.headers["content-type"] || "").split(";")[0].trim().toLowerCase();
+    if (type !== "application/json") return reject(new HttpError(415, "json_required", "Send JSON."));
     let size = 0;
     const chunks = [];
     req.on("data", (c) => {
@@ -186,9 +187,19 @@ function getOrderOr404(ref) {
   if (!o) throw new HttpError(404, "not_found", "No order matches that reference and phone number.");
   return o;
 }
-function customerOrder(ref, phone) {
-  const o = getOrderOr404(ref);
-  if (!O.phoneMatches(o, phone)) throw new HttpError(404, "not_found", "No order matches that reference and phone number.");
+/**
+ * Order number + last four phone digits. Wrong tries count per address (20 an hour) and per order (20 a day),
+ * so the four digits can't be guessed by trying them all.
+ */
+function customerOrder(req, ref, phone) {
+  const ipKey = `phone-miss:${clientIp(req)}`, refKey = `phone-miss:${ref}`;
+  if (allow.full(ipKey, 20, 3600e3) || allow.full(refKey, 20, 24 * 3600e3)) throw new HttpError(429, "rate_limited", "Too many tries. Wait a moment and try again.");
+  const o = /^T[KP]-[A-Z0-9]{4,10}$/.test(ref) ? store.getOrder(ref) : null;
+  if (!o || !O.phoneMatches(o, phone)) {
+    allow.add(ipKey);
+    if (o) allow.add(refKey);
+    throw new HttpError(404, "not_found", "No order matches that reference and phone number.");
+  }
   return o;
 }
 /** Crew members only reach jobs of their own crew; leaders and owners reach all. */
@@ -316,7 +327,7 @@ async function withModel(f, body) {
   if (!m || typeof m.id !== "string" || !nls3d.enabled) return f;
   const lat = Number(m.lat), lon = Number(m.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return f;
-  const r = await nls3d.lookup(lat, lon, { waitMs: 0 }).catch(() => null);
+  const r = await nls3d.lookup(lat, lon, { cachedOnly: true }).catch(() => null);
   if (r && r.status === "found" && r.building.id === m.id && r.building.walls && r.building.walls.length) {
     f.walls = r.building.walls;
     f.model = { id: r.building.id, date: (r.modelDate || r.building.created || "").slice(0, 10) || null };
@@ -483,20 +494,20 @@ route("POST", /^\/api\/orders$/, async (req) => {
 
 route("GET", /^\/api\/orders\/([A-Z0-9-]+)$/, (req, m, url) => {
   limit(req, "track", 30, 10 * 60e3);
-  return customerView(customerOrder(m[1], url.searchParams.get("phone")));
+  return customerView(customerOrder(req, m[1], url.searchParams.get("phone")));
 });
 // Same, with the phone digits in the body instead of the address (the website uses this).
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/view$/, async (req, m) => {
   limit(req, "track", 30, 10 * 60e3);
   const body = await readJson(req, 1024);
-  return customerView(customerOrder(m[1], body.phone));
+  return customerView(customerOrder(req, m[1], body.phone));
 });
 
 // Customer actions on the tracking page. A longer or shorter rental is a change request the office approves.
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/(extend|pickup|message|change)$/, async (req, m) => {
   limit(req, "track-action", 20, 10 * 60e3);
   const body = await readJson(req, 8192);
-  const o = customerOrder(m[1], body.phone);
+  const o = customerOrder(req, m[1], body.phone);
   const action = m[2];
   if (action === "extend" || action === "change") {
     const b = action === "extend" ? { type: "days", days: (Number(o.schedule.days) || 0) + (Number(body.days) || 7) } : body;
@@ -538,7 +549,7 @@ function answerPriceChange(o, accept, body, who, actor) {
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/price-change\/(accept|decline)$/, async (req, m) => {
   limit(req, "track-action", 20, 10 * 60e3);
   const body = await readJson(req, 4096);
-  const o = customerOrder(m[1], body.phone);
+  const o = customerOrder(req, m[1], body.phone);
   answerPriceChange(o, m[2] === "accept", body, o.customer.name, null);
   return customerView(o);
 });
@@ -556,7 +567,7 @@ function addCustomerPhoto(o, image) {
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/photos$/, async (req, m) => {
   limit(req, "photos", 30, 10 * 60e3);
   const body = await readJson(req, 7 * 1024 * 1024);
-  const o = customerOrder(m[1], body.phone);
+  const o = customerOrder(req, m[1], body.phone);
   addCustomerPhoto(o, body.image);
   return customerView(o);
 });
@@ -564,7 +575,7 @@ route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/photos$/, async (req, m) => {
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/review$/, async (req, m) => {
   limit(req, "review", 10, 60 * 60e3);
   const body = await readJson(req, 4096);
-  const o = customerOrder(m[1], body.phone);
+  const o = customerOrder(req, m[1], body.phone);
   const r = P.saveReview(store, o, body);
   notify.alert("review", o.ref, `${o.ref}: ${r.stars}/5 stars from ${r.name}`);
   return customerView(o);
@@ -1123,7 +1134,7 @@ route("GET", /^\/api\/crew\/jobs\/([A-Z0-9-]+)\/plan$/, (req, m) => {
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/plan$/, async (req, m) => {
   limit(req, "track", 60, 10 * 60e3);
   const body = await readJson(req, 1024);
-  return { plan: O.orderPlan(customerOrder(m[1], body.phone)) };
+  return { plan: O.orderPlan(customerOrder(req, m[1], body.phone)) };
 });
 // Shared plan: only the scaffold and the house shape, no names, phone numbers or address.
 route("GET", /^\/api\/plan\/([\w-]{12,40})$/, (req, m) => {
@@ -1666,10 +1677,19 @@ route("GET", /^\/api\/office\/weather$/, async (req) => {
 });
 
 /* ---------- Files and documents (staff, or the customer with order number + last four phone digits) ---------- */
-function canSee(req, url, ref) {
-  if (sessionUser(req)) return true;
+/** The customer's signed link key for this order (from the tracking page or the business portal). */
+function customerKey(url, ref) {
   const t = auth.verify(url.searchParams.get("t"));
   return Boolean(ref && t && t.sid === `c:${ref}`);
+}
+/** Office and leaders see every order's files; crew members only their own crew's jobs; sales none. */
+function canSee(req, url, ref) {
+  const u = sessionUser(req);
+  if (u && (u.role === "owner" || u.role === "leader")) return true;
+  if (u && u.role === "worker" && ref) {
+    try { crewOrder(u, ref); return true; } catch { /* another crew's job */ }
+  }
+  return customerKey(url, ref);
 }
 
 route("GET", /^\/api\/files\/([\w-]+)$/, (req, m, url) => {
@@ -1694,8 +1714,9 @@ route("GET", /^\/doc\/(confirmation|inspection)\/([A-Z0-9-]+)$/, (req, m, url) =
 
 route("GET", /^\/doc\/invoice\/([\w-]+)$/, (req, m, url) => {
   const iv = store.get("invoice", m[1]);
-  const staff = sessionUser(req);
-  if (!iv || (!staff && (iv.status === "draft" || !canSee(req, url, iv.ref)))) throw new HttpError(404, "not_found", "Document not found.");
+  const u = sessionUser(req);
+  const owner = Boolean(u && u.role === "owner"); // invoices are the head of company's (like in the office)
+  if (!iv || (!owner && (iv.status === "draft" || !customerKey(url, iv.ref)))) throw new HttpError(404, "not_found", "Document not found.");
   const html = Docs.invoice(iv, store.getOrder(iv.ref), { company: ops().company, note: ops().invoiceNote });
   return new Raw(html, { ...DOC_HEADERS, "Content-Type": "text/html; charset=utf-8" });
 });
@@ -1788,6 +1809,20 @@ function notFound(req, res) {
   send(res, 404, "Not found");
 }
 
+/**
+ * Requests that change something must come from our own pages. Other sites under the same parent domain
+ * (any *.sslip.io address) count as the same site for cookies, so SameSite=Lax alone doesn't stop them.
+ * Browsers send Origin and Sec-Fetch-Site with these requests; scripts and tests without them pass.
+ */
+function crossSite(req) {
+  if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") return false;
+  const site = req.headers["sec-fetch-site"];
+  if (site && site !== "same-origin" && site !== "none") return true;
+  const origin = req.headers.origin;
+  if (!origin) return false;
+  try { return new URL(origin).host !== req.headers.host; } catch { return true; }
+}
+
 /* ---------- Server ---------- */
 const server = http.createServer(async (req, res) => {
   let url;
@@ -1798,6 +1833,7 @@ const server = http.createServer(async (req, res) => {
   }
   const pathname = url.pathname;
   try {
+    if (crossSite(req)) throw new HttpError(403, "cross_site", "This request must come from our own pages.");
     for (const r of routes) {
       if (r.method !== req.method) continue;
       const m = pathname.match(r.pattern);

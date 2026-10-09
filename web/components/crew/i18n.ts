@@ -540,7 +540,7 @@ const fi = {
 
   "err.network": "Ei yhteyttä palvelimeen. Tarkista verkko.",
   "err.wrong_login": "Väärä puhelinnumero tai PIN.",
-  "err.locked": "Liian monta väärää PIN-koodia. Yritä 15 minuutin päästä tai pyydä toimistoa vaihtamaan PIN.",
+  "err.locked": "Liian monta väärää PIN-koodia. Yritä myöhemmin uudelleen tai pyydä toimistoa vaihtamaan PIN.",
   "err.wrong_password": "Väärä salasana.",
   "err.rate_limited": "Liian monta yritystä. Odota hetki.",
   "err.office_disabled": "Kirjautuminen ei ole käytössä palvelimella.",
@@ -1087,7 +1087,7 @@ const en: Dict = {
 
   "err.network": "Can't reach the server. Check your connection.",
   "err.wrong_login": "Wrong phone number or PIN.",
-  "err.locked": "Too many wrong PINs. Try again in 15 minutes or ask the office to reset your PIN.",
+  "err.locked": "Too many wrong PINs. Try again later or ask the office to reset your PIN.",
   "err.wrong_password": "Wrong password.",
   "err.rate_limited": "Too many tries. Wait a moment.",
   "err.office_disabled": "Logins are switched off on the server.",
@@ -1631,7 +1631,7 @@ const ru: Dict = {
 
   "err.network": "Нет связи с сервером. Проверьте интернет.",
   "err.wrong_login": "Неверный номер телефона или PIN.",
-  "err.locked": "Слишком много неверных PIN. Попробуйте через 15 минут или попросите офис сменить PIN.",
+  "err.locked": "Слишком много неверных PIN. Попробуйте позже или попросите офис сменить PIN.",
   "err.wrong_password": "Неверный пароль.",
   "err.rate_limited": "Слишком много попыток. Подождите немного.",
   "err.office_disabled": "Вход на сервере отключён.",
