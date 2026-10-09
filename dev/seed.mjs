@@ -17,10 +17,10 @@ const me = (await call("GET", "/api/staff/me")).j;
 if (me.crews.length) { console.log("already seeded"); process.exit(0); }
 const c1 = (await call("POST", "/api/office/crews", { name: "Tiimi 1", truck: "ABC-123" })).j.crew;
 const c2 = (await call("POST", "/api/office/crews", { name: "Tiimi 2", truck: "XYZ-789" })).j.crew;
-await call("POST", "/api/office/staff", { name: "Liisa Laine", phone: "040 100 0001", role: "leader", crewId: c1.id, pin: "1111", lang: "fi" });
+await call("POST", "/api/office/staff", { name: "Liisa Laine", phone: "040 100 0001", role: "leader", crewId: c1.id, pin: "111111", lang: "fi" });
 await call("POST", "/api/office/staff", { name: "Ivan Petrov", phone: "040 100 0002", role: "worker", crewId: c1.id, pin: "2222", lang: "ru" });
 await call("POST", "/api/office/staff", { name: "Mikko Virtanen", phone: "040 100 0003", role: "worker", crewId: c2.id, pin: "3333", lang: "fi" });
-await call("POST", "/api/office/staff", { name: "Sara Smith", phone: "040 100 0004", role: "leader", crewId: c2.id, pin: "4444", lang: "en" });
+await call("POST", "/api/office/staff", { name: "Sara Smith", phone: "040 100 0004", role: "leader", crewId: c2.id, pin: "444444", lang: "en" });
 // Stock: enough for several jobs.
 await call("PUT", "/api/office/stock", { enabled: true, owned: { frames: 600, baseJacks: 400, decks: 600, hatchDecks: 120, guardrails: 360, toeBoards: 260, endGuards: 80, diagonals: 120, topPosts: 120, catchPosts: 60, catchMesh: 200, anchors: 200, frames1: 120, consoles: 160, endToeBoards: 80, hBraces: 60, startLedgers: 40, ladders: 20, tubes: 80, couplers: 200 }, prices: { frames: 140, baseJacks: 35, decks: 95, hatchDecks: 260, guardrails: 28, toeBoards: 30, endGuards: 25, diagonals: 32, topPosts: 22, catchPosts: 120, catchMesh: 85, anchors: 9 } });
 await call("POST", "/api/office/accounts", { name: "Kattomestarit Oy", businessId: "1234567-8", contactName: "Pekka Katto", email: "pekka@kattomestarit.example", phone: "040 555 0101", code: "KATTO10", discountPct: 10, paymentDays: 21 });
@@ -46,4 +46,4 @@ await call("PATCH", `/api/office/orders/${refs[3]}`, { status: "erected", assign
 await call("POST", `/api/orders/${refs[3]}/extend`, { phone: "0004", days: 14 }, "");
 await call("POST", `/api/orders/${refs[1]}/message`, { phone: "0002", text: "Portin koodi on 4512. Koira on pihalla, soittakaa ennen tuloa." }, "");
 await call("POST", "/api/contact", { name: "Laura Lehto", email: "laura@example.fi", phone: "040 800 9000", message: "Tarvitsemme telineet rivitaloon ensi kuussa. Voitteko antaa tarjouksen?", lang: "fi", website: "" }, "");
-console.log("seeded", { crews: [c1.name, c2.name], refs, logins: { owner: "password localpassword", leader: "040 100 0001 / 1111", workerRu: "040 100 0002 / 2222", worker2: "040 100 0003 / 3333", leaderEn: "040 100 0004 / 4444" } });
+console.log("seeded", { crews: [c1.name, c2.name], refs, logins: { owner: "password localpassword", leader: "040 100 0001 / 111111", workerRu: "040 100 0002 / 2222", worker2: "040 100 0003 / 3333", leaderEn: "040 100 0004 / 444444" } });

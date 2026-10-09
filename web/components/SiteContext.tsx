@@ -20,7 +20,7 @@ interface SiteState {
   quote: { open: boolean; start: QuoteStart; key: number };
   openQuote: (start?: QuoteStart) => void;
   closeQuote: () => void;
-  track: { open: boolean; ref?: string; phone4?: string };
+  track: { open: boolean; ref?: string; phone4?: string; key?: string };
   openTrack: (ref?: string, phone4?: string) => void;
   closeTrack: () => void;
 }
@@ -57,13 +57,15 @@ export function SiteProvider({ children }: { children: React.ReactNode }) {
   const openTrack = useCallback((ref?: string, phone4?: string) => setTrack({ open: true, ref, phone4 }), []);
   const closeTrack = useCallback(() => setTrack((t) => ({ ...t, open: false })), []);
 
-  // Links in our emails and texts open the tracking window: /?track=TK-XXXXXX
+  // Links in our emails and texts open the tracking window: /?track=TK-XXXXXX&k=<the order's key>
   useEffect(() => {
-    const ref = new URLSearchParams(window.location.search).get("track");
+    const q = new URLSearchParams(window.location.search);
+    const ref = q.get("track");
     if (!ref) return;
-    setTrack({ open: true, ref: ref.toUpperCase().slice(0, 20) });
+    setTrack({ open: true, ref: ref.toUpperCase().slice(0, 20), key: (q.get("k") || "").slice(0, 400) || undefined });
     const url = new URL(window.location.href);
     url.searchParams.delete("track");
+    url.searchParams.delete("k");
     window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
   }, []);
 

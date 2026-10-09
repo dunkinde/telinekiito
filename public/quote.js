@@ -372,7 +372,7 @@
     if (last4.length !== 4) { err.textContent = t("tr.err.phone"); return; }
     $("#tr-ref").value = ref;
     try {
-      const o = await api("GET", `/api/orders/${encodeURIComponent(ref)}?phone=${last4}`);
+      const o = await api("POST", `/api/orders/${encodeURIComponent(ref)}/view`, { phone: last4 });
       S.track = { ...S.track, ref, phone4: last4, order: o };
       renderTrack();
       startPolling();
@@ -386,7 +386,7 @@
     S.track.timer = setInterval(async () => {
       if (S.view !== "track" || !S.track.ref || document.hidden) return;
       try {
-        const o = await api("GET", `/api/orders/${encodeURIComponent(S.track.ref)}?phone=${S.track.phone4}`);
+        const o = await api("POST", `/api/orders/${encodeURIComponent(S.track.ref)}/view`, { phone: S.track.phone4 });
         if (o.updatedAt !== (S.track.order && S.track.order.updatedAt)) { S.track.order = o; renderTrack(); }
       } catch {}
     }, 30000);

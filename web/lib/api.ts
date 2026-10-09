@@ -326,13 +326,15 @@ export const sendContact = (body: { name: string; email: string; phone: string; 
 
 /** The order endpoints of the app. */
 export const placeOrder = (body: Record<string, unknown>) => api<{ ref: string; order: OrderView }>("POST", "/api/orders", body);
-// The phone digits go in the request body, never in the web address (they'd end up in logs and history).
-export const getOrder = (ref: string, phone4: string) => api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/view`, { phone: phone4 });
-export const getOrderPlan = (ref: string, phone4: string) => api<{ plan: import("./plan").ScaffoldPlan }>("POST", `/api/orders/${encodeURIComponent(ref)}/plan`, { phone: phone4 });
-export const uploadOrderPhoto = (ref: string, phone4: string, image: string) =>
-  api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/photos`, { phone: phone4, image });
-export const answerPriceChange = (ref: string, phone4: string, accept: boolean, id: string, note?: string) =>
-  api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/price-change/${accept ? "accept" : "decline"}`, { phone: phone4, id, note });
+/** What opens an order on the tracking page: the last four phone digits, or the order's key (from a message link or remembered here). */
+export type OrderPass = { phone: string; key?: string };
+// The phone digits and keys go in the request body, never in the web address (they'd end up in logs and history).
+export const getOrder = (ref: string, pass: OrderPass) => api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/view`, pass);
+export const getOrderPlan = (ref: string, pass: OrderPass) => api<{ plan: import("./plan").ScaffoldPlan }>("POST", `/api/orders/${encodeURIComponent(ref)}/plan`, pass);
+export const uploadOrderPhoto = (ref: string, pass: OrderPass, image: string) =>
+  api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/photos`, { ...pass, image });
+export const answerPriceChange = (ref: string, pass: OrderPass, accept: boolean, id: string, note?: string) =>
+  api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/price-change/${accept ? "accept" : "decline"}`, { ...pass, id, note });
 export const orderAction = (ref: string, action: "extend" | "pickup" | "message" | "change" | "review", body: Record<string, unknown>) =>
   api<OrderView>("POST", `/api/orders/${encodeURIComponent(ref)}/${action}`, body);
 

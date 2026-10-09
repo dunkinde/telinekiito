@@ -69,7 +69,7 @@ test("whole job: team, crew app, change, invoice, review", async () => {
   // Team: a crew, a leader and a worker.
   const crew = (await req("POST", "/api/office/crews", { name: "Tiimi 1", truck: "ABC-123" }, owner)).json.crew;
   assert.ok(crew.id && crew.color);
-  const leader = (await req("POST", "/api/office/staff", { name: "Liisa Leader", phone: "040 222 0001", role: "leader", crewId: crew.id, pin: "4321", lang: "fi" }, owner)).json.staff;
+  const leader = (await req("POST", "/api/office/staff", { name: "Liisa Leader", phone: "040 222 0001", role: "leader", crewId: crew.id, pin: "432100", lang: "fi" }, owner)).json.staff;
   const worker = (await req("POST", "/api/office/staff", { name: "Ivan Worker", phone: "040 222 0002", role: "worker", crewId: crew.id, pin: "1234", lang: "ru" }, owner)).json.staff;
   assert.equal(worker.lang, "ru");
   assert.equal((await req("POST", "/api/office/staff", { name: "Dup", phone: "0402220002", role: "worker", pin: "1111" }, owner)).json.error, "phone_taken");
@@ -78,7 +78,7 @@ test("whole job: team, crew app, change, invoice, review", async () => {
   // Wrong PIN, then right PIN.
   assert.equal((await req("POST", "/api/staff/login", { phone: "040 222 0002", pin: "0000" })).json.error, "wrong_login");
   const w = await loginAs({ phone: "+358 40 222 0002", pin: "1234" });
-  const l = await loginAs({ phone: "040 222 0001", pin: "4321" });
+  const l = await loginAs({ phone: "040 222 0001", pin: "432100" });
   assert.equal((await req("GET", "/api/staff/me", undefined, w)).json.user.role, "worker");
 
   // Roles: workers can't use the office; leaders can't change prices.
@@ -303,9 +303,9 @@ test("sales role: leads and CRM only", async () => {
   for (const url of ["/api/office/orders", "/api/crew/jobs", "/api/office/invoices", "/api/office/accounts", "/api/office/alerts"]) assert.equal((await req("GET", url, undefined, s)).status, 403, url);
   // Leads and CRM work for sales and the owner, not for a team leader.
   assert.equal((await req("GET", "/api/office/prospects", undefined, s)).status, 200);
-  const leaderRec = (await req("POST", "/api/office/staff", { name: "Leo Leader", phone: "040 333 0002", role: "leader", pin: "2468", lang: "fi" }, owner)).json.staff;
+  const leaderRec = (await req("POST", "/api/office/staff", { name: "Leo Leader", phone: "040 333 0002", role: "leader", pin: "246800", lang: "fi" }, owner)).json.staff;
   assert.ok(leaderRec);
-  const l = await loginAs({ phone: "040 333 0002", pin: "2468" });
+  const l = await loginAs({ phone: "040 333 0002", pin: "246800" });
   assert.equal((await req("GET", "/api/office/prospects", undefined, l)).status, 403);
   assert.equal((await req("GET", "/api/office/crm/orgs", undefined, l)).status, 403);
   // CRM: an organisation, a person, an activity; duplicates refused; only the owner deletes.

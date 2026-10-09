@@ -4,7 +4,7 @@
 // rate us after pickup). A longer rental is a request the office approves; the new price shows before → after.
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { answerPriceChange, getOrder, getOrderPlan, orderAction, STATUSES, uploadOrderPhoto, type OrderChange, type OrderView, type PriceChange } from "@/lib/api";
+import { answerPriceChange, getOrder, getOrderPlan, orderAction, STATUSES, uploadOrderPhoto, type OrderChange, type OrderPass, type OrderView, type PriceChange } from "@/lib/api";
 import { Plan3DOverlay } from "../scaffold3d/Plan3DOverlay";
 import { siteTexts } from "../scaffold3d/siteTexts";
 import { shrinkImage } from "@/lib/image";
@@ -30,9 +30,28 @@ export function TrackOrder() {
   const { t } = useI18n();
   return (
     <Modal open={track.open} onClose={closeTrack} label={t("tr.title")} closeLabel={t("q.close")} size="md">
-      <TrackBody key={`${track.ref || ""}-${track.open}`} initialRef={track.ref} initialPhone={track.phone4} />
+      <TrackBody key={`${track.ref || ""}-${track.open}`} initialRef={track.ref} initialPhone={track.phone4} initialKey={track.key} />
     </Modal>
   );
+}
+
+// The order's key from the last time it was opened on this device: it still opens when the order is
+// blocked for phone digits (someone else tried too many wrong ones).
+const keyName = (ref: string) => `tk-track-${ref}`;
+function remembered(ref: string): string | undefined {
+  try {
+    return localStorage.getItem(keyName(ref)) || undefined;
+  } catch {
+    return undefined;
+  }
+}
+function remember(ref: string, key?: string | null) {
+  try {
+    if (key) localStorage.setItem(keyName(ref), key);
+    else localStorage.removeItem(keyName(ref));
+  } catch {
+    /* private browsing */
+  }
 }
 
 const STAR_PATH = "M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z";
@@ -48,7 +67,7 @@ function Stars({ n, className = "h-4 w-4" }: { n: number; className?: string }) 
   );
 }
 
-function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialPhone?: string }) {
+function TrackBody({ initialRef, initialPhone, initialKey }: { initialRef?: string; initialPhone?: string; initialKey?: string }) {
   const i18n = useI18n();
   const { t, tk, lang } = i18n;
   const toast = useToast();
@@ -60,24 +79,27 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
   const [msg, setMsg] = useState("");
   const [rating, setRating] = useState({ stars: 0, text: "", consent: true });
   const [uploading, setUploading] = useState(0);
-  const creds = useRef<{ ref: string; phone4: string } | null>(null);
+  const creds = useRef<{ ref: string; pass: OrderPass } | null>(null);
   const [show3d, setShow3d] = useState(false);
   const phoneInput = useRef<HTMLInputElement>(null);
   const fmt = (iso: string) => fmtDate(iso, lang);
 
   const find = useCallback(
-    async (r: string, p: string) => {
+    async (r: string, p: string, k?: string) => {
       const nr = normRef(r), p4 = digits(p);
+      const key = k || remembered(nr);
       setError("");
       if (nr.length < 9) return setError(t("tr.err.ref"));
-      if (p4.length !== 4) return setError(t("tr.err.phone"));
+      if (!key && p4.length !== 4) return setError(t("tr.err.phone"));
       setBusy(true);
       try {
-        const o = await getOrder(nr, p4);
-        creds.current = { ref: nr, phone4: p4 };
+        const o = await getOrder(nr, { phone: p4, key });
+        creds.current = { ref: nr, pass: { phone: p4, key: o.access || key } };
+        remember(nr, o.access);
         setRef(nr);
         setOrder(o);
       } catch (e) {
+        if (!k && key && !p4) remember(nr, null); // an old key; the digits are needed again
         setError(errText(i18n, e, fmt));
       } finally {
         setBusy(false);
@@ -87,10 +109,10 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
     [i18n]
   );
 
-  // Opened from the wizard's "Track this order": look it up right away. From a message link (/?track=REF)
-  // only the reference is known, so the phone digits field gets the focus.
+  // Opened from the wizard's "Track this order" or a message link with the order's key: look it up right away.
+  // With only the reference (and no key remembered here), the phone digits field gets the focus.
   useEffect(() => {
-    if (initialRef && initialPhone) void find(initialRef, initialPhone);
+    if (initialRef && (initialPhone || initialKey || remembered(normRef(initialRef)))) void find(initialRef, initialPhone || "", initialKey);
     else if (initialRef) window.setTimeout(() => phoneInput.current?.focus(), 350);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -102,7 +124,7 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
       const c = creds.current;
       if (!c || document.hidden) return;
       try {
-        const o = await getOrder(c.ref, c.phone4);
+        const o = await getOrder(c.ref, c.pass);
         setOrder((prev) => (prev && prev.updatedAt === o.updatedAt && (prev.changes || []).length === (o.changes || []).length ? prev : o));
       } catch {
         /* keep showing the last state */
@@ -115,7 +137,7 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
     const c = creds.current;
     if (!c) return false;
     try {
-      const o = await orderAction(c.ref, action, { phone: c.phone4, ...extra });
+      const o = await orderAction(c.ref, action, { ...c.pass, ...extra });
       setOrder(o);
       toast(ok(o));
       return true;
@@ -214,13 +236,13 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
             const c = creds.current;
             if (!c || !order.priceChange) return;
             try {
-              setOrder(await answerPriceChange(c.ref, c.phone4, accept, order.priceChange.id, note));
+              setOrder(await answerPriceChange(c.ref, c.pass, accept, order.priceChange.id, note));
               toast(accept ? t("tr.pc.acceptedToast") : t("tr.pc.declinedToast"));
             } catch (e) {
               toast(errText(i18n, e, fmt));
               // The offer may have changed meanwhile: show the current one.
               try {
-                setOrder(await getOrder(c.ref, c.phone4));
+                setOrder(await getOrder(c.ref, c.pass));
               } catch {
                 /* keep the last state */
               }
@@ -280,7 +302,7 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
         </div>
       ) : null}
       {show3d && creds.current ? (
-        <Plan3DOverlay title={t("p3d.title")} texts={siteTexts(i18n)} onClose={() => setShow3d(false)} load={() => getOrderPlan(creds.current!.ref, creds.current!.phone4).then((r) => r.plan)} />
+        <Plan3DOverlay title={t("p3d.title")} texts={siteTexts(i18n)} onClose={() => setShow3d(false)} load={() => getOrderPlan(creds.current!.ref, creds.current!.pass).then((r) => r.plan)} />
       ) : null}
 
       {!finished && !cancelled ? (
@@ -316,7 +338,7 @@ function TrackBody({ initialRef, initialPhone }: { initialRef?: string; initialP
                 for (let k = 0; k < files.length; k++) {
                   setUploading(files.length - k);
                   try {
-                    last = await uploadOrderPhoto(c.ref, c.phone4, await shrinkImage(files[k], t("tr.photoBad")));
+                    last = await uploadOrderPhoto(c.ref, c.pass, await shrinkImage(files[k], t("tr.photoBad")));
                   } catch (err) {
                     toast(errText(i18n, err, fmt));
                     break;

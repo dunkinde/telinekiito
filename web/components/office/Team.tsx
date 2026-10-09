@@ -99,8 +99,10 @@ function StaffDialog({ open, person, crews, onClose, onSaved }: { open: boolean;
     setSeen(key);
     if (open) setD(person ? { name: person.name, phone: person.phone || "", role: person.role, crewId: person.crewId || "", lang: person.lang, pin: "" } : { name: "", phone: "", role: "worker", crewId: crews[0]?.id || "", lang: "fi", pin: "" });
   }
-  const pinBad = d.pin !== "" && !/^\d{4,8}$/.test(d.pin);
-  const ok = d.name.trim() && d.phone.replace(/\D/g, "").length >= 6 && (person ? !pinBad : /^\d{4,8}$/.test(d.pin));
+  // The head of company and team leaders reach everything, so their PIN is 6–8 digits.
+  const pinOk = (d.role === "owner" || d.role === "leader" ? /^\d{6,8}$/ : /^\d{4,8}$/).test(d.pin);
+  const pinBad = d.pin !== "" && !pinOk;
+  const ok = d.name.trim() && d.phone.replace(/\D/g, "").length >= 6 && (person ? !pinBad : pinOk);
   async function save() {
     if (!ok) return;
     const body = { name: d.name.trim(), phone: d.phone.trim(), role: d.role, crewId: d.crewId || null, lang: d.lang, ...(d.pin ? { pin: d.pin } : {}) };

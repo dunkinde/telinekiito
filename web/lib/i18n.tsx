@@ -361,6 +361,7 @@ const en = {
 
   "err.network": "Can't reach the server. Check your connection.",
   "err.rate_limited": "Too many requests. Wait a moment and try again.",
+  "err.too_many_tries": "Too many wrong tries for this order. Open it from the link in our text message or email, or call us.",
   "err.address_short": "Write the street, number and city.",
   "err.lookup_failed": "The map service didn't answer. Try again or enter the size yourself.",
   "err.ai_not_configured": "Drawing reading isn't switched on yet.",
@@ -848,6 +849,7 @@ const fi: Record<Key, Entry> = {
 
   "err.network": "Palvelimeen ei saada yhteyttä. Tarkista nettiyhteys.",
   "err.rate_limited": "Liian monta pyyntöä. Odota hetki ja yritä uudelleen.",
+  "err.too_many_tries": "Tälle tilaukselle on tehty liian monta väärää yritystä. Avaa tilaus tekstiviestimme tai sähköpostimme linkistä tai soita meille.",
   "err.address_short": "Kirjoita katu, numero ja kaupunki.",
   "err.lookup_failed": "Karttapalvelu ei vastannut. Yritä uudelleen tai syötä mitat itse.",
   "err.ai_not_configured": "Piirustusten luku ei ole vielä käytössä.",

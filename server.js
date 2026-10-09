@@ -54,7 +54,8 @@ const pricing = () => O.mergePricing(store.getSetting("pricing"));
 const ops = () => P.mergeOps(store.getSetting("ops"));
 const stockCfg = () => S.mergeStock(store.getSetting("stock"));
 const crews = () => store.list("crew").sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-const notify = createNotifier({ store, getOps: ops });
+// Tracking links in customer messages carry the order's key, so customers never need the phone digits.
+const notify = createNotifier({ store, getOps: ops, orderKey: (ref) => (auth.enabled ? auth.orderKey(ref) : null) });
 
 if (store.countOrders() === 0 && process.env.SEED_EXAMPLES !== "0") {
   for (const o of O.exampleOrders(pricing())) store.insertOrder(o);
@@ -163,9 +164,15 @@ function limit(req, bucket, max, windowMs) {
 }
 
 /* ---------- Sessions and roles ---------- */
+/** A login that was logged out stays dead even if the cookie was copied (kept until it would have expired). */
+const loggedOut = (s) => Boolean(s.n && store.get("loggedout", s.n));
+function endSession(token) {
+  const s = auth.verify(token);
+  if (s && s.n) store.put("loggedout", { id: s.n, exp: s.exp });
+}
 function sessionUser(req) {
   const s = auth.verify(cookies(req)[auth.COOKIE]);
-  if (!s || !s.sid) return null;
+  if (!s || !s.sid || loggedOut(s)) return null;
   if (s.sid === MASTER_ID) return { id: MASTER_ID, name: "Owner", role: "owner", lang: "fi", crewId: null, master: true };
   const st = store.get("staff", s.sid);
   if (!st || st.active === false || (st.ver || 0) !== (s.ver || 0)) return null;
@@ -188,13 +195,15 @@ function getOrderOr404(ref) {
   return o;
 }
 /**
- * Order number + last four phone digits. Wrong tries count per address (20 an hour) and per order (20 a day),
- * so the four digits can't be guessed by trying them all.
+ * Order number + last four phone digits, or the key from the link in our messages (or the one the tracking page
+ * remembered). Wrong digits count per address (20 an hour) and per order (20 a day), so the four digits can't be
+ * guessed by trying them all; the key still works when the order is blocked for digits.
  */
-function customerOrder(req, ref, phone) {
-  const ipKey = `phone-miss:${clientIp(req)}`, refKey = `phone-miss:${ref}`;
-  if (allow.full(ipKey, 20, 3600e3) || allow.full(refKey, 20, 24 * 3600e3)) throw new HttpError(429, "rate_limited", "Too many tries. Wait a moment and try again.");
+function customerOrder(req, ref, { phone, key } = {}) {
   const o = /^T[KP]-[A-Z0-9]{4,10}$/.test(ref) ? store.getOrder(ref) : null;
+  if (o && key && auth.checkOrderKey(o.ref, key)) return o;
+  const ipKey = `phone-miss:${clientIp(req)}`, refKey = `phone-miss:${ref}`;
+  if (allow.full(ipKey, 20, 3600e3) || allow.full(refKey, 20, 24 * 3600e3)) throw new HttpError(429, "too_many_tries", "Too many wrong tries. Open the order from the link in our text message or email, or call us.");
   if (!o || !O.phoneMatches(o, phone)) {
     allow.add(ipKey);
     if (o) allow.add(refKey);
@@ -302,15 +311,21 @@ route("GET", /^\/api\/config$/, () => {
 });
 
 // Build status written by deploy/autodeploy.sh on the host (mounted read-only into /deploy).
-route("GET", /^\/healthz\/deploy$/, () => {
+// Anyone sees whether the last build worked; the build log and commit messages only the office.
+route("GET", /^\/healthz\/deploy$/, (req) => {
   let status = null, log = "";
   try { status = JSON.parse(fs.readFileSync(path.join(DEPLOY_DIR, "status.json"), "utf8")); } catch {}
+  const site = fs.existsSync(path.join(SITE_DIR, "index.html"));
+  const u = sessionUser(req);
+  if (!u || !["owner", "leader"].includes(u.role)) {
+    return { status: status && { status: status.status, commit: status.commit, finishedAt: status.finishedAt }, site };
+  }
   try {
     log = fs.readFileSync(path.join(DEPLOY_DIR, "build.log"), "utf8")
       .replace(/\x1b\[[0-9;]*[A-Za-z]/g, "")
       .split("\n").slice(-150).join("\n");
   } catch {}
-  return { status, log, site: fs.existsSync(path.join(SITE_DIR, "index.html")) };
+  return { status, log, site };
 });
 // Whether the weather service and messaging work (no customer data).
 route("GET", /^\/healthz\/services$/, () => {
@@ -404,7 +419,7 @@ route("POST", /^\/api\/ai\/drawing$/, async (req) => {
   try {
     return { ok: true, house: await ai.readDrawing(images, { lang: body.lang === "fi" ? "fi" : "en" }) };
   } catch (e) {
-    console.error("[ai]", e.code, e.message);
+    console.error("[ai]", e.code, e.code === "ai_bad_key" ? "" : e.message);
     const msg = {
       ai_bad_key: "The OpenAI key on the server isn't valid.",
       ai_no_credit: "The OpenAI account has run out of credit.",
@@ -494,20 +509,20 @@ route("POST", /^\/api\/orders$/, async (req) => {
 
 route("GET", /^\/api\/orders\/([A-Z0-9-]+)$/, (req, m, url) => {
   limit(req, "track", 30, 10 * 60e3);
-  return customerView(customerOrder(req, m[1], url.searchParams.get("phone")));
+  return customerView(customerOrder(req, m[1], { phone: url.searchParams.get("phone") }));
 });
 // Same, with the phone digits in the body instead of the address (the website uses this).
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/view$/, async (req, m) => {
   limit(req, "track", 30, 10 * 60e3);
   const body = await readJson(req, 1024);
-  return customerView(customerOrder(req, m[1], body.phone));
+  return customerView(customerOrder(req, m[1], body));
 });
 
 // Customer actions on the tracking page. A longer or shorter rental is a change request the office approves.
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/(extend|pickup|message|change)$/, async (req, m) => {
   limit(req, "track-action", 20, 10 * 60e3);
   const body = await readJson(req, 8192);
-  const o = customerOrder(req, m[1], body.phone);
+  const o = customerOrder(req, m[1], body);
   const action = m[2];
   if (action === "extend" || action === "change") {
     const b = action === "extend" ? { type: "days", days: (Number(o.schedule.days) || 0) + (Number(body.days) || 7) } : body;
@@ -549,7 +564,7 @@ function answerPriceChange(o, accept, body, who, actor) {
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/price-change\/(accept|decline)$/, async (req, m) => {
   limit(req, "track-action", 20, 10 * 60e3);
   const body = await readJson(req, 4096);
-  const o = customerOrder(req, m[1], body.phone);
+  const o = customerOrder(req, m[1], body);
   answerPriceChange(o, m[2] === "accept", body, o.customer.name, null);
   return customerView(o);
 });
@@ -567,7 +582,7 @@ function addCustomerPhoto(o, image) {
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/photos$/, async (req, m) => {
   limit(req, "photos", 30, 10 * 60e3);
   const body = await readJson(req, 7 * 1024 * 1024);
-  const o = customerOrder(req, m[1], body.phone);
+  const o = customerOrder(req, m[1], body);
   addCustomerPhoto(o, body.image);
   return customerView(o);
 });
@@ -575,7 +590,7 @@ route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/photos$/, async (req, m) => {
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/review$/, async (req, m) => {
   limit(req, "review", 10, 60 * 60e3);
   const body = await readJson(req, 4096);
-  const o = customerOrder(req, m[1], body.phone);
+  const o = customerOrder(req, m[1], body);
   const r = P.saveReview(store, o, body);
   notify.alert("review", o.ref, `${o.ref}: ${r.stars}/5 stars from ${r.name}`);
   return customerView(o);
@@ -595,7 +610,7 @@ route("GET", /^\/api\/content$/, () => {
 // price or the schedule are change requests the office approves; order details like the PO number are edited directly.
 function bizSession(req) {
   const s = auth.verify(cookies(req)[auth.BIZ_COOKIE]);
-  if (!s || !s.sid || !String(s.sid).startsWith("b:")) return null;
+  if (!s || !s.sid || !String(s.sid).startsWith("b:") || loggedOut(s)) return null;
   const u = store.get("bizuser", s.sid.slice(2));
   if (!u || u.active === false || (u.ver || 0) !== (s.ver || 0)) return null;
   const account = store.get("account", u.accountId);
@@ -638,6 +653,7 @@ route("POST", /^\/api\/biz\/login$/, async (req, m, url, res) => {
   return { ok: true, user: B.publicBizUser(u) };
 });
 route("POST", /^\/api\/biz\/logout$/, (req, m, url, res) => {
+  endSession(cookies(req)[auth.BIZ_COOKIE]);
   res.setHeader("Set-Cookie", auth.clearCookie(isSecure(req), auth.BIZ_COOKIE));
   return { ok: true };
 });
@@ -849,6 +865,7 @@ async function login(req, m, url, res) {
   return { ok: true, user };
 }
 function logout(req, m, url, res) {
+  endSession(cookies(req)[auth.COOKIE]);
   res.setHeader("Set-Cookie", auth.clearCookie(isSecure(req)));
   return { ok: true };
 }
@@ -887,8 +904,10 @@ function salesStaff() {
   const list = store.list("staff", { limit: 500 }).filter((x) => x.active !== false && SALES.includes(x.role)).map((x) => ({ id: x.id, name: x.name, role: x.role }));
   return [{ id: MASTER_ID, name: "Owner", role: "owner" }, ...list];
 }
-function getProspect(id) {
-  const p = store.get("prospect", id);
+function getProspect(raw) {
+  let id = "";
+  try { id = decodeURIComponent(raw); } catch {}
+  const p = id ? store.get("prospect", id) : null;
   if (!p) throw new HttpError(404, "not_found", "No such prospect.");
   return p;
 }
@@ -920,7 +939,7 @@ route("PATCH", /^\/api\/office\/prospects\/settings$/, async (req) => {
 });
 route("GET", /^\/api\/office\/prospects\/([^/]+)$/, (req, m) => {
   requireSales(req);
-  const p = getProspect(decodeURIComponent(m[1]));
+  const p = getProspect(m[1]);
   p.research = RESEARCH[p.id] || p.research || null;
   PR.finish(p, store, CRM, P.today());
   const org = (id) => (id ? CRM.get(store, id) : null);
@@ -929,7 +948,7 @@ route("GET", /^\/api\/office\/prospects\/([^/]+)$/, (req, m) => {
 });
 route("PATCH", /^\/api\/office\/prospects\/([^/]+)$/, async (req, m) => {
   const user = requireSales(req);
-  const p = getProspect(decodeURIComponent(m[1]));
+  const p = getProspect(m[1]);
   const body = await readJson(req, 16 * 1024);
   const log = (entry) => (p.notes = [{ id: store.newId("pnt"), at: new Date().toISOString(), by: user.name, text: "", ...entry }, ...(p.notes || [])].slice(0, 300));
   if (body.status !== undefined) {
@@ -1134,7 +1153,7 @@ route("GET", /^\/api\/crew\/jobs\/([A-Z0-9-]+)\/plan$/, (req, m) => {
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/plan$/, async (req, m) => {
   limit(req, "track", 60, 10 * 60e3);
   const body = await readJson(req, 1024);
-  return { plan: O.orderPlan(customerOrder(req, m[1], body.phone)) };
+  return { plan: O.orderPlan(customerOrder(req, m[1], body)) };
 });
 // Shared plan: only the scaffold and the house shape, no names, phone numbers or address.
 route("GET", /^\/api\/plan\/([\w-]{12,40})$/, (req, m) => {
@@ -1860,6 +1879,7 @@ const server = http.createServer(async (req, res) => {
 
 /* ---------- Background jobs: reminders, wind warnings, map locations, retries ---------- */
 async function tick() {
+  for (const r of store.list("loggedout", { limit: 5000 })) if (r.exp < Date.now()) store.del("loggedout", r.id);
   const o0 = ops();
   const t = P.today();
   const orders = store.listOrders();
