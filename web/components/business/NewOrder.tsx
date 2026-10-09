@@ -136,7 +136,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
           eave: h.eave ? String(h.eave) : floors ? String(EAVE_BY_FLOORS[floors]) : x.eave
         };
       });
-      setGeo({ lat: r.match.lat, lon: r.match.lon, for: text, result: r, checks: (r.noteCodes || []).map((n) => n.code).filter((c) => ["size_mismatch", "not_rectangle", "size_estimated", "street_only", "outbuilding", "model_mismatch", "model_slope"].includes(c)) });
+      setGeo({ lat: r.match.lat, lon: r.match.lon, for: text, result: r, checks: (r.noteCodes || []).map((n) => n.code).filter((c) => ["size_mismatch", "not_rectangle", "size_estimated", "street_only", "outbuilding", "model_mismatch", "model_old", "model_slope"].includes(c)) });
       const full = Boolean(r.model) || Boolean(h.length && h.width && h.floors) && r.match.houseLevel && r.details?.sizeSource !== "estimate" && !(r.noteCodes || []).some((n) => n.code === "size_mismatch");
       const how = r.model ? t("biz.new.model") : full ? t("biz.new.found") : t("biz.new.partial");
       setLookup({ busy: false, msg: `${r.match.short || r.match.display} – ${how}${r.modelPending ? ` (${t("biz.new.modelPending")})` : ""}`, ok: full });

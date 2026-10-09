@@ -143,7 +143,7 @@ export interface AddressResult {
     eave: number | null;
   };
   details: {
-    sizeSource?: "OpenStreetMap" | "estimate" | "NLS 3D model";
+    sizeSource?: "OpenStreetMap" | "estimate" | "NLS 3D model" | "City of Helsinki";
     footprintM2?: number;
     outline?: [number, number][];
     osmType?: string;

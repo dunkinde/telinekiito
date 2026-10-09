@@ -41,7 +41,7 @@ import { HouseModel } from "../HouseModel";
 import { shrinkImage } from "@/lib/image";
 
 /** Address lookup warnings that make the office check the size before confirming. */
-const REVIEW_CODES = ["size_mismatch", "not_rectangle", "size_estimated", "street_only", "outbuilding", "model_mismatch", "model_slope"];
+const REVIEW_CODES = ["size_mismatch", "not_rectangle", "size_estimated", "street_only", "outbuilding", "model_mismatch", "model_old", "model_slope"];
 
 interface Form {
   address: string;

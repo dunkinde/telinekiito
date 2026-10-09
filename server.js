@@ -457,7 +457,8 @@ const REVIEW_CHECKS = {
   size_estimated: "the size is estimated from the register floor area, not measured",
   street_only: "the address matched only the street, not the house",
   outbuilding: "the matched building may be an outbuilding",
-  model_mismatch: "the 3D model's outline doesn't match the map",
+  model_mismatch: "the 3D model doesn't match the city's outline of the house, so it isn't used",
+  model_old: "the house was completed after the 3D model was measured, so it isn't used",
   model_slope: "the 3D model's wall heights suggest a sloping plot"
 };
 /** The address is in another delivery zone than the order was priced for: a note for the office (transport price). */
@@ -478,7 +479,7 @@ function applyReviewFlags(order, body) {
   order.needsReview = true;
   order.sizeCheck = { reasons, at: new Date().toISOString() };
   const words = reasons.map((r) => (r.code === "storeys_many" ? `the building register lists ${r.n} storeys (the online price covers up to 2)` : REVIEW_CHECKS[r.code]));
-  order.internalNotes = `Check the size before confirming: ${words.join("; ")}. Look at the satellite view and ask the customer for photos of each side.`;
+  order.internalNotes = `Check the size before confirming: ${words.join("; ")}. Look at the satellite view and ask the customer for photos of each side or the house drawings.`;
 }
 
 route("POST", /^\/api\/orders$/, async (req) => {
