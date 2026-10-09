@@ -407,6 +407,7 @@ const en = {
   "err.use_cancel": "Use Cancel order to cancel.",
   "err.order_finished": "This order is already finished.",
   "err.bad_crew": "That crew doesn't exist any more.",
+  "err.crew_off": "That crew is switched off. Switch it on under Team first.",
   "err.already_decided": "Someone has already decided this change.",
   "err.already_invoiced": "This order already has an invoice. Void it first to make a new one.",
   "err.bad_part": "Unknown part.",
@@ -729,6 +730,7 @@ const en = {
   "cal.requested": (v) => `Asked to start ${v.date}, ${v.days} days, ${v.speed}`,
   "cal.rentalEnds": (v) => `Rental ends ${v.date}`,
   "cal.noCrews": "No crews yet – add them under Team.",
+  "cal.crewsOff": "All crews are switched off – switch one on under Team.",
   "cal.empty": "Nothing to plan",
 
   "map.label": "Map of sites",
@@ -2044,6 +2046,7 @@ const fi: Record<Key, Entry> = {
   "err.use_cancel": "Peru tilaus Peru tilaus -painikkeella.",
   "err.order_finished": "Tilaus on jo päättynyt.",
   "err.bad_crew": "Tiimiä ei ole enää olemassa.",
+  "err.crew_off": "Tiimi on pois käytöstä. Ota se käyttöön Tiimit-osiossa ensin.",
   "err.already_decided": "Joku on jo ratkaissut tämän muutoksen.",
   "err.already_invoiced": "Tilauksella on jo lasku. Mitätöi se ensin, jos haluat tehdä uuden.",
   "err.bad_part": "Tuntematon osa.",
@@ -2366,6 +2369,7 @@ const fi: Record<Key, Entry> = {
   "cal.requested": (v) => `Toivottu aloitus ${v.date}, ${v.days} pv, ${v.speed}`,
   "cal.rentalEnds": (v) => `Vuokra päättyy ${v.date}`,
   "cal.noCrews": "Tiimejä ei vielä ole – lisää ne Tiimit-osiossa.",
+  "cal.crewsOff": "Kaikki tiimit ovat pois käytöstä – ota tiimi käyttöön Tiimit-osiossa.",
   "cal.empty": "Ei suunniteltavaa",
 
   "map.label": "Työmaiden kartta",

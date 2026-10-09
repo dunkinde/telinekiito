@@ -233,6 +233,7 @@ function crewOrder(user, ref) {
 }
 function saveOrder(o) {
   store.saveOrder(o);
+  P.closeMootChanges(store, o);
   return o;
 }
 

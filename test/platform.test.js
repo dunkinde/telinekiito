@@ -102,6 +102,13 @@ test("whole job: team, crew app, change, invoice, review", async () => {
   // Not assigned yet: the worker can't open it.
   assert.equal((await req("GET", `/api/crew/jobs/${ref}`, undefined, w)).status, 403);
 
+  // A switched-off crew can't be given the job.
+  const off = (await req("POST", "/api/office/crews", { name: "Pois", truck: "OFF-1" }, owner)).json.crew;
+  await req("PATCH", `/api/office/crews/${off.id}`, { active: false }, owner);
+  const refused = await req("PATCH", `/api/office/orders/${ref}`, { assignment: { crewId: off.id } }, owner);
+  assert.equal(refused.status, 409);
+  assert.equal(refused.json.error, "crew_off");
+
   // Office confirms and schedules it for the crew.
   const date = start();
   const sched = await req("PATCH", `/api/office/orders/${ref}`, { status: "confirmed", assignment: { date, time: "08:00", crewId: crew.id } }, owner);

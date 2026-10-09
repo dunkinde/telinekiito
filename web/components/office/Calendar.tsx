@@ -374,7 +374,7 @@ export function CalendarView() {
                         })}
                       </tbody>
                     </table>
-                    {!crews.length ? <p className="border-t border-line px-4 py-3 text-[13px] text-muted">{t("cal.noCrews")}</p> : null}
+                    {!crews.length ? <p className="border-t border-line px-4 py-3 text-[13px] text-muted">{t(d.crews.length ? "cal.crewsOff" : "cal.noCrews")}</p> : null}
                   </div>
 
                   {/* Agenda: phones */}

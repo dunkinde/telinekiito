@@ -147,8 +147,14 @@ test("office login, dispatch, pricing and delete", async () => {
   assert.equal(p1.json.order.status, "erected");
   assert.equal((await req("PATCH", `/api/office/orders/${mine.ref}`, { status: "flying" }, H)).status, 400);
 
+  const before = (await req("GET", `/api/orders/${mine.ref}?phone=4321`)).json.changes.find((c) => c.status === "pending" && c.type === "days");
+  assert.ok(before, "a longer rental is waiting for the office");
   const pick = await req("POST", `/api/orders/${mine.ref}/pickup`, { phone: "4321" });
   assert.equal(pick.json.status, "pickup_requested");
+  // Asking for pickup closes the request for a longer rental: approving it later would reprice a finished job.
+  const moot = pick.json.changes.find((c) => c.id === before.id);
+  assert.equal(moot.status, "rejected");
+  assert.equal((await req("POST", `/api/office/changes/${moot.id}/approve`, {}, H)).status, 409);
   assert.equal(pick.json.crew, "Team 3");
 
   const pr = await req("PUT", "/api/office/pricing", { pricing: { rentPerM2Day: 0.2, zones: { A: { trip: 99 } } } }, H);
