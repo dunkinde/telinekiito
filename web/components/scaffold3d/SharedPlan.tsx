@@ -74,7 +74,7 @@ function Body() {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 text-xs text-muted">{p.house.measured ? t("p3d.measured") : t("p3d.box")}</p>
+                <p className="mt-3 text-xs text-muted">{p.house.measured ? t("p3d.measured") : p.house.outline ? t("p3d.outline") : t("p3d.box")}</p>
               </div>
             </div>
           </>

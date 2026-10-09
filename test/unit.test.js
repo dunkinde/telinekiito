@@ -505,3 +505,38 @@ test("temporary roof over eaves of different heights: each roof-catch deck stays
   assert.equal(up[0].parts.frames1, (up[0].bays + 1) * (1 + up[0].half));
   assert.ok(planFor(h, est).sides.some((s) => s.topUp === 1));
 });
+
+test("house from its map outline: roof faces tile the outline, gable ends rise to the ridge, priced wall by wall", () => {
+  const { outlineHouse, skeleton } = require("../lib/outline"), { planFor } = require("../lib/layout");
+  const area = (P) => P.reduce((a, p, i) => { const q = P[(i + 1) % P.length]; return a + p[0] * q[1] - q[0] * p[1]; }, 0) / 2;
+  const shapes = {
+    L: [[0, 0], [12, 0], [12, 5], [5, 5], [5, 10], [0, 10]],
+    T: [[0, 0], [16, 0], [16, 5], [10, 5], [10, 11], [6, 11], [6, 5], [0, 5]],
+    U: [[0, 0], [16, 0], [16, 10], [11, 10], [11, 4], [5, 4], [5, 10], [0, 10]],
+    // Kaitalahdenkuja 1 (City of Helsinki outline): a terrace of staggered units.
+    saw: [[1.9, 0], [17.3, 0], [17.3, 4.6], [18.4, 5.7], [14.9, 9.3], [13.9, 8.4], [11.4, 10.9], [9.4, 8.8], [8.1, 10.1], [5.5, 7.6], [3.3, 9.8], [0, 6.6], [0, 1], [1.9, 1]],
+    // Walls a few cm out of line and a wing closing on a step (Kaitalahdenkuja 3).
+    jog: [[0, 6], [0, 0], [8.4, 0.1], [8.4, 0.5], [16.7, 0.6], [16.7, 0], [20.5, 0], [20.5, 2.4], [21.7, 2.4], [21.7, 7.6], [16.7, 7.6], [16.7, 6.1]]
+  };
+  for (const [name, P] of Object.entries(shapes)) {
+    const sk = skeleton(P);
+    assert.ok(sk, name);
+    const sum = sk.faces.reduce((a, f) => a + area(f.map((id) => [sk.nodes[id].x, sk.nodes[id].y])), 0);
+    assert.ok(Math.abs(sum - area(P)) < 0.01 * area(P), name);
+    const r = geo.minRect(P.map(([x, y]) => ({ x, y })));
+    const h = { length: r.length, width: r.width, eave: 3, pitch: 30, roofType: "gable", jobType: "roof", gables: true, system: "layher" };
+    const o = outlineHouse(P, h);
+    assert.equal(o.walls.length, P.length, name);
+    assert.ok(o.shape.ridge > 3 && o.shape.ridge < 3 + Math.tan(Math.PI / 6) * r.width / 2 + 0.01, name);
+    const est = E.estimate({ ...h, walls: o.walls, shape: o.shape }), plan = planFor({ ...h, walls: o.walls, shape: o.shape }, est);
+    assert.ok(est.sides.length >= 4 && plan.house.outline && !plan.house.measured, name);
+    assert.equal(plan.house.walls.length, P.length, name);
+  }
+  // L: both wing ends are gables up to the ridge (3 + tan 30° x 2.5 m).
+  const L = outlineHouse(shapes.L, { length: 12, width: 10, eave: 3, pitch: 30, roofType: "gable" });
+  assert.deepEqual(L.walls.filter((w) => w.gable).map((w) => [w.edge, w.top]), [[1, 4.44], [4, 4.44]]);
+  assert.equal(outlineHouse(shapes.L, { length: 12, width: 10, eave: 3, pitch: 30, roofType: "hip" }).walls.filter((w) => w.gable).length, 0);
+  // A rectangle stays a box; an outline that no longer fits the size entered is not used.
+  assert.equal(outlineHouse([[0, 0], [10, 0], [10, 6], [0, 6]], { length: 10, width: 6, eave: 3, pitch: 30, roofType: "gable" }), null);
+  assert.equal(outlineHouse(shapes.L, { length: 13, width: 10, eave: 3, pitch: 30, roofType: "gable" }), null);
+});

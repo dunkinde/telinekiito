@@ -92,7 +92,7 @@ export function NewOrder({ copyFrom }: { copyFrom?: string }) {
     const g = geo && geo.for === f.address.trim() ? geo.result : null;
     return house.ok ? modelRefFor(g, { length: house.L, width: house.W, eave: house.E, pitch: house.P, roofType: f.roofType }) : undefined;
   }, [geo, f.address, house, f.roofType]);
-  const modelId = modelRef ? modelRef.id : "";
+  const modelId = modelRef ? JSON.stringify(modelRef) : "";
 
   // Live price with the company's discount, and the first free start dates for this house.
   useEffect(() => {

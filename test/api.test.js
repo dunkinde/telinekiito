@@ -190,6 +190,11 @@ test("live quote, config extras and contact messages", async () => {
   const q = await req("POST", "/api/quote", { length: 15, width: 10, eave: 3, roofType: "gable", pitch: 30, jobType: "roof", gables: true, days: 28, zone: "A", urgency: "standard" });
   assert.equal(q.status, 200);
   assert.equal(q.json.estimate.area, 319);
+  // Without a 3D model, the map outline sent back shapes the walls and roof.
+  const L = [[0, 0], [12, 0], [12, 5], [5, 5], [5, 10], [0, 10]];
+  const ql = await req("POST", "/api/quote", { length: 12, width: 10, eave: 3, roofType: "gable", pitch: 30, jobType: "roof", gables: true, days: 28, zone: "A", urgency: "standard", model: { outline: L } });
+  assert.equal(ql.status, 200);
+  assert.ok(ql.json.plan.house.outline && ql.json.plan.house.walls.length === 6);
   const cfg = (await req("GET", "/api/config")).json;
   assert.ok(cfg.earliest.emergency < cfg.earliest.standard);
   assert.equal(cfg.examples.totals.standard, q.json.quote.total);

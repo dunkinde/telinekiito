@@ -12,6 +12,7 @@ const { makeAuth, MASTER_ID } = require("./lib/auth");
 const { makeLimiter } = require("./lib/ratelimit");
 const { createAddressService } = require("./lib/address");
 const { createNls3d } = require("./lib/nls3d");
+const { outlineHouse } = require("./lib/outline");
 const { createSuggest } = require("./lib/suggest");
 const { checksFor } = require("./lib/checks");
 const { createAI } = require("./lib/ai");
@@ -336,9 +337,16 @@ route("GET", /^\/healthz\/services$/, () => {
 /**
  * The measured walls of a building in the 3D model, when the address lookup found one: the page sends back only the
  * building id and point, and the walls come from the server's own copy (never priced from walls sent by the page).
+ * Without a model, the map outline the lookup gave (model.outline) shapes the walls and roof (lib/outline.js) while
+ * it still fits the size entered.
  */
 async function withModel(f, body) {
   const m = body && body.model;
+  if (m && typeof m.id !== "string" && Array.isArray(m.outline)) {
+    const o = outlineHouse(m.outline, f);
+    if (o) { f.walls = o.walls; f.shape = o.shape; }
+    return f;
+  }
   if (!m || typeof m.id !== "string" || !nls3d.enabled) return f;
   const lat = Number(m.lat), lon = Number(m.lon);
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return f;

@@ -56,7 +56,8 @@ export interface ScaffoldPlan {
   jack: number;
   /** Height of the compensation frame, m. */
   half?: number;
-  house: { walls: P3[][]; roofs: P3[][]; ridge: number; measured: boolean };
+  /** measured: from the 3D building model; outline: walls on the map outline, roof shape assumed. */
+  house: { walls: P3[][]; roofs: P3[][]; ridge: number; measured: boolean; outline?: boolean };
   sides: PlanSide[];
   /** Weather sheeting on the outer face of every side. */
   sheeting?: boolean;

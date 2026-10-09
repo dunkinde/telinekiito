@@ -111,11 +111,8 @@ export interface SystemOption {
   weightKg: number;
 }
 
-export interface ModelRef {
-  id: string;
-  lat: number;
-  lon: number;
-}
+/** The 3D building (id and point), or without one the map outline of the house: the server shapes the walls from it. */
+export type ModelRef = { id: string; lat: number; lon: number } | { outline: [number, number][] };
 
 export interface QuoteResult {
   estimate: Estimate;
@@ -172,8 +169,10 @@ export function modelRefFor(
   h: { length: number; width: number; eave: number; pitch: number; roofType: RoofType }
 ): ModelRef | undefined {
   const m = r?.model, s = r?.house;
-  if (!m || !s) return undefined;
   const near = (x: number | null | undefined, y: number) => x == null || Math.abs(x - y) < 0.051;
+  const o = r?.details?.outline;
+  if (!m && s && o && o.length > 4 && s.length != null && s.width != null && near(s.length, h.length) && near(s.width, h.width)) return { outline: o };
+  if (!m || !s) return undefined;
   const same = near(s.length, h.length) && near(s.width, h.width) && near(s.eave, h.eave) && (s.roofType ?? h.roofType) === h.roofType && (h.roofType === "flat" || near(s.pitch, h.pitch));
   return same ? { id: m.id, lat: m.lat, lon: m.lon } : undefined;
 }
