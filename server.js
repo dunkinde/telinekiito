@@ -456,7 +456,9 @@ const REVIEW_CHECKS = {
   not_rectangle: "the building is not a simple rectangle",
   size_estimated: "the size is estimated from the register floor area, not measured",
   street_only: "the address matched only the street, not the house",
-  outbuilding: "the matched building may be an outbuilding"
+  outbuilding: "the matched building may be an outbuilding",
+  model_mismatch: "the 3D model's outline doesn't match the map",
+  model_slope: "the 3D model's wall heights suggest a sloping plot"
 };
 /** The address is in another delivery zone than the order was priced for: a note for the office (transport price). */
 async function checkZone(order) {
