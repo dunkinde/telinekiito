@@ -100,7 +100,7 @@ interface Joins { top: [number, number]; ties: { a: P2; b: P2; top: number }[] }
 function joinsOf(plan: ScaffoldPlan): Joins[] {
   const W = plan.width;
   const runOf = (s: PlanSide) => s.run ?? s.bays * plan.bay;
-  const topOf = (s: PlanSide) => plan.jack + (s.half ? plan.half ?? 1 : 0) + plan.lift * s.lifts;
+  const topOf = (s: PlanSide) => plan.jack + (s.half ? plan.half ?? 1 : 0) + plan.lift * s.lifts - (s.topUp ? plan.lift - (plan.half ?? 1) : 0);
   return plan.sides.map((s, i) => {
     const j: Joins = { top: [-1, -1], ties: [] };
     const g = s.gap ?? plan.gap, run = runOf(s);
@@ -138,7 +138,8 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide, joins: Joins 
   const bay = side.run ? side.run / side.bays : plan.bay;
   const gap = side.gap ?? plan.gap;
   const base = jack + (side.half ? plan.half ?? 1 : 0); // lowest transom of the 2 m lifts
-  const Z = (l: number) => (l === 0 ? jack : base + lift * l); // height of level l (0 = on the base jacks)
+  // Height of level l (0 = on the base jacks); a top lift of 1.00 m frames ends 1 m lower.
+  const Z = (l: number) => (l === 0 ? jack : base + lift * l - (side.topUp && l === side.lifts ? lift - (plan.half ?? 1) : 0));
   const run = side.bays * bay;
   const top = Z(side.lifts); // highest deck
   const cons = 0.36;

@@ -27,6 +27,8 @@ export interface PlanSide {
   gap?: number;
   /** 1 when a 1.00 m compensation frame stands under the 2.00 m lifts. */
   half?: number;
+  /** 1 when the top lift is a 1.00 m frame (a side under a temporary roof on the other frame grid than the roof's). */
+  topUp?: number;
   /** 0.36 m inner consoles with a deck on every decked level (under a temporary roof). */
   inner?: boolean;
   /** Access towers (hatch decks with ladders) on this side: one per connected scaffold, more every 50 m. */

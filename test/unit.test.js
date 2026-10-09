@@ -481,3 +481,27 @@ test("prospects: a housing company name must start with the street (no other tow
   assert.ok(!nameCovers("Kiinteistö Oy Karlskronabulevardi 9-11", "Bulevardi", 11));
   assert.ok(nameCovers("Asunto Oy Helsingin Satamakatu 11", "Satamakatu", 11));
 });
+
+test("temporary roof over eaves of different heights: each roof-catch deck stays under its own eave", () => {
+  const E = require("../lib/engine"), { planFor } = require("../lib/layout");
+  // Eaves 2.9 m and 3.9 m: no single 2 m frame grid has a deck under both, so one side stands on the other grid
+  // and reaches the roof's level with a 1.00 m frame on top.
+  const outline = [[0, 0], [12, 0], [12, 8], [0, 8]];
+  const walls = [
+    { edge: 0, len: 12, eave: 2.9, top: 2.9, e0: 1, e1: 1 }, { edge: 1, len: 8, eave: 2.9, top: 6, gable: true, e0: 1, e1: 1 },
+    { edge: 2, len: 12, eave: 3.9, top: 3.9, e0: 1, e1: 1 }, { edge: 3, len: 8, eave: 2.9, top: 6, gable: true, e0: 1, e1: 1 }
+  ];
+  const h = { length: 12, width: 8, eave: 3.4, roofType: "gable", pitch: 30, jobType: "roof", gables: true, weatherRoof: true, walls, shape: { outline, w: [], r: [] } };
+  const est = E.estimate(h);
+  const need = E.catchNeed(true, 30);
+  for (const s of est.sides) {
+    assert.ok(Math.abs(s.deckH - est.roof.support) < 1e-9, s.name); // one level all round
+    if (!s.catchOn) continue;
+    const z = E.deckHeight(s, s.catchLevel);
+    assert.ok(z <= s.eave - 0.2 + 1e-9 && z >= s.eave - E.CATCH.maxBelow - 1e-9 && z + E.CATCH.wall >= s.eave + need - 1e-9, s.name);
+  }
+  const up = est.sides.filter((s) => s.topUp);
+  assert.equal(up.length, 1);
+  assert.equal(up[0].parts.frames1, (up[0].bays + 1) * (1 + up[0].half));
+  assert.ok(planFor(h, est).sides.some((s) => s.topUp === 1));
+});
