@@ -1370,11 +1370,12 @@ route("DELETE", /^\/api\/office\/orders\/([A-Z0-9-]+)$/, (req, m) => {
   if (invoices.some((iv) => iv.status === "sent" || iv.status === "paid")) throw new HttpError(409, "has_invoice", "This order has a sent invoice. Void the invoice first.");
   if (!store.deleteOrder(m[1])) throw new HttpError(404, "not_found", "Order not found.");
   for (const iv of invoices) if (iv.status === "draft") store.put("invoice", { ...iv, status: "void" });
-  // Its unsent messages never go out (they'd tell the customer about an order that's gone), its alerts go away.
+  // Its unsent messages never go out (they'd tell the customer about an order that's gone), its alerts and reviews go away.
   for (const msg of store.list("msg", { ref: m[1], limit: 500 })) {
     if (msg.status === "waiting" || msg.status === "failed") store.put("msg", { ...msg, status: "skipped", error: "Order deleted" });
   }
   for (const a of store.list("alert", { ref: m[1], limit: 500 })) store.del("alert", a.id);
+  for (const r of store.list("review", { ref: m[1], limit: 50 })) store.del("review", r.id);
   P.audit(store, user, "order_deleted", m[1], null);
   return { ok: true };
 });
