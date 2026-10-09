@@ -246,6 +246,9 @@ test("platform helpers: reference numbers, phones, mail format, weather, stock",
   assert.equal(toE164("+358 50 765 4321"), "+358507654321");
   assert.equal(toE164("12"), null);
   assert.equal(fill("Hei {name}, {missing}", { name: "Anna" }), "Hei Anna, –");
+  // A time not set yet is left out, not shown as a dash.
+  assert.equal(fill("Pystytys {date} {time}. Seuranta", { date: "ke 14.10.2026", time: "" }), "Pystytys ke 14.10.2026. Seuranta");
+  assert.equal(fill("Pystytys {date} {time}.", { date: "ke 14.10.2026", time: "08:00" }), "Pystytys ke 14.10.2026 08:00.");
   const msg = buildMessage({ from: "a@b.fi", fromName: "TelineKiito", to: "c@d.fi", subject: "Tilaus vahvistettu – ä", text: "Hei\nRivi 2" });
   assert.match(msg, /Subject: =\?UTF-8\?B\?/);
   assert.match(msg, /Content-Transfer-Encoding: base64/);
