@@ -13,6 +13,14 @@ function niceMax(v: number) {
   return n * p;
 }
 const ticks = (max: number, n = 4) => Array.from({ length: n + 1 }, (_, k) => (max / n) * k);
+/** Axis values from lo to lo + span: four steps, or fewer when rounding would print the same label twice (0, 0, 1, 1, 1). */
+function axisTicks(span: number, f: (v: number) => string, lo = 0) {
+  for (const n of [4, 2, 1]) {
+    const t = ticks(span, n).map((v) => v + lo);
+    if (new Set(t.map(f)).size === t.length) return t;
+  }
+  return [lo, lo + span];
+}
 
 interface Tip {
   x: number;
@@ -78,12 +86,14 @@ export function Bars({
           rows: series.map((s, k) => ({ label: s.name, value: fmt(groups[hover].values[k] || 0), color: ns > 1 ? s.color : undefined }))
         }
       : null;
-  const labelEvery = gw < 34 ? Math.ceil(34 / Math.max(gw, 1)) : 1;
+  // Room for the longest label ("vk 40", "нед. 40"); counted back from the last group so the newest is always labelled.
+  const need = Math.max(...groups.map((g) => String(g.label).length), 1) * 6.4 + 8;
+  const labelEvery = gw < need ? Math.ceil(need / Math.max(gw, 1)) : 1;
   return (
     <div ref={ref} className="relative w-full" style={{ height }}>
       {w > 0 ? (
         <svg width={w} height={height} role="img" aria-label={label} className="block overflow-visible" onMouseLeave={() => setHover(null)}>
-          {ticks(max).map((tv) => (
+          {axisTicks(max, axisFmt || fmt).map((tv) => (
             <g key={tv}>
               <line x1={padL} x2={w - padR} y1={y(tv)} y2={y(tv)} stroke="#e3e7ea" strokeDasharray={tv === 0 ? undefined : "3 4"} />
               <text x={padL - 8} y={y(tv)} dy="0.32em" textAnchor="end" fontSize="11" fill="#5d6773" className="tabular-nums">
@@ -110,7 +120,7 @@ export function Bars({
                     />
                   ) : null;
                 })}
-                {gi % labelEvery === 0 || gi === groups.length - 1 ? (
+                {(groups.length - 1 - gi) % labelEvery === 0 ? (
                   <text x={padL + gw * gi + gw / 2} y={height - 8} textAnchor="middle" fontSize="11" fill={on ? "#0e1217" : "#5d6773"} fontWeight={on ? 600 : 400}>
                     {g.label}
                   </text>
@@ -205,7 +215,7 @@ export function Line({
     hover != null && points[hover]
       ? { x: x(hover), y: y(points[hover].y), title: dayFmt(points[hover].x), rows: [{ label: seriesName, value: fmt(points[hover].y) }] }
       : null;
-  const tickVals = ticks(hi - lo).map((v) => v + lo);
+  const tickVals = axisTicks(hi - lo, fmt, lo);
   return (
     <div ref={ref} className="relative w-full" style={{ height }}>
       {w > 0 && points.length ? (

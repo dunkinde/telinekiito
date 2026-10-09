@@ -156,8 +156,13 @@ test("office login, dispatch, pricing and delete", async () => {
   assert.equal(pr.json.pricing.zones.A.trip, 99);
   assert.equal((await req("GET", "/api/config")).json.pricing.rentPerM2Day, 0.2);
 
+  const queued = (await req("GET", "/api/office/outbox", undefined, H)).json.messages.filter((x) => x.ref === mine.ref && x.status === "waiting");
+  assert.ok(queued.length > 0, "the order has unsent messages");
   assert.equal((await req("DELETE", `/api/office/orders/${mine.ref}`, undefined, H)).status, 200);
   assert.equal((await req("GET", `/api/orders/${mine.ref}?phone=4321`)).status, 404);
+  const after = (await req("GET", "/api/office/outbox", undefined, H)).json.messages.filter((x) => x.ref === mine.ref);
+  assert.ok(after.length && after.every((x) => x.status !== "waiting"), "a deleted order's messages are never sent");
+  assert.ok(!(await req("GET", "/api/office/alerts", undefined, H)).json.alerts.some((x) => x.ref === mine.ref), "its alerts are gone");
 
   const out = await req("POST", "/api/office/logout", {}, H);
   assert.match(out.headers.get("set-cookie"), /Max-Age=0/);

@@ -1354,6 +1354,11 @@ route("PATCH", /^\/api\/office\/orders\/([A-Z0-9-]+)$/, async (req, m) => {
 route("DELETE", /^\/api\/office\/orders\/([A-Z0-9-]+)$/, (req, m) => {
   const user = requireOwner(req);
   if (!store.deleteOrder(m[1])) throw new HttpError(404, "not_found", "Order not found.");
+  // Its unsent messages never go out (they'd tell the customer about an order that's gone), its alerts go away.
+  for (const msg of store.list("msg", { ref: m[1], limit: 500 })) {
+    if (msg.status === "waiting" || msg.status === "failed") store.put("msg", { ...msg, status: "skipped", error: "Order deleted" });
+  }
+  for (const a of store.list("alert", { ref: m[1], limit: 500 })) store.del("alert", a.id);
   P.audit(store, user, "order_deleted", m[1], null);
   return { ok: true };
 });
@@ -1426,7 +1431,9 @@ route("POST", /^\/api\/office\/stock\/move$/, async (req) => {
 
 route("GET", /^\/api\/office\/alerts$/, (req) => {
   const user = requireOffice(req);
-  return { alerts: store.list("alert", { limit: 200 }).map((a) => ({ ...a, read: (a.readBy || []).includes(user.id) })) };
+  // Alerts of a deleted order are left out (orders deleted before their alerts were removed with them).
+  const alerts = store.list("alert", { limit: 200 }).filter((a) => !a.ref || store.getOrder(a.ref));
+  return { alerts: alerts.map((a) => ({ ...a, read: (a.readBy || []).includes(user.id) })) };
 });
 route("POST", /^\/api\/office\/alerts\/read$/, async (req) => {
   const user = requireOffice(req);

@@ -762,10 +762,10 @@ export function KV({ items, className }: { items: { k: React.ReactNode; v: React
     </dl>
   );
 }
-/** Table wrapper: scrolls sideways on small screens. */
+/** Table wrapper: scrolls sideways on small screens (relative: hidden labels in the cells stay inside, not widening the page). */
 export function TableWrap({ children, className, label }: { children: React.ReactNode; className?: string; label?: string }) {
   return (
-    <div className={cx("overflow-x-auto", className)} role={label ? "region" : undefined} aria-label={label} tabIndex={label ? 0 : undefined}>
+    <div className={cx("relative overflow-x-auto", className)} role={label ? "region" : undefined} aria-label={label} tabIndex={label ? 0 : undefined}>
       {children}
     </div>
   );
