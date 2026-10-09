@@ -318,7 +318,7 @@ route("GET", /^\/api\/config$/, () => {
     zones: o.zones,
     earliest,
     examples: O.priceExamples(p),
-    systems: E.SYSTEM_KEYS.map((k) => ({ key: k, name: E.SYSTEMS[k].name, enabled: Boolean(p.systems[k].enabled) }))
+    systems: E.SYSTEM_KEYS.map((k) => ({ key: k, enabled: Boolean(p.systems[k].enabled) }))
   };
 });
 
@@ -1176,14 +1176,14 @@ route("GET", /^\/api\/crew\/jobs\/([A-Z0-9-]+)\/plan$/, (req, m) => {
 route("POST", /^\/api\/orders\/([A-Z0-9-]+)\/plan$/, async (req, m) => {
   limit(req, "track", 60, 10 * 60e3);
   const body = await readJson(req, 1024);
-  return { plan: O.orderPlan(customerOrder(req, m[1], body)) };
+  return { plan: O.customerPlan(O.orderPlan(customerOrder(req, m[1], body))) };
 });
 // Shared plan: only the scaffold and the house shape, no names, phone numbers or address.
 route("GET", /^\/api\/plan\/([\w-]{12,40})$/, (req, m) => {
   limit(req, "plan", 120, 10 * 60e3);
   const o = store.listOrders().find((x) => x.shareToken === m[1]);
   if (!o || o.status === "cancelled") throw new HttpError(404, "not_found", "This link doesn't work any more.");
-  return { ref: o.ref, plan: O.orderPlan(o) };
+  return { ref: o.ref, plan: O.customerPlan(O.orderPlan(o)) };
 });
 
 route("GET", /^\/api\/crew\/jobs\/([A-Z0-9-]+)$/, (req, m) => {

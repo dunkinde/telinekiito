@@ -13,7 +13,6 @@ import {
   SYSTEM_BAY,
   WEATHER_JOBS,
   SYSTEM_KEYS,
-  SYSTEM_NAMES,
   readDrawing,
   type AddressResult,
   type Estimate,
@@ -1097,7 +1096,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
       {show3d && plan ? (
         <div className="fixed inset-0 z-[95] flex flex-col bg-ink/80 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label={t("p3d.title")}>
           <div className="mb-2 flex items-center justify-between gap-3 text-white">
-            <p className="font-semibold">{t("p3d.title")} · {plan.systemName}</p>
+            <p className="font-semibold">{t("p3d.title")}</p>
             <button type="button" onClick={() => setShow3d(false)} className="rounded-full bg-white px-3 py-1 text-sm font-semibold text-ink">
               {t("p3d.close")}
             </button>

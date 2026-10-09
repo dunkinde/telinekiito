@@ -45,7 +45,7 @@ export interface Config {
   earliest: Record<Urgency, string | null>;
   examples: { area: number; days: number; zone: Zone; totals: Record<Urgency, number> };
   /** Scaffold systems the customer can choose from. */
-  systems?: { key: SystemKey; name: string; enabled: boolean }[];
+  systems?: { key: SystemKey; enabled: boolean }[];
 }
 
 export interface QuoteLine {
@@ -105,7 +105,6 @@ export interface QuoteInput {
 /** The same house priced with one scaffold system. */
 export interface SystemOption {
   system: SystemKey;
-  name: string;
   total: number;
   area: number;
   weightKg: number;

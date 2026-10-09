@@ -50,7 +50,7 @@ function Body() {
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted">{data!.ref}</p>
               <h1 className="font-display text-3xl font-extrabold tracking-[-0.02em] text-ink">{t("p3d.title")}</h1>
-              <p className="mt-1 text-sm text-ink-soft">{t("p3d.sub", { system: p.systemName, area: p.area, sides: p.sides.length })}</p>
+              <p className="mt-1 text-sm text-ink-soft">{t("p3d.sub", { area: p.area, sides: p.sides.length })}</p>
             </div>
             <div className="grid flex-1 gap-4 lg:grid-cols-[1fr_260px]">
               <Scaffold3D plan={p} texts={siteTexts(i18n)} className="h-[62svh] min-h-[360px] lg:h-full" selected={pick} onSelect={setPick} />

@@ -47,7 +47,8 @@ export interface PlanSide {
 export interface ScaffoldPlan {
   v: number;
   system: SystemKey;
-  systemName: string;
+  /** Scaffold brand and model: in office and crew plans only. */
+  systemName?: string;
   /** Bay length, frame width and gap to the wall, lift height and base jack height, m. */
   bay: number;
   width: number;

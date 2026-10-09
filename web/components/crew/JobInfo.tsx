@@ -40,6 +40,7 @@ export function SiteModel({ view }: { view: ViewCard }) {
       {show3d ? (
         <Plan3DOverlay
           title={t("p3d.title")}
+          showSystem
           load={() => getJobPlan(view.ref).then((r) => r.plan)}
           onClose={() => setShow3d(false)}
           texts={{

@@ -614,3 +614,28 @@ test("weekends: only emergency deliveries start on a Saturday or Sunday", () => 
   assert.equal(S.earliestStart([], free, {}, [], {}, 7, "2026-10-10", "2026-10-09"), "2026-10-12");
   assert.equal(S.earliestStart([], free, {}, [], {}, 7, "2026-10-10", "2026-10-09", { weekends: true }), "2026-10-10");
 });
+
+test("temporary roof on a Z-shaped house: both long edges carried end to end, every wall keeps its scaffold", () => {
+  const { outlineHouse } = require("../lib/outline");
+  // Päätie 14, Helsinki: two offset wings under one rectangular keder roof.
+  const outline = [[-6.59, 4.87], [-4.47, -0.31], [-5.41, -1.54], [3.88, -8.73], [8.37, -2.91], [3.55, 0.81], [0.67, 7.84]];
+  const f = O.parseQuoteInput({ length: 17.2, width: 10.4, eave: 6.5, floors: "2", roofType: "gable", pitch: 26, jobType: "roof", gables: true, weatherRoof: true, zone: "A", urgency: "standard", days: 28 });
+  const o = outlineHouse(outline, f); f.walls = o.walls; f.shape = o.shape;
+  const plan = O.quoteFor(f, O.mergePricing({})).plan, r = plan.roof, W = plan.width;
+  const n = [-r.dir[1], r.dir[0]];
+  const uv = (p) => [(p[0] - r.at[0]) * r.dir[0] + (p[1] - r.at[1]) * r.dir[1], (p[0] - r.at[0]) * n[0] + (p[1] - r.at[1]) * n[1]];
+  for (const sign of [-1, 1]) {
+    // Scaffold under this long edge: sides running along it near v = ±span/2 (their outer face reaches the edge).
+    const under = plan.sides.map((s) => {
+      const a = uv([s.at[0] + s.out[0] * (s.gap + W), s.at[1] + s.out[1] * (s.gap + W)]);
+      const b = uv([s.at[0] + s.dir[0] * s.run + s.out[0] * (s.gap + W), s.at[1] + s.dir[1] * s.run + s.out[1] * (s.gap + W)]);
+      return Math.abs(Math.abs(a[1]) - r.span / 2) < 0.8 && Math.abs(Math.abs(b[1]) - r.span / 2) < 0.8 && Math.sign(a[1]) === sign ? [Math.min(a[0], b[0]), Math.max(a[0], b[0])] : null;
+    }).filter(Boolean).sort((x, y) => x[0] - y[0]);
+    let at = -r.length / 2;
+    for (const [a, b] of under) { assert.ok(a <= at + 0.8, `long edge ${sign}: a gap of ${(a - at).toFixed(2)} m with no scaffold under the trusses`); at = Math.max(at, b); }
+    assert.ok(at >= r.length / 2 - 0.8, `long edge ${sign}: the last ${(r.length / 2 - at).toFixed(2)} m have no scaffold`);
+  }
+  const work = plan.sides.filter((s) => s.kind !== "support");
+  assert.ok(work.length >= 7, `every wall keeps a work scaffold (${work.length})`);
+  assert.equal(plan.systemName, undefined, "customers don't see the scaffold brand");
+});
