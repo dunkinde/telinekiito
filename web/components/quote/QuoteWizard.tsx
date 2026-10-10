@@ -38,6 +38,7 @@ import type { ScaffoldPlan } from "@/lib/plan";
 import { AddressInput } from "../ui/AddressInput";
 import { HouseModel } from "../HouseModel";
 import { shrinkImage } from "@/lib/image";
+import { logEvent } from "@/lib/events";
 
 /** Address lookup warnings that make the office check the size before confirming. */
 const REVIEW_CODES = ["size_mismatch", "not_rectangle", "size_estimated", "street_only", "other_place", "outbuilding", "model_mismatch", "model_old", "model_slope"];
@@ -368,6 +369,10 @@ function WizardBody({ start }: { start: QuoteStart }) {
   const [options, setOptions] = useState<SystemOption[]>([]);
   const [plan, setPlan] = useState<ScaffoldPlan | null>(null);
   const [show3d, setShow3d] = useState(false);
+  const open3d = () => {
+    setShow3d(true);
+    logEvent("view_3d_opened");
+  };
   const [source, setSource] = useState<"form" | "address" | "ai">("form");
   const [zoneAuto, setZoneAuto] = useState(false);
   // The customer picked the zone by hand: an address picked later doesn't change it.
@@ -482,6 +487,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         .then((r) => {
           if (id !== reqId.current) return;
           setPrice({ quote: r.quote, estimate: r.estimate, loading: false });
+          if (r.quote) logEvent("price_shown", { zone: form.zone, job: form.jobType });
           setOptions(r.options || []);
           setPlan(r.plan || null);
           setAvail(r.available || null);
@@ -506,6 +512,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
       setLookup({ status: "loading" });
       try {
         const r = await lookupAddress(text);
+        logEvent("address_looked_up");
         if (!r.found) {
           setLookup({ status: "notfound" });
           return;
@@ -525,6 +532,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         setZoneAuto(true);
         setSource("address");
         setLookup({ status: "done", result: r, query: text });
+        if (r.model) logEvent("model_found");
         setUnlocked(false);
         // The 3D model for a new area takes a moment to download: look again while the address is unchanged.
         if (r.modelPending && retry < 3) window.setTimeout(() => addressNow.current === text && void runLookup(text, retry + 1), 6000);
@@ -541,6 +549,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
   useEffect(() => {
     if (started.current) return;
     started.current = true;
+    logEvent("calculator_opened");
     if (start.address) void runLookup(start.address);
   }, [start.address, runLookup]);
 
@@ -577,6 +586,9 @@ function WizardBody({ start }: { start: QuoteStart }) {
     setDir(n > step ? 1 : -1);
     setError("");
     setStep(n);
+    if (n === 1) logEvent("step_job");
+    if (n === 2) logEvent("step_timing", { zone: form.zone, job: form.jobType });
+    if (n === 3) logEvent("step_contact", { zone: form.zone, job: form.jobType });
   }
 
   async function submit() {
@@ -618,6 +630,8 @@ function WizardBody({ start }: { start: QuoteStart }) {
         checks: checks.length ? checks : undefined,
         model: modelRef
       });
+      const weather = (["sheeting", "weatherRoof"] as const).some((k) => form[k] && WEATHER_JOBS[k].includes(form.jobType));
+      logEvent("order_placed", { zone: form.zone, job: form.jobType, weather });
       setDone({ ref: r.ref, total: r.order.quote.total, phone4: digits(form.phone).slice(-4), review: Boolean(tooTall), photos: checks.length > 0 || Boolean(tooTall) });
     } catch (e) {
       const err = e as { code?: string; info?: { date?: string } | null };
@@ -827,7 +841,11 @@ function WizardBody({ start }: { start: QuoteStart }) {
         <div className="grid gap-3 sm:grid-cols-2">
           {(["sheeting", "weatherRoof"] as const).filter((k) => WEATHER_JOBS[k].includes(form.jobType)).map((k) => (
             <label key={k} className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-line">
-              <input type="checkbox" className="mt-1 h-5 w-5 accent-ink" checked={form[k]} onChange={(e) => set(k, e.target.checked)} />
+              <input type="checkbox" className="mt-1 h-5 w-5 accent-ink" checked={form[k]} onChange={(e) => {
+                  set(k, e.target.checked);
+                  if (e.target.checked) logEvent("weather_option_ticked");
+                }}
+              />
               <span>
                 <span className="font-semibold text-ink">{t(`q.${k}`)}</span>
                 <span className="block text-sm text-muted">{t(`q.${k}Hint`)}</span>
@@ -1021,7 +1039,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
                   <HouseModel shape={shownShape} className="mb-3 h-36 w-full" label={t("q.title")} />
                 ) : null}
                 {plan && house.ok ? (
-                  <button type="button" onClick={() => setShow3d(true)} className="mb-3 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line">
+                  <button type="button" onClick={open3d} className="mb-3 rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line">
                     {t("p3d.open")}
                   </button>
                 ) : null}
@@ -1037,7 +1055,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
             {price.quote ? (
               <span className="flex items-center gap-3">
                 {plan && house.ok ? (
-                  <button type="button" onClick={() => setShow3d(true)} className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line">
+                  <button type="button" onClick={open3d} className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line">
                     3D
                   </button>
                 ) : null}
@@ -1112,7 +1130,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
           <HouseModel shape={shownShape} className="-mx-2 mb-2 h-44 w-[calc(100%+1rem)]" label={t("q.title")} />
         ) : null}
         {plan && house.ok ? (
-          <button type="button" onClick={() => setShow3d(true)} className="mb-4 self-start rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line hover:bg-sun-soft">
+          <button type="button" onClick={open3d} className="mb-4 self-start rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-ink ring-1 ring-line hover:bg-sun-soft">
             {t("p3d.open")}
           </button>
         ) : null}

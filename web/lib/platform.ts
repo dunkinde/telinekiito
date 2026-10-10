@@ -397,6 +397,19 @@ export interface MarginRow {
   crewCost: number; transportCost: number; damages: number; margin: number; marginPct: number | null; invoiced: boolean; hoursLogged: boolean;
 }
 export interface Margins { rows: MarginRow[]; byZone: { zone: Zone; jobs: number; revenue: number; margin: number; marginPct: number | null }[]; costs: { crewHourCost: number; truckTripCost: number } }
+/** Sales funnel from the anonymous visit statistics: unique visits per event and day, summed over the period. */
+export type FunnelStep = "calculator_opened" | "address_looked_up" | "price_shown" | "step_job" | "step_timing" | "step_contact" | "order_placed";
+export interface Funnel {
+  from: string;
+  to: string;
+  steps: { event: FunnelStep; visits: number; ofPrev: number | null; ofStart: number | null }[];
+  side: { model_found: number; view_3d_opened: number; weather_option_ticked: number; tracking_opened: number };
+  bySource: { kind: "utm" | "referrer" | "direct"; source: string; campaign: string; opened: number; quotes: number; orders: number; conv: number | null }[];
+  byZone: { zone: Zone; quotes: number; contact: number; orders: number; conv: number | null }[];
+  byJob: { job: JobType; chosen: number; contact: number; orders: number; conv: number | null }[];
+  weather: { quotes: number; ticked: number; tickedPct: number | null; orders: number; ordersWithWeather: number; ordersPct: number | null };
+  landings: { path: string; opened: number; orders: number }[];
+}
 
 export type TemplateEvent =
   | "order_received" | "confirmed" | "on_the_way" | "ready" | "rental_ending" | "pickup_scheduled"
@@ -554,6 +567,7 @@ export const setReviewPublished = (id: string, published: boolean) => call<{ rev
 
 export const getDashboard = () => call<Dashboard>("GET", "/api/office/dashboard");
 export const getMargins = () => call<Margins>("GET", "/api/office/margins");
+export const getFunnel = (from: string, to: string) => call<Funnel>("GET", `/api/office/funnel?from=${from}&to=${to}`);
 export const getAudit = (ref?: string) => call<{ entries: AuditEntry[] }>("GET", `/api/office/audit${ref ? `?ref=${enc(ref)}` : ""}`);
 
 /* ---------------- Links ---------------- */

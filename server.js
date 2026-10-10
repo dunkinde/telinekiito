@@ -24,6 +24,7 @@ const S = require("./lib/stock");
 const Docs = require("./lib/docs");
 const B = require("./lib/business");
 const { finvoice } = require("./lib/finvoice");
+const Ev = require("./lib/events");
 const PR = require("./lib/prospects");
 const CRM = require("./lib/crm");
 const { HttpError } = O;
@@ -56,6 +57,7 @@ const ops = () => P.mergeOps(store.getSetting("ops"));
 const stockCfg = () => S.mergeStock(store.getSetting("stock"));
 const crews = () => store.list("crew").sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 // Tracking links in customer messages carry the order's key, so customers never need the phone digits.
+const countEvent = Ev.createEventCounter(store, { today: P.today });
 const notify = createNotifier({ store, getOps: ops, orderKey: (ref) => (auth.enabled ? auth.orderKey(ref) : null) });
 
 if (store.countOrders() === 0 && process.env.SEED_EXAMPLES !== "0") {
@@ -387,6 +389,15 @@ route("POST", /^\/api\/quote$/, async (req) => {
   out.partner = account ? { name: account.name, discountPct: account.discountPct } : body.partnerCode ? { invalid: true } : null;
   out.available = availableDates(out.estimate.parts, f.days);
   return out;
+});
+
+// Anonymous funnel statistics from the website (no cookies; the IP is only used in memory for the rate limit).
+route("POST", /^\/api\/events$/, async (req) => {
+  limit(req, "events", 120, 10 * 60e3);
+  const ev = Ev.parseEvent(await readJson(req, 2048), { ownHost: req.headers.host });
+  if (!allow(`events-visit:${ev.vid}`, 60, 60 * 60e3)) throw new HttpError(429, "rate_limited", "Too many requests. Wait a moment and try again.");
+  countEvent(ev);
+  return { ok: true };
 });
 
 // Contact form on the website. Messages show in the office.
@@ -1547,6 +1558,15 @@ route("GET", /^\/api\/office\/dashboard$/, (req) => {
 route("GET", /^\/api\/office\/margins$/, (req) => {
   requireOwner(req);
   return P.margins(store, store.listOrders(), { ops: ops() });
+});
+route("GET", /^\/api\/office\/funnel$/, (req, m, url) => {
+  requireOwner(req);
+  const t = P.today();
+  let from = P.isoDate(url.searchParams.get("from")) || S.addDays(t, -29);
+  let to = P.isoDate(url.searchParams.get("to")) || t;
+  if (from > to) [from, to] = [to, from];
+  if (from < S.addDays(to, -730)) from = S.addDays(to, -730);
+  return Ev.funnelReport(store.eventRows(from, to), { from, to });
 });
 route("GET", /^\/api\/office\/audit$/, (req, m, url) => {
   requireOwner(req);

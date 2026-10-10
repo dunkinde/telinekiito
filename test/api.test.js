@@ -358,3 +358,45 @@ test("office price change: the customer declines, the old price stays and the of
   const same = await req("POST", `/api/office/orders/${ref}/layout`, { adjust: null }, H);
   assert.equal(same.json.order.history.at(-1).code, "layout_changed");
 });
+
+test("funnel events: validation, once per visit, rate limit and the office report", async () => {
+  const vid = "visit_" + "a".repeat(16);
+  // Validation: unknown events, missing visit ids and non-JSON are refused.
+  assert.equal((await req("POST", "/api/events", { event: "page_view", vid })).json.error, "bad_event");
+  assert.equal((await req("POST", "/api/events", { event: "calculator_opened", vid: "short" })).json.error, "bad_visit");
+  assert.equal((await fetch(base + "/api/events", { method: "POST", body: "event=x" })).status, 415);
+
+  const send = (event, extra = {}, v = vid) =>
+    req("POST", "/api/events", { event, vid: v, utm_source: "Facebook", utm_campaign: "kevat 2027", referrer: "https://www.google.fi/search?q=teline", landing: "/?utm_source=facebook", ...extra });
+  assert.equal((await send("calculator_opened")).status, 200);
+  assert.equal((await send("calculator_opened")).status, 200); // same visit: counted once
+  await send("price_shown", { zone: "B", job: "roof" });
+  await send("weather_option_ticked", { zone: "B", job: "roof" });
+  await send("order_placed", { zone: "B", job: "roof", weather: true, name: "Matti", phone: "0401234567" });
+  await send("calculator_opened", { utm_source: "", utm_campaign: "", referrer: "", landing: "/" }, "visit_" + "b".repeat(16));
+
+  // No session: no report. The owner sees the counts.
+  assert.equal((await req("GET", "/api/office/funnel")).status, 401);
+  const login = await req("POST", "/api/office/login", { password: PASSWORD });
+  const H = { Cookie: login.headers.get("set-cookie").split(";")[0] };
+  const r = (await req("GET", "/api/office/funnel", undefined, H)).json;
+  assert.equal(r.steps[0].event, "calculator_opened");
+  assert.equal(r.steps[0].visits, 2);
+  assert.equal(r.steps.find((s) => s.event === "order_placed").visits, 1);
+  assert.equal(r.steps.find((s) => s.event === "order_placed").ofStart, 50);
+  const fb = r.bySource.find((x) => x.kind === "utm");
+  assert.deepEqual([fb.source, fb.campaign, fb.opened, fb.orders, fb.conv], ["facebook", "kevat_2027", 1, 1, 100]);
+  assert.ok(r.bySource.some((x) => x.kind === "direct" && x.opened === 1));
+  assert.equal(r.byZone.find((z) => z.zone === "B").orders, 1);
+  assert.equal(r.weather.ordersWithWeather, 1);
+  assert.equal(r.weather.tickedPct, 100);
+  assert.deepEqual(r.landings.map((l) => l.path), ["/"]);
+  // Nothing personal reaches the report.
+  assert.doesNotMatch(JSON.stringify(r), /Matti|0401234567|visit_|google\.fi\/search/);
+
+  // Rate limit per visit: 60 events an hour.
+  const flood = "visit_" + "c".repeat(16);
+  let last;
+  for (let k = 0; k < 61; k++) last = await send("step_job", {}, flood);
+  assert.equal(last.status, 429);
+});

@@ -1,5 +1,5 @@
 "use client";
-// Margin report: revenue minus crew hours, truck trips and lost parts, per job and per delivery zone.
+// Reports: margins (revenue minus crew hours, truck trips and lost parts, per job and per delivery zone) and the sales funnel.
 import { useMemo, useState } from "react";
 import { getMargins, type MarginRow } from "@/lib/platform";
 import { useLoad, useOffice, useT } from "./context";
@@ -7,11 +7,26 @@ import { money, money0, number } from "./format";
 import { statusLabel } from "./i18n";
 import { IReports, ISettings } from "./icons";
 import { RefLink } from "./bits";
-import { Async, Badge, Btn, Callout, Card, CardHead, Empty, TableWrap, cx, td, th } from "./ui";
+import { FunnelReport } from "./Funnel";
+import { Async, Badge, Btn, Callout, Card, CardHead, Empty, TableWrap, Tabs, cx, td, th } from "./ui";
 
 type SortKey = "ref" | "revenue" | "margin" | "marginPct" | "hours";
+const TABS = ["margins", "funnel"] as const;
+type Tab = (typeof TABS)[number];
 
 export function Reports() {
+  const { t } = useT();
+  const { route, setParams } = useOffice();
+  const tab: Tab = route.params.tab === "funnel" ? "funnel" : "margins";
+  return (
+    <>
+      <Tabs className="mb-4" label={t("nav.reports")} value={tab} onChange={(k) => setParams({ tab: k === "margins" ? null : k })} tabs={TABS.map((k) => ({ key: k, label: t(`rep.tab.${k}`) }))} />
+      {tab === "funnel" ? <FunnelReport /> : <MarginReport />}
+    </>
+  );
+}
+
+function MarginReport() {
   const i = useT();
   const { t, lang } = i;
   const { nav } = useOffice();
