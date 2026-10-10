@@ -950,11 +950,13 @@ export interface I18n {
 }
 const Ctx = createContext<I18n | null>(null);
 
-export function LangProvider({ children }: { children: React.ReactNode }) {
+/** `fixed`: a page that exists in each language at its own URL (city pages) – no saved choice or ?lang= applies. */
+export function LangProvider({ children, fixed }: { children: React.ReactNode; fixed?: Lang }) {
   // The static HTML is rendered in Finnish; the visitor's saved choice or ?lang= is applied after load.
-  const [lang, setLangState] = useState<Lang>("fi");
+  const [lang, setLangState] = useState<Lang>(fixed ?? "fi");
 
   useEffect(() => {
+    if (fixed) return;
     let next: Lang | null = null;
     try {
       const q = new URLSearchParams(window.location.search).get("lang");
@@ -967,7 +969,7 @@ export function LangProvider({ children }: { children: React.ReactNode }) {
       /* storage blocked: keep Finnish */
     }
     if (next && next !== "fi") setLangState(next);
-  }, []);
+  }, [fixed]);
 
   useEffect(() => {
     document.documentElement.lang = lang;

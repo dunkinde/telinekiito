@@ -6,3 +6,6 @@ Disallow: /api/
 Disallow: /mvp
 Disallow: /business
 Disallow: /3d
+
+# Absolute URL required; keep in sync with SITE_URL in lib/site.ts.
+Sitemap: https://169-58-228-43.sslip.io/sitemap.xml

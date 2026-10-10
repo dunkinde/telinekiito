@@ -27,6 +27,11 @@ const fadeUp: Variants = {
   hidden: { opacity: 0, y: 24 },
   show: { opacity: 1, y: 0, transition: { duration: 0.8, ease: EASE_OUT } }
 };
+// The lead paragraph is the largest text on first paint (LCP): it only slides, so it is visible in the static HTML.
+const slideUp: Variants = {
+  hidden: { y: 24 },
+  show: { y: 0, transition: { duration: 0.8, ease: EASE_OUT } }
+};
 
 /** One line of the headline, split into words that slide up from behind a mask. */
 function Line({ text }: { text: string }) {
@@ -45,7 +50,8 @@ function Line({ text }: { text: string }) {
   );
 }
 
-function AddressBar() {
+/** The address bar that opens the quote calculator (also used on the city pages). */
+export function AddressBar({ placeholder, className = "mt-9 max-w-xl lg:mt-[clamp(1rem,3.4svh,2.25rem)]" }: { placeholder?: string; className?: string }) {
   const { t } = useI18n();
   const { openQuote } = useSite();
   const reduce = useReducedMotion();
@@ -54,7 +60,7 @@ function AddressBar() {
   const start = (address: string) => openQuote({ address: address.trim() || undefined, origin: !reduce && window.scrollY < 400 ? "hero" : undefined });
   return (
     <form
-      className="mt-9 max-w-xl lg:mt-[clamp(1rem,3.4svh,2.25rem)]"
+      className={className}
       onSubmit={(e) => {
         e.preventDefault();
         start(value);
@@ -73,7 +79,7 @@ function AddressBar() {
             onChange={setValue}
             onPick={(s) => start(s.label)}
             listLabel={t("a.suggestions")}
-            placeholder={t("hero.addressPh")}
+            placeholder={placeholder ?? t("hero.addressPh")}
             wrapperClassName="w-full"
             className="h-12 w-full bg-transparent text-base lg:h-[clamp(2.75rem,7svh,3rem)] text-ink placeholder:text-muted focus:outline-none"
           />
@@ -183,7 +189,7 @@ export function Hero() {
             </span>
           </motion.h1>
 
-          <motion.p variants={fadeUp} className="mt-7 max-w-xl text-lg leading-relaxed text-muted sm:text-xl lg:mt-[clamp(0.75rem,2.6svh,1.75rem)] lg:max-w-[38rem] lg:text-[clamp(1rem,2.4svh,1.25rem)]">
+          <motion.p variants={slideUp} className="mt-7 max-w-xl text-lg leading-relaxed text-muted sm:text-xl lg:mt-[clamp(0.75rem,2.6svh,1.75rem)] lg:max-w-[38rem] lg:text-[clamp(1rem,2.4svh,1.25rem)]">
             {t("hero.sub")}
           </motion.p>
 
@@ -211,7 +217,7 @@ export function Hero() {
                   <CountUp to={s.n} />
                   <span className="ml-0.5 text-sun-deep">{s.u}</span>
                 </p>
-                <p className="mt-1 text-xs leading-snug text-muted sm:text-sm">{t(s.k)}</p>
+                <p className="mt-1 text-xs leading-snug text-ink-soft sm:text-sm">{t(s.k)}</p>
               </div>
             ))}
           </motion.div>

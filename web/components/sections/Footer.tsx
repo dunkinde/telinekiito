@@ -1,14 +1,16 @@
 "use client";
 // Footer: brand, section links, customer links, social icons and copyright.
 import { FaFacebookF, FaInstagram, FaLinkedinIn } from "react-icons/fa6";
+import { CITIES } from "@/lib/cities";
 import { useI18n } from "@/lib/i18n";
+import { cityPath } from "@/lib/seo";
 import { SITE } from "@/lib/site";
 import { LangSwitch } from "../Header";
 import { Logo } from "../Logo";
 import { useSite } from "../SiteContext";
 
 export function Footer() {
-  const { t, pick } = useI18n();
+  const { t, pick, lang } = useI18n();
   const { openQuote, openTrack } = useSite();
   const linkCls = "nav-link text-white/70 transition-colors hover:text-white";
   // Only real profiles are shown (fill them in lib/site.ts).
@@ -87,6 +89,16 @@ export function Footer() {
             </div>
           </div>
         </div>
+        <nav aria-label={pick({ fi: "Palvelualueet", en: "Service areas" })} className="mt-12">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-sun">{pick({ fi: "Palvelualueet", en: "Service areas" })}</p>
+          <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm">
+            {CITIES.map((c) => (
+              <li key={c.slug}>
+                <a href={cityPath(c.slug, lang)} className={linkCls}>{pick({ fi: `Telineet ${c.name.fi}`, en: `Scaffolding ${c.name.en}` })}</a>
+              </li>
+            ))}
+          </ul>
+        </nav>
         <div className="mt-14 flex flex-col gap-3 border-t border-white/10 pt-6 text-sm text-white/50 sm:flex-row sm:items-center sm:justify-between">
           <p>© {SITE.year} TelineKiito. {t("foot.rights")}</p>
           <a href="#top" className="nav-link self-start text-white/60 hover:text-white sm:self-auto">{t("foot.top")} ↑</a>
