@@ -3,6 +3,7 @@
 // MotionConfig "user" turns off transform animations for visitors who ask for reduced motion.
 import { MotionConfig } from "framer-motion";
 import { useEffect, useState, type ComponentType } from "react";
+import { startVisit } from "@/lib/events";
 import { LangProvider, useI18n } from "@/lib/i18n";
 import { BlockScroll } from "./BlockScroll";
 import { Header } from "./Header";
@@ -78,6 +79,8 @@ function LazyWindows() {
 }
 
 export default function Site() {
+  // Where the visit came from (anonymous funnel statistics), read on the first page.
+  useEffect(startVisit, []);
   return (
     <MotionConfig reducedMotion="user">
       <LangProvider>

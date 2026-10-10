@@ -12,7 +12,7 @@ export const CONTROLLER = {
   contact: "[Yhteyshenkilö / Contact person]"
 };
 
-export const PRIVACY_UPDATED = "2026-10-06";
+export const PRIVACY_UPDATED = "2026-10-10";
 
 export const PRIVACY: { title: L; body: L[]; list?: L[] }[] = [
   {
@@ -33,7 +33,8 @@ export const PRIVACY: { title: L; body: L[]; list?: L[] }[] = [
       { fi: "Tilaus: päivät, hinta, viestit kanssamme, muutospyynnöt, laskut ja maksut.", en: "The order: dates, price, messages with us, change requests, invoices and payments." },
       { fi: "Työmaa: asentajien kuvat telineestä, tarkastuspöytäkirja ja allekirjoituksesi luovutuksessa.", en: "On site: the crew's photos of the scaffold, the inspection record and your signature at handover." },
       { fi: "Yhteydenottolomake: nimi, sähköposti, puhelin ja viesti.", en: "Contact form: name, email, phone and your message." },
-      { fi: "Arvio: tähdet, kommentti ja lupasi julkaisuun.", en: "Rating: stars, comment and whether we may publish it." }
+      { fi: "Arvio: tähdet, kommentti ja lupasi julkaisuun.", en: "Rating: stars, comment and whether we may publish it." },
+      { fi: "Nimetön kävijätilasto hintalaskurin käytöstä ilman evästeitä ja henkilötietoja (ks. kohta Evästeet ja selaimen tallennus).", en: "Anonymous statistics on how the price calculator is used, without cookies or personal data (see Cookies and browser storage)." }
     ]
   },
   {
@@ -108,8 +109,12 @@ export const PRIVACY: { title: L; body: L[]; list?: L[] }[] = [
     title: { fi: "Evästeet ja selaimen tallennus", en: "Cookies and browser storage" },
     body: [
       {
-        fi: "Verkkosivu ei käytä seuranta- tai mainosevästeitä. Selaimeesi tallennetaan vain kielivalintasi. Toimisto ja asentajien sovellus käyttävät kirjautumiseen välttämätöntä evästettä.",
-        en: "The website uses no tracking or advertising cookies. Only your language choice is stored in your browser. The office and the crew app use a cookie that is needed to stay logged in."
+        fi: "Verkkosivu ei käytä seuranta- tai mainosevästeitä. Selaimeesi tallennetaan kielivalintasi ja käynnin ajaksi satunnainen käyntitunnus (sessionStorage), joka poistuu, kun suljet välilehden. Toimisto ja asentajien sovellus käyttävät kirjautumiseen välttämätöntä evästettä.",
+        en: "The website uses no tracking or advertising cookies. Your browser stores your language choice and, for the visit only, a random visit id (sessionStorage) that is removed when you close the tab. The office and the crew app use a cookie that is needed to stay logged in."
+      },
+      {
+        fi: "Nimetön kävijätilasto: lasketaan, kuinka moni käynti avaa hintalaskurin, saa hinnan ja etenee tilaukseen asti. Käyntitunnuksen avulla kukin vaihe lasketaan vain kerran käyntiä kohden; tunnusta ei tallenneta tietokantaan. Tallennamme vain päiväkohtaiset määrät sekä mistä käynti tuli (linkin utm-kampanjatunnus, viittaavan sivuston verkkotunnus ja aloitussivu), toimitusalueen, työtyypin ja sääsuojavalinnan. IP-osoitetta tai henkilötietoja ei tallenneta, eikä tietoja yhdistetä tilauksiin. Peruste: oikeutettu etu palvelun kehittämiseen.",
+        en: "Anonymous visit statistics: we count how many visits open the price calculator, get a price and go on to order. The visit id makes sure each step is counted only once per visit; the id itself is not stored in our database. We only keep daily counts with where the visit came from (the link's utm campaign tags, the referring site's domain and the landing page), the delivery zone, job type and weather option. No IP address or personal data is stored, and the counts are not linked to orders. Basis: legitimate interest in improving the service."
       }
     ]
   }
