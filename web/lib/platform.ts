@@ -362,6 +362,10 @@ export interface Account {
   einvoiceOperator?: string;
   portalUsers?: number;
   active: boolean;
+  /** Registered itself on the portal and waits for the office to call and approve it. */
+  pending?: boolean;
+  registration?: { message: string; lang: string; at: string };
+  approvedAt?: string;
   createdAt: string;
   orders?: { ref: string; status: OrderStatus; total: number; createdAt: string; address: string }[];
 }
@@ -543,6 +547,8 @@ export const getAccounts = () => call<{ accounts: Account[] }>("GET", "/api/offi
 export const saveAccount = (body: Partial<Account>, id?: string) =>
   id ? call<{ account: Account }>("PATCH", `/api/office/accounts/${enc(id)}`, body) : call<{ account: Account }>("POST", "/api/office/accounts", body);
 export const removeAccount = (id: string) => call<{ ok: true }>("DELETE", `/api/office/accounts/${enc(id)}`);
+export const approveAccount = (id: string, body: { discountPct: number; paymentDays: number }) => call<{ account: Account }>("POST", `/api/office/accounts/${enc(id)}/approve`, body);
+export const rejectAccount = (id: string) => call<{ ok: true }>("POST", `/api/office/accounts/${enc(id)}/reject`);
 
 export const getInvoices = () => call<{ invoices: Invoice[] }>("GET", "/api/office/invoices");
 export const createInvoice = (ref: string) => call<{ invoice: Invoice }>("POST", `/api/office/orders/${enc(ref)}/invoice`, {});

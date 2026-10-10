@@ -112,6 +112,8 @@ const enc = encodeURIComponent;
 
 /* ---------- Portal ---------- */
 export const bizLogin = (phone: string, pin: string) => call<{ ok: true; user: BizUser }>("POST", "/api/biz/login", { phone, pin });
+export interface BizRegistration { company: string; businessId: string; billingAddress: string; einvoiceAddress: string; contactName: string; phone: string; email: string; pin: string; message: string; lang: StaffLang; website: string }
+export const bizRegister = (body: BizRegistration) => call<{ ok: true }>("POST", "/api/biz/register", body);
 export const bizLogout = () => call<{ ok: true }>("POST", "/api/biz/logout");
 export const bizMe = () => call<BizMe>("GET", "/api/biz/me");
 export const bizOrders = () => call<{ orders: BizOrderSummary[] }>("GET", "/api/biz/orders");

@@ -129,6 +129,7 @@ function AlertsTab() {
     if (!a.read) read([a.id]);
     if (a.ref) openOrder(a.ref);
     else if (a.type === "contact") nav("messages", { tab: "contact" });
+    else if (a.type === "biz_registration") nav("customers");
   }
   if (!alerts) return <Loading />;
   return (
@@ -165,9 +166,9 @@ function AlertsTab() {
                   {typeof a.data?.text === "string" && a.type === "customer_message" ? <p className="mt-1 rounded-lg bg-mist px-3 py-1.5 text-[13.5px] text-ink">“{a.data.text}”</p> : null}
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5 sm:flex-row sm:items-center">
-                  {a.ref || a.type === "contact" ? (
+                  {a.ref || a.type === "contact" || a.type === "biz_registration" ? (
                     <Btn size="xs" variant="light" onClick={() => open(a)}>
-                      {a.ref ? t("alerts.openOrder") : t("alerts.openContact")}
+                      {a.ref ? t("alerts.openOrder") : a.type === "biz_registration" ? t("alerts.openRequest") : t("alerts.openContact")}
                     </Btn>
                   ) : null}
                   {!a.read ? (

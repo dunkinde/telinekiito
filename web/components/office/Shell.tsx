@@ -82,7 +82,8 @@ function useBadges() {
       return false;
     }).length;
     const unread = (alerts || []).filter((a) => !a.read).length;
-    const b: Partial<Record<Section, number>> = { orders: received, calendar: unplanned, approvals: (pending || []).length, messages: unread };
+    const requests = (alerts || []).filter((a) => a.type === "biz_registration").length;
+    const b: Partial<Record<Section, number>> = { orders: received, calendar: unplanned, approvals: (pending || []).length, messages: unread, customers: requests };
     return b;
   }, [orders, pending, alerts]);
 }
@@ -122,7 +123,7 @@ function NavList({ onPick }: { onPick?: () => void }) {
                       {on ? <span aria-hidden className="absolute top-2 bottom-2 left-0 w-[3px] rounded-full bg-sun" /> : null}
                       <Icon className={cx("h-[19px] w-[19px] shrink-0", on ? "text-sun" : "text-white/60 group-hover:text-white/90")} />
                       <span className="flex-1 truncate">{t(`nav.${s}`)}</span>
-                      {n ? <Count n={n} tone={s === "approvals" || s === "messages" ? "sun" : "dim"} label={tk(`nav.badge.${s}`)} /> : null}
+                      {n ? <Count n={n} tone={s === "approvals" || s === "messages" || s === "customers" ? "sun" : "dim"} label={tk(`nav.badge.${s}`)} /> : null}
                     </a>
                   </li>
                 );

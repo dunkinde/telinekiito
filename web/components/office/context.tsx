@@ -30,7 +30,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const chosen = useRef(false);
   useEffect(() => {
     try {
-      const s = window.localStorage.getItem(LANG_KEY);
+      // A link from the website brings its language (?lang=en); otherwise the one chosen on this device.
+      const q = new URLSearchParams(window.location.search).get("lang");
+      const s = isLang(q) ? q : window.localStorage.getItem(LANG_KEY);
       if (isLang(s)) {
         chosen.current = true;
         setLangState(s);

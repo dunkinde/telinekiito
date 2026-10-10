@@ -8,7 +8,7 @@ import { Logo } from "../Logo";
 import { useSite } from "../SiteContext";
 
 export function Footer() {
-  const { t, pick } = useI18n();
+  const { t, pick, lang } = useI18n();
   const { openQuote, openTrack } = useSite();
   const linkCls = "nav-link text-white/70 transition-colors hover:text-white";
   // Only real profiles are shown (fill them in lib/site.ts).
@@ -62,6 +62,8 @@ export function Footer() {
               <ul className="mt-4 space-y-3 text-sm">
                 <li><button type="button" onClick={() => openQuote()} className={linkCls}>{t("nav.quote")}</button></li>
                 <li><button type="button" onClick={() => openTrack()} className={linkCls}>{t("nav.track")}</button></li>
+                <li><a href="#business" className={linkCls}>{t("foot.business")}</a></li>
+                <li><a href={`/business/?lang=${lang}`} className={linkCls}>{t("foot.bizLogin")}</a></li>
                 <li><a href="/privacy" className={linkCls}>{t("privacy.link")}</a></li>
                 <li><a href="/office" className={linkCls}>{t("foot.office")}</a></li>
               </ul>

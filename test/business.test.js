@@ -193,3 +193,52 @@ test("partner codes: new codes are hard to guess, guessing codes stops working",
   // After 20 wrong codes, even a right one no longer shows the company or its discount from this visitor.
   assert.equal((await req("POST", "/api/quote", { ...q, partnerCode: acc.code })).json.partner.invalid, true);
 });
+
+test("registration: a company registers, the office approves it, then the PIN works", async () => {
+  const owner = await loginAs({ password: PASSWORD });
+  const form = { company: "Katto ja Teline Oy", businessId: "0112038 9", contactName: "Rami Rekisteröijä", phone: "040 777 0001", email: "rami@katto.example", pin: "4321", message: "Noin 20 kohdetta vuodessa", lang: "fi" };
+  // The business ID's check digit is checked; the PIN must be 4–8 digits.
+  assert.equal((await req("POST", "/api/biz/register", { ...form, businessId: "0112038-8" })).json.error, "bad_business_id");
+  assert.equal((await req("POST", "/api/biz/register", { ...form, pin: "12" })).json.error, "bad_pin");
+  assert.equal((await req("POST", "/api/biz/register", form)).status, 200);
+  assert.equal((await req("POST", "/api/biz/register", { ...form, phone: "040 777 0002" })).json.error, "already_pending");
+
+  // Waiting: the right PIN says so, a wrong one is just wrong; the account gives no partner discount yet.
+  assert.equal((await req("POST", "/api/biz/login", { phone: "0407770001", pin: "4321" })).json.error, "account_pending");
+  assert.equal((await req("POST", "/api/biz/login", { phone: "0407770001", pin: "9999" })).status, 401);
+  const acc = (await req("GET", "/api/office/accounts", undefined, owner)).json.accounts.find((a) => a.name === "Katto ja Teline Oy");
+  assert.equal(acc.pending, true);
+  assert.equal(acc.active, false);
+  assert.equal(acc.businessId, "0112038-9");
+  assert.equal(acc.portalUsers, 1);
+  const alert = (await req("GET", "/api/office/alerts", undefined, owner)).json.alerts.find((a) => a.type === "biz_registration");
+  assert.equal(alert.data.accountId, acc.id);
+  // Editing doesn't open it; approving does, with the discount and payment terms agreed on the phone.
+  await req("PATCH", `/api/office/accounts/${acc.id}`, { active: true, notes: "Soitettu" }, owner);
+  assert.equal((await req("POST", "/api/biz/login", { phone: "0407770001", pin: "4321" })).json.error, "account_pending");
+  const ok = await req("POST", `/api/office/accounts/${acc.id}/approve`, { discountPct: 12, paymentDays: 21 }, owner);
+  assert.equal(ok.status, 200, ok.text);
+  assert.equal(ok.json.account.discountPct, 12);
+  assert.equal(ok.json.account.pending, undefined);
+  assert.equal((await req("POST", `/api/office/accounts/${acc.id}/approve`, {}, owner)).json.error, "not_pending");
+  assert.ok(!(await req("GET", "/api/office/alerts", undefined, owner)).json.alerts.some((a) => a.type === "biz_registration"));
+  const c = await bizLogin("040 777 0001", "4321");
+  const me = (await req("GET", "/api/biz/me", undefined, c)).json;
+  assert.equal(me.user.role, "admin");
+  assert.equal(me.account.discountPct, 12);
+  // The approval message waits in the outbox (sending isn't connected in tests).
+  const out = (await req("GET", "/api/office/outbox", undefined, owner)).json;
+  assert.ok((out.messages || out.msgs || []).some((m) => m.event === "biz_approved" && m.to === "rami@katto.example"), JSON.stringify(out).slice(0, 300));
+  // The same company can't register twice.
+  assert.equal((await req("POST", "/api/biz/register", { ...form, phone: "040 777 0003" })).json.error, "company_exists");
+
+  // A rejected request goes away with its login, so the phone number can register again.
+  await req("POST", "/api/biz/register", { ...form, company: "Huijari Oy", businessId: "1234567-1", phone: "040 777 0009" });
+  const bad = (await req("GET", "/api/office/accounts", undefined, owner)).json.accounts.find((a) => a.name === "Huijari Oy");
+  assert.equal((await req("POST", `/api/office/accounts/${bad.id}/reject`, undefined, owner)).status, 200);
+  assert.equal((await req("POST", "/api/biz/login", { phone: "0407770009", pin: "4321" })).status, 401);
+  assert.equal((await req("POST", "/api/biz/register", { ...form, company: "Huijari Oy", businessId: "1234567-1", phone: "040 777 0009" })).status, 200);
+  // Bots filling the hidden field get "ok" and nothing is saved.
+  assert.equal((await req("POST", "/api/biz/register", { ...form, company: "Botti Oy", businessId: "7654321-?", website: "x" })).status, 200);
+  assert.ok(!(await req("GET", "/api/office/accounts", undefined, owner)).json.accounts.some((a) => a.name === "Botti Oy"));
+});

@@ -675,6 +675,25 @@ route("POST", /^\/api\/biz\/login$/, async (req, m, url, res) => {
   res.setHeader("Set-Cookie", auth.cookie(auth.issue(`b:${u.id}`, u.ver || 0), isSecure(req), auth.BIZ_COOKIE));
   return { ok: true, user: B.publicBizUser(u) };
 });
+// A company registers itself on the portal. The office calls it and approves the account; until then the PIN
+// the admin chose answers "waiting for approval".
+route("POST", /^\/api\/biz\/register$/, async (req) => {
+  limit(req, "biz-register", 10, 60 * 60e3);
+  const body = await readJson(req, 8192);
+  if (body.website) return { ok: true }; // hidden honeypot field: bots fill it, people don't
+  const r = B.parseRegistration(store, body);
+  const acc = P.saveAccount(store, { name: r.name, businessId: r.businessId, contactName: r.contactName, email: r.email, phone: r.phone, billingAddress: r.billingAddress, einvoiceAddress: r.einvoiceAddress, notes: r.message, active: false });
+  store.put("account", Object.assign(acc, { pending: true, registration: { message: r.message, lang: r.lang, at: new Date().toISOString() } }));
+  try {
+    B.saveBizUser(store, acc.id, { name: r.contactName, phone: r.phone, email: r.email, role: "admin", lang: r.lang, pin: String(body.pin) }, null);
+  } catch (e) {
+    store.del("account", acc.id);
+    throw e;
+  }
+  notify.alert("biz_registration", null, `Business account request from ${r.name}`, { accountId: acc.id });
+  P.audit(store, null, "biz_registered", null, { name: r.name });
+  return { ok: true };
+});
 route("POST", /^\/api\/biz\/logout$/, (req, m, url, res) => {
   endSession(cookies(req)[auth.BIZ_COOKIE]);
   res.setHeader("Set-Cookie", auth.clearCookie(isSecure(req), auth.BIZ_COOKIE));
@@ -1449,7 +1468,8 @@ route("POST", /^\/api\/office\/stock\/move$/, async (req) => {
 route("GET", /^\/api\/office\/alerts$/, (req) => {
   const user = requireOffice(req);
   // Alerts of a deleted order are left out (orders deleted before their alerts were removed with them).
-  const alerts = store.list("alert", { limit: 200 }).filter((a) => !a.ref || store.getOrder(a.ref));
+  // Business account requests only for the owner, who approves them.
+  const alerts = store.list("alert", { limit: 200 }).filter((a) => (!a.ref || store.getOrder(a.ref)) && (a.type !== "biz_registration" || user.role === "owner"));
   return { alerts: alerts.map((a) => ({ ...a, read: (a.readBy || []).includes(user.id) })) };
 });
 route("POST", /^\/api\/office\/alerts\/read$/, async (req) => {
@@ -1611,11 +1631,50 @@ route("PATCH", /^\/api\/office\/accounts\/([\w-]+)$/, async (req, m) => {
   requireOwner(req);
   const a0 = store.get("account", m[1]);
   if (!a0) throw new HttpError(404, "not_found", "Account not found.");
-  return { account: P.saveAccount(store, await readJson(req, 8192), a0) };
+  const body = await readJson(req, 8192);
+  if (a0.pending) delete body.active; // a registration opens only by approving it
+  return { account: P.saveAccount(store, body, a0) };
 });
+/** An account goes with its portal logins (their phone numbers become free) and its registration alert. */
+function removeAccount(id) {
+  for (const u of store.list("bizuser", { limit: 5000 })) if (u.accountId === id) store.del("bizuser", u.id);
+  for (const a of store.list("alert", { limit: 1000 })) if (a.type === "biz_registration" && a.data && a.data.accountId === id) store.del("alert", a.id);
+  return store.del("account", id);
+}
 route("DELETE", /^\/api\/office\/accounts\/([\w-]+)$/, (req, m) => {
   requireOwner(req);
-  if (!store.del("account", m[1])) throw new HttpError(404, "not_found", "Account not found.");
+  if (!removeAccount(m[1])) throw new HttpError(404, "not_found", "Account not found.");
+  return { ok: true };
+});
+function pendingAccount(id) {
+  const a = store.get("account", id);
+  if (!a) throw new HttpError(404, "not_found", "Account not found.");
+  if (!a.pending) throw new HttpError(409, "not_pending", "This request has already been handled.");
+  return a;
+}
+// After calling the company: open the account with its discount and payment terms. The admin's PIN works at once
+// and they get an email and a text saying so (when sending is connected).
+route("POST", /^\/api\/office\/accounts\/([\w-]+)\/approve$/, async (req, m) => {
+  const user = requireOwner(req);
+  const a0 = pendingAccount(m[1]);
+  const body = await readJson(req, 2048);
+  const a = P.saveAccount(store, { discountPct: body.discountPct, paymentDays: body.paymentDays, active: true }, a0);
+  delete a.pending;
+  a.approvedAt = new Date().toISOString();
+  a.approvedBy = user.name;
+  store.put("account", a);
+  for (const x of store.list("alert", { limit: 1000 })) if (x.type === "biz_registration" && x.data && x.data.accountId === a.id) store.del("alert", x.id);
+  const admin = store.list("bizuser", { limit: 5000 }).find((u) => u.accountId === a.id && u.role === "admin");
+  if (admin) notify.direct({ event: "biz_approved", email: admin.email || a.email, phone: admin.phone, lang: admin.lang, ...B.approvedMessage(admin.lang, { name: admin.name.split(" ")[0], company: a.name, url: notify.siteUrl() }) });
+  P.audit(store, user, "biz_approved", null, { name: a.name, discountPct: a.discountPct });
+  return { account: a };
+});
+// Not a real company or not a fit: the request and its login go away (call them to say why).
+route("POST", /^\/api\/office\/accounts\/([\w-]+)\/reject$/, (req, m) => {
+  const user = requireOwner(req);
+  const a = pendingAccount(m[1]);
+  removeAccount(a.id);
+  P.audit(store, user, "biz_rejected", null, { name: a.name });
   return { ok: true };
 });
 

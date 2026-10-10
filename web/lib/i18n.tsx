@@ -504,7 +504,30 @@ const en = {
   "a.roofPitch": "roof pitch {p}°",
   "a.modelPending": "Checking the 3D building model for this area…",
   "a.modelFilled": "Measured from the 3D building model: the price follows each wall and its real height. If you change the size below, the price uses a simple box instead.",
-  "a.modelCredit": "Contains data from the National Land Survey of Finland, 3D buildings {date},"
+  "a.modelCredit": "Contains data from the National Land Survey of Finland, 3D buildings {date},",
+  "nav.business": "For business",
+  "nav.login": "Log in",
+  "nav.loginLabel": "Business customer login",
+  "foot.business": "Business customers",
+  "foot.bizLogin": "Business login",
+  "sec.biz.eyebrow": "For business customers",
+  "sec.biz.title": "Better prices for companies",
+  "sec.biz.intro": "Builders, roofers, property managers and housing companies: open a business account and get your own company price on every order, with all your sites in one place.",
+  "sec.biz.b1.title": "Your own company price",
+  "sec.biz.b1.text": "We agree a discount for your company. It's taken off every order automatically – in the business portal, and in the website calculator with your partner code.",
+  "sec.biz.b2.title": "All sites in one view",
+  "sec.biz.b2.text": "See every site's status, delivery and pickup dates and the costs so far, live.",
+  "sec.biz.b3.title": "Order and change online",
+  "sec.biz.b3.text": "Order a new site in minutes, ask for more rental days or a pickup. You see the price before you send.",
+  "sec.biz.b4.title": "Invoicing for companies",
+  "sec.biz.b4.text": "Invoices with agreed payment terms and your PO number, project and cost centre, plus a Finvoice file. Your foremen and accountant get their own logins.",
+  "sec.biz.steps": "How to start",
+  "sec.biz.s1": "Register your company – it takes about two minutes.",
+  "sec.biz.s2": "We call you, check the details and agree your company price.",
+  "sec.biz.s3": "Log in and order at your company price.",
+  "sec.biz.register": "Register your company",
+  "sec.biz.login": "Log in",
+  "sec.biz.have": "Already a business customer?"
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -999,7 +1022,30 @@ const fi: Record<Key, Entry> = {
   "a.roofPitch": "kattokulma {p}°",
   "a.modelPending": "Haetaan alueen 3D-rakennusmallia…",
   "a.modelFilled": "Mitattu 3D-rakennusmallista: hinta lasketaan jokaisen seinän ja sen todellisen korkeuden mukaan. Jos muutat mittoja alla, hinta lasketaan yksinkertaisena laatikkona.",
-  "a.modelCredit": "Sisältää Maanmittauslaitoksen 3D-rakennukset-aineistoa {date},"
+  "a.modelCredit": "Sisältää Maanmittauslaitoksen 3D-rakennukset-aineistoa {date},",
+  "nav.business": "Yrityksille",
+  "nav.login": "Kirjaudu",
+  "nav.loginLabel": "Yritysasiakkaan kirjautuminen",
+  "foot.business": "Yritysasiakkaat",
+  "foot.bizLogin": "Yrityskirjautuminen",
+  "sec.biz.eyebrow": "Yritysasiakkaille",
+  "sec.biz.title": "Yrityksille paremmat hinnat",
+  "sec.biz.intro": "Rakennusliikkeet, kattourakoitsijat, isännöitsijät ja taloyhtiöt: avaa yritystili, niin saat oman yrityshinnan jokaiseen tilaukseen ja kaikki työmaat samaan paikkaan.",
+  "sec.biz.b1.title": "Oma yrityshinta",
+  "sec.biz.b1.text": "Sovimme yrityksellenne oman alennuksen. Se vähennetään jokaisesta tilauksesta automaattisesti – yritysportaalissa ja verkkosivun laskurissa kumppanikoodilla.",
+  "sec.biz.b2.title": "Kaikki työmaat yhdessä näkymässä",
+  "sec.biz.b2.text": "Näet jokaisen työmaan tilan, toimitus- ja noutopäivät sekä tähänastiset kulut reaaliajassa.",
+  "sec.biz.b3.title": "Tilaa ja muuta verkossa",
+  "sec.biz.b3.text": "Tilaa uusi työmaa muutamassa minuutissa, pyydä lisää vuokrapäiviä tai noutoa. Näet hinnan ennen lähettämistä.",
+  "sec.biz.b4.title": "Laskutus yrityksille",
+  "sec.biz.b4.text": "Laskut sovitulla maksuajalla, ostotilausnumero, projekti ja kustannuspaikka laskulla sekä Finvoice-aineisto. Työnjohtajat ja kirjanpitäjä saavat omat tunnukset.",
+  "sec.biz.steps": "Näin pääset alkuun",
+  "sec.biz.s1": "Rekisteröi yrityksesi – se vie noin kaksi minuuttia.",
+  "sec.biz.s2": "Soitamme, tarkistamme tiedot ja sovimme yrityshinnan.",
+  "sec.biz.s3": "Kirjaudu ja tilaa yrityshinnalla.",
+  "sec.biz.register": "Rekisteröi yritys",
+  "sec.biz.login": "Kirjaudu sisään",
+  "sec.biz.have": "Onko yritykselläsi jo tili?"
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi };

@@ -321,7 +321,7 @@ export function Async<D>({ state, children, rows }: { state: { data: D | null; e
 
 /* ---------------- Form fields ---------------- */
 export const inputCls =
-  "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[14.5px] text-ink transition-colors placeholder:text-muted/70 hover:border-ink/30 focus:border-ink focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink disabled:bg-mist disabled:text-muted";
+  "w-full rounded-xl border border-line bg-white px-3.5 py-2.5 text-[14.5px] text-ink transition-colors placeholder:text-muted/70 hover:border-ink/30 focus:border-ink focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ink disabled:bg-mist disabled:text-muted aria-invalid:border-[#e5484d]";
 export function Field({
   label,
   hint,
@@ -377,6 +377,7 @@ type InputProps = {
   step?: string;
   name?: string;
   "aria-label"?: string;
+  "aria-invalid"?: boolean;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 };
 export function Input({ value, onChange, describedBy, className, type = "text", ...rest }: InputProps) {

@@ -16,6 +16,7 @@ const NAV: { id: string; key: Key }[] = [
   { id: "faq", key: "nav.faq" },
   { id: "contact", key: "nav.contact" }
 ];
+const MENU: { id: string; key: Key }[] = [...NAV.slice(0, 4), { id: "business", key: "nav.business" }, ...NAV.slice(4)];
 
 export function LangSwitch({ dark = false }: { dark?: boolean }) {
   const { lang, setLang, t } = useI18n();
@@ -58,8 +59,9 @@ function useActiveSection(ids: string[]) {
 const NAV_IDS = NAV.map((n) => n.id);
 
 export function Header() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { openQuote, openTrack } = useSite();
+  const portal = `/business/?lang=${lang}`;
   const { scrollY } = useScroll();
   const [scrolled, setScrolled] = useState(false);
   const [menu, setMenu] = useState(false);
@@ -102,9 +104,9 @@ export function Header() {
           </motion.span>
         </a>
 
-        <nav className="hidden items-center gap-7 lg:flex" aria-label="Main">
+        <nav className="hidden items-center gap-5 lg:flex 2xl:gap-7" aria-label="Main">
           {NAV.map((n) => (
-            <a key={n.id} href={`#${n.id}`} data-active={active === n.id} className="nav-link text-[15px] font-medium text-ink-soft transition-colors hover:text-ink">
+            <a key={n.id} href={`#${n.id}`} data-active={active === n.id} className="nav-link text-[15px] font-medium whitespace-nowrap text-ink-soft transition-colors hover:text-ink">
               {t(n.key)}
             </a>
           ))}
@@ -112,9 +114,16 @@ export function Header() {
 
         <div className="flex items-center gap-3">
           <LangSwitch />
-          <button type="button" onClick={() => openTrack()} className="nav-link hidden text-[15px] font-medium text-ink-soft hover:text-ink xl:inline">
+          <button type="button" onClick={() => openTrack()} className="nav-link hidden text-[15px] font-medium whitespace-nowrap text-ink-soft hover:text-ink xl:inline">
             {t("nav.track")}
           </button>
+          <a href={portal} aria-label={t("nav.loginLabel")} title={t("nav.loginLabel")} className="hidden h-10 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-semibold whitespace-nowrap text-ink ring-1 ring-inset ring-ink/15 transition-colors hover:ring-ink/40 md:inline-flex lg:max-xl:w-10 lg:max-xl:justify-center lg:max-xl:px-0">
+            <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="8" r="4" />
+              <path d="M4 21a8 8 0 0 1 16 0" />
+            </svg>
+            <span className="lg:max-xl:sr-only">{t("nav.login")}</span>
+          </a>
           <span className="hidden sm:block">
             <Button size="sm" onClick={() => openQuote()}>
               {t("nav.quote")}
@@ -156,7 +165,7 @@ export function Header() {
               animate="show"
               variants={{ hidden: {}, show: { transition: { staggerChildren: 0.05, delayChildren: 0.05 } } }}
             >
-              {NAV.map((n) => (
+              {MENU.map((n) => (
                 <motion.li key={n.id} variants={{ hidden: { opacity: 0, x: -12 }, show: { opacity: 1, x: 0 } }}>
                   <a href={`#${n.id}`} onClick={() => setMenu(false)} className="flex items-center justify-between py-4 font-display text-xl font-bold text-ink">
                     {t(n.key)}
@@ -171,6 +180,9 @@ export function Header() {
               </Button>
               <Button variant="ghost" className="w-full" onClick={() => { setMenu(false); openTrack(); }}>
                 {t("nav.track")}
+              </Button>
+              <Button variant="ghost" className="w-full sm:col-span-2" href={portal} onClick={() => setMenu(false)}>
+                {t("nav.loginLabel")}
               </Button>
             </div>
           </motion.nav>

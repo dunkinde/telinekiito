@@ -17,6 +17,7 @@ import { OrderView } from "./OrderView";
 import { NewOrder } from "./NewOrder";
 import { Invoices } from "./Invoices";
 import { Users } from "./Users";
+import { AuthFrame, Register } from "./Register";
 
 export default function BizApp() {
   return (
@@ -74,12 +75,24 @@ function Root() {
         </Callout>
       </div>
     );
-  if (s.state === "out") return <Login onDone={check} />;
+  if (s.state === "out") return <LoggedOut onDone={check} />;
   return (
     <BizProvider me={s.me} onLogout={logout} onExpired={() => setS({ state: "out" })}>
       <Shell />
     </BizProvider>
   );
+}
+
+/** Logged out: the login, or the registration form at #/register (the website links there). */
+function LoggedOut({ onDone }: { onDone: () => void }) {
+  const [hash, setHash] = useState("");
+  useEffect(() => {
+    const on = () => setHash(window.location.hash);
+    on();
+    window.addEventListener("hashchange", on);
+    return () => window.removeEventListener("hashchange", on);
+  }, []);
+  return hash === "#/register" ? <Register /> : <Login onDone={onDone} />;
 }
 
 function Login({ onDone }: { onDone: () => void }) {
@@ -104,15 +117,7 @@ function Login({ onDone }: { onDone: () => void }) {
     }
   }
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-mist">
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-ink" />
-      <header className="relative mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-5 sm:px-6">
-        <a href="/" aria-label="TelineKiito">
-          <Logo dark />
-        </a>
-        <LangSwitch dark />
-      </header>
-      <main className="relative mx-auto flex w-full max-w-5xl flex-1 flex-col items-center px-4 pt-4 pb-10 sm:px-6 sm:pt-8">
+    <AuthFrame>
         <div className="w-full max-w-[440px] rounded-3xl bg-white p-6 shadow-[0_24px_60px_-20px_rgba(14,18,23,0.35)] ring-1 ring-line sm:p-8">
           <p className="text-xs font-semibold tracking-[0.14em] text-muted uppercase">{t("biz.eyebrow")}</p>
           <h1 className="mt-1 font-display text-[1.8rem] leading-tight font-extrabold tracking-[-0.01em] text-ink">{t("login.title")}</h1>
@@ -132,9 +137,19 @@ function Login({ onDone }: { onDone: () => void }) {
             </Btn>
           </form>
         </div>
-        <p className="mt-6 max-w-md text-center text-sm text-muted">{t("biz.noAccount")}</p>
-      </main>
-    </div>
+        <div className="mt-4 w-full max-w-[440px] rounded-3xl bg-white/70 p-5 text-center ring-1 ring-line sm:p-6">
+          <p className="font-display text-[16px] font-bold text-ink">{t("biz.reg.noAccount")}</p>
+          <p className="mt-1 text-[13.5px] text-muted">{t("biz.reg.pitch")}</p>
+          <Btn variant="primary" className="mt-4" href="#/register">
+            {t("biz.reg.link")}
+          </Btn>
+        </div>
+        <p className="mt-6 text-center text-[13px] text-muted">
+          <a href="/office/" className="underline underline-offset-2 hover:text-ink">
+            {t("biz.reg.staff")}
+          </a>
+        </p>
+    </AuthFrame>
   );
 }
 

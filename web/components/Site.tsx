@@ -8,6 +8,7 @@ import { BlockScroll } from "./BlockScroll";
 import { Header } from "./Header";
 import { Intro } from "./Intro";
 import { BuildUp } from "./sections/BuildUp";
+import { Business } from "./sections/Business";
 import { Contact } from "./sections/Contact";
 import { Coverage } from "./sections/Coverage";
 import { Faq } from "./sections/Faq";
@@ -95,6 +96,7 @@ export default function Site() {
               <Projects />
               <Reviews />
               <Pricing />
+              <Business />
               <Coverage />
               <Faq />
               <Contact />
