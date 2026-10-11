@@ -1691,8 +1691,6 @@ const en = {
   "biz.reg.err.pin2": "The PINs don't match.",
   "biz.reg.err.fix": "Check the marked fields.",
   "err.account_pending": "Your registration is waiting for approval. We'll call you to confirm it.",
-  "err.already_pending": "Your company's registration is already waiting for approval. We'll call you.",
-  "err.company_exists": "Your company already has an account. Ask your company's admin to add you, or contact us.",
   "err.bad_business_id": "Check the business ID (1234567-8).",
   "err.company_required": "Add the company name.",
   "err.not_pending": "This request has already been handled.",
@@ -1718,7 +1716,11 @@ const en = {
   "acc.req.reject": "Reject",
   "acc.req.rejectTitle": (v) => `Reject the request of ${v.name}?`,
   "acc.req.rejectText": "The request and its login are deleted. Call the company to tell them why.",
-  "acc.req.rejected": "Request rejected."
+  "acc.req.rejected": "Request rejected.",
+  "acc.req.isCustomer": (v) => `This business ID is already a customer: ${v.name}. Check who is registering – it may be a colleague who should be added as a user instead.`,
+  "acc.req.otherRequests": (v) => `${v.n} other request(s) for this business ID are waiting.`,
+  "acc.req.phoneTaken": (v) => `This phone number already logs in to ${v.name}. It can't be approved until that login is changed.`,
+  "err.registrations_busy": "We can't take more registrations right now. Call or email us instead."
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -3400,8 +3402,6 @@ const fi: Record<Key, Entry> = {
   "biz.reg.err.pin2": "PIN-koodit eivät täsmää.",
   "biz.reg.err.fix": "Tarkista merkityt kentät.",
   "err.account_pending": "Rekisteröintinne odottaa hyväksyntää. Soitamme teille ja vahvistamme sen.",
-  "err.already_pending": "Yrityksenne rekisteröinti odottaa jo hyväksyntää. Soitamme teille.",
-  "err.company_exists": "Yrityksellänne on jo tili. Pyydä yrityksenne pääkäyttäjää lisäämään sinut tai ota yhteyttä meihin.",
   "err.bad_business_id": "Tarkista Y-tunnus (1234567-8).",
   "err.company_required": "Lisää yrityksen nimi.",
   "err.not_pending": "Tämä pyyntö on jo käsitelty.",
@@ -3427,7 +3427,11 @@ const fi: Record<Key, Entry> = {
   "acc.req.reject": "Hylkää",
   "acc.req.rejectTitle": (v) => `Hylätäänkö hakemus: ${v.name}?`,
   "acc.req.rejectText": "Hakemus ja sen tunnukset poistetaan. Soita yritykselle ja kerro syy.",
-  "acc.req.rejected": "Hakemus hylätty."
+  "acc.req.rejected": "Hakemus hylätty.",
+  "acc.req.isCustomer": (v) => `Tällä Y-tunnuksella on jo asiakastili: ${v.name}. Tarkista kuka rekisteröi – kollega kannattaa ehkä lisätä käyttäjäksi.`,
+  "acc.req.otherRequests": (v) => `Samalla Y-tunnuksella odottaa ${v.n} muuta hakemusta.`,
+  "acc.req.phoneTaken": (v) => `Tällä puhelinnumerolla kirjaudutaan jo tiliin ${v.name}. Hakemusta ei voi hyväksyä ennen kuin se muutetaan.`,
+  "err.registrations_busy": "Emme voi juuri nyt ottaa vastaan enempää rekisteröintejä. Soita tai lähetä meille sähköpostia."
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };

@@ -681,15 +681,13 @@ route("POST", /^\/api\/biz\/register$/, async (req) => {
   limit(req, "biz-register", 10, 60 * 60e3);
   const body = await readJson(req, 8192);
   if (body.website) return { ok: true }; // hidden honeypot field: bots fill it, people don't
-  const r = B.parseRegistration(store, body);
+  const r = B.parseRegistration(body);
+  // However many addresses they come from: at most 30 an hour and 50 waiting, and requests expire after 30 days.
+  expireRegistrations();
+  if (B.pendingAccounts(store).length >= 50 || !allow("biz-register-all", 30, 60 * 60e3)) throw new HttpError(503, "registrations_busy", "We can't take more registrations right now. Call or email us instead.");
   const acc = P.saveAccount(store, { name: r.name, businessId: r.businessId, contactName: r.contactName, email: r.email, phone: r.phone, billingAddress: r.billingAddress, einvoiceAddress: r.einvoiceAddress, notes: r.message, active: false });
-  store.put("account", Object.assign(acc, { pending: true, registration: { message: r.message, lang: r.lang, at: new Date().toISOString() } }));
-  try {
-    B.saveBizUser(store, acc.id, { name: r.contactName, phone: r.phone, email: r.email, role: "admin", lang: r.lang, pin: String(body.pin) }, null);
-  } catch (e) {
-    store.del("account", acc.id);
-    throw e;
-  }
+  const admin = { name: r.contactName, phone: r.phone, email: r.email, lang: r.lang, pinHash: r.pinHash };
+  store.put("account", Object.assign(acc, { pending: true, registration: { message: r.message, lang: r.lang, at: new Date().toISOString(), admin } }));
   notify.alert("biz_registration", null, `Business account request from ${r.name}`, { accountId: acc.id });
   P.audit(store, null, "biz_registered", null, { name: r.name });
   return { ok: true };
@@ -1617,11 +1615,23 @@ route("DELETE", /^\/api\/office\/crews\/([\w-]+)$/, (req, m) => {
 });
 
 /* Partner accounts */
+/** A waiting request as the office sees it: the admin's details without the PIN, and what clashes with it. */
+function officeAccount(a) {
+  if (!a.pending) return a;
+  const ad = (a.registration && a.registration.admin) || {};
+  return { ...a, registration: { ...a.registration, admin: { name: ad.name, phone: ad.phone, email: ad.email } }, conflicts: B.registrationConflicts(store, a) };
+}
+const REGISTRATION_DAYS = 30;
+function expireRegistrations() {
+  const cut = Date.now() - REGISTRATION_DAYS * 864e5;
+  for (const a of B.pendingAccounts(store)) if (Date.parse((a.registration && a.registration.at) || a.createdAt) < cut) removeAccount(a.id);
+}
 route("GET", /^\/api\/office\/accounts$/, (req) => {
   requireOwner(req);
+  expireRegistrations();
   const orders = store.listOrders();
   const users = store.list("bizuser", { limit: 5000 });
-  return { accounts: store.list("account").map((a) => ({ ...a, portalUsers: users.filter((u) => u.accountId === a.id).length, orders: orders.filter((o) => o.accountId === a.id).map((o) => ({ ref: o.ref, status: o.status, total: o.quote.total, createdAt: o.createdAt, address: o.site.address })) })) };
+  return { accounts: store.list("account", { limit: 5000 }).map(officeAccount).map((a) => ({ ...a, portalUsers: users.filter((u) => u.accountId === a.id).length, orders: orders.filter((o) => o.accountId === a.id).map((o) => ({ ref: o.ref, status: o.status, total: o.quote.total, createdAt: o.createdAt, address: o.site.address })) })) };
 });
 route("POST", /^\/api\/office\/accounts$/, async (req) => {
   requireOwner(req);
@@ -1633,7 +1643,7 @@ route("PATCH", /^\/api\/office\/accounts\/([\w-]+)$/, async (req, m) => {
   if (!a0) throw new HttpError(404, "not_found", "Account not found.");
   const body = await readJson(req, 8192);
   if (a0.pending) delete body.active; // a registration opens only by approving it
-  return { account: P.saveAccount(store, body, a0) };
+  return { account: officeAccount(P.saveAccount(store, body, a0)) };
 });
 /** An account goes with its portal logins (their phone numbers become free) and its registration alert. */
 function removeAccount(id) {
@@ -1658,16 +1668,25 @@ route("POST", /^\/api\/office\/accounts\/([\w-]+)\/approve$/, async (req, m) => 
   const user = requireOwner(req);
   const a0 = pendingAccount(m[1]);
   const body = await readJson(req, 2048);
-  const a = P.saveAccount(store, { discountPct: body.discountPct, paymentDays: body.paymentDays, active: true }, a0);
+  const ad = a0.registration && a0.registration.admin;
+  // The login is made now; it fails (409 phone_taken) if that phone already logs in to another account.
+  const admin = ad ? B.adminFromRegistration(store, a0.id, ad) : null;
+  let a;
+  try {
+    a = P.saveAccount(store, { discountPct: body.discountPct, paymentDays: body.paymentDays, active: true }, a0);
+  } catch (e) {
+    if (admin) store.del("bizuser", admin.id);
+    throw e;
+  }
   delete a.pending;
+  a.registration = { message: a0.registration.message, lang: a0.registration.lang, at: a0.registration.at };
   a.approvedAt = new Date().toISOString();
   a.approvedBy = user.name;
   store.put("account", a);
   for (const x of store.list("alert", { limit: 1000 })) if (x.type === "biz_registration" && x.data && x.data.accountId === a.id) store.del("alert", x.id);
-  const admin = store.list("bizuser", { limit: 5000 }).find((u) => u.accountId === a.id && u.role === "admin");
   if (admin) notify.direct({ event: "biz_approved", email: admin.email || a.email, phone: admin.phone, lang: admin.lang, ...B.approvedMessage(admin.lang, { name: admin.name.split(" ")[0], company: a.name, url: notify.siteUrl() }) });
   P.audit(store, user, "biz_approved", null, { name: a.name, discountPct: a.discountPct });
-  return { account: a };
+  return { account: officeAccount(a) };
 });
 // Not a real company or not a fit: the request and its login go away (call them to say why).
 route("POST", /^\/api\/office\/accounts\/([\w-]+)\/reject$/, (req, m) => {

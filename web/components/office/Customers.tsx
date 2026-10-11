@@ -324,6 +324,17 @@ function RequestCard({ a, onApprove, onReject }: { a: Account; onApprove: () => 
         {a.einvoiceAddress ? <li className="text-ink-soft">{t("acc.einvoice")}: <span className="font-mono">{a.einvoiceAddress}</span></li> : null}
       </ul>
       {a.registration?.message ? <p className="mx-5 mt-3 rounded-xl bg-mist px-3 py-2 text-[13px] whitespace-pre-line text-ink-soft">“{a.registration.message}”</p> : null}
+      {a.conflicts && (a.conflicts.customer || a.conflicts.otherRequests || a.conflicts.phoneTaken) ? (
+        <div className="mx-5 mt-3">
+          <Callout tone="warn">
+            <ul className="space-y-0.5">
+              {a.conflicts.customer ? <li>{t("acc.req.isCustomer", { name: a.conflicts.customer })}</li> : null}
+              {a.conflicts.otherRequests ? <li>{t("acc.req.otherRequests", { n: a.conflicts.otherRequests })}</li> : null}
+              {a.conflicts.phoneTaken ? <li>{t("acc.req.phoneTaken", { name: a.conflicts.phoneTaken })}</li> : null}
+            </ul>
+          </Callout>
+        </div>
+      ) : null}
       <div className="mt-auto pt-4">
       <div className="flex flex-wrap items-center gap-2 border-t border-line px-5 py-3">
         {a.phone ? (

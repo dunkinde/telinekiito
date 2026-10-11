@@ -364,7 +364,9 @@ export interface Account {
   active: boolean;
   /** Registered itself on the portal and waits for the office to call and approve it. */
   pending?: boolean;
-  registration?: { message: string; lang: string; at: string };
+  registration?: { message: string; lang: string; at: string; admin?: { name: string; phone: string; email: string } };
+  /** Clashes the office checks before approving a request. */
+  conflicts?: { customer: string | null; otherRequests: number; phoneTaken: string | null };
   approvedAt?: string;
   createdAt: string;
   orders?: { ref: string; status: OrderStatus; total: number; createdAt: string; address: string }[];
