@@ -169,6 +169,7 @@ test("office login, dispatch, pricing and delete", async () => {
   const after = (await req("GET", "/api/office/outbox", undefined, H)).json.messages.filter((x) => x.ref === mine.ref);
   assert.ok(after.length && after.every((x) => x.status !== "waiting"), "a deleted order's messages are never sent");
   assert.ok(!(await req("GET", "/api/office/alerts", undefined, H)).json.alerts.some((x) => x.ref === mine.ref), "its alerts are gone");
+  assert.ok(!(await req("GET", "/api/office/changes?status=all", undefined, H)).json.changes.some((x) => x.ref === mine.ref), "its change requests are gone");
 
   const out = await req("POST", "/api/office/logout", {}, H);
   assert.match(out.headers.get("set-cookie"), /Max-Age=0/);

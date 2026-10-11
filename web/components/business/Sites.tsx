@@ -119,9 +119,10 @@ function SitesBody({ all, today, filter, setFilter, q, setQ, project, setProject
       </div>
 
       {list.length ? (
-        <ul className="mt-4 grid gap-3 md:grid-cols-2">
+        <ul className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           {list.map((o) => (
-            <li key={o.ref}>
+            // min-w-0: a long address truncates instead of widening the column on phones
+            <li key={o.ref} className="min-w-0">
               <SiteCard o={o} today={today} canOrder={canOrder} />
             </li>
           ))}

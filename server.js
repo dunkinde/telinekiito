@@ -1419,7 +1419,8 @@ route("GET", /^\/api\/(office|crew)\/changes$/, (req, m, url) => {
   const status = url.searchParams.get("status") || "pending";
   const list = (status === "all" ? store.list("change", { limit: 300 }) : store.list("change", { status, limit: 300 })).map(P.publicChange);
   const orders = Object.fromEntries(list.map((c) => [c.ref, store.getOrder(c.ref)]).filter(([, o]) => o));
-  return { changes: list.map((c) => ({ ...c, order: orders[c.ref] ? { address: orders[c.ref].site.address, customer: orders[c.ref].customer.name, status: orders[c.ref].status } : null })) };
+  // Changes of orders deleted before deleting took them along are left out.
+  return { changes: list.filter((c) => orders[c.ref]).map((c) => ({ ...c, order: orders[c.ref] ? { address: orders[c.ref].site.address, customer: orders[c.ref].customer.name, status: orders[c.ref].status } : null })) };
 });
 
 route("POST", /^\/api\/(office|crew)\/changes\/([\w-]+)\/(approve|reject)$/, async (req, m) => {
@@ -1533,6 +1534,8 @@ route("DELETE", /^\/api\/office\/orders\/([A-Z0-9-]+)$/, (req, m) => {
   }
   for (const a of store.list("alert", { ref: m[1], limit: 500 })) store.del("alert", a.id);
   for (const r of store.list("review", { ref: m[1], limit: 50 })) store.del("review", r.id);
+  // Its change requests too: a waiting one would stay in Approvals with nothing to approve.
+  for (const c of store.list("change", { ref: m[1], limit: 500 })) store.del("change", c.id);
   P.audit(store, user, "order_deleted", m[1], null);
   return { ok: true };
 });
