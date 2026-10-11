@@ -57,7 +57,7 @@ export interface House {
   model?: { id: string; date: string | null };
 }
 export interface Side { name: string; bays: number; lifts: number; workH: number; area: number; catchOn: boolean }
-export interface FullEstimate { supplier?: string | null; sheeting?: { m2: number } | null; roof?: { span: number; length: number; pitch: number; support: number; sections: number; tarpWidth: number; planM2: number } | null; area: number; runM: number; catchRunM: number; extraLevelM: number; weightKg: number; parts: Parts; sides: Side[] }
+export interface FullEstimate { sheeting?: { m2: number } | null; roof?: { span: number; length: number; pitch: number; support: number; sections: number; tarpWidth: number; planM2: number } | null; area: number; runM: number; catchRunM: number; extraLevelM: number; weightKg: number; parts: Parts; sides: Side[] }
 export interface Assignment { date?: string | null; time?: string; crewId?: string | null; pickupDate?: string | null; pickupTime?: string; pickupCrewId?: string | null }
 export interface HistoryEntry { status?: OrderStatus; event?: string; code?: string; at: string; by?: string; days?: number; detail?: unknown }
 export interface Message { from: "customer" | "office"; text: string; at: string; by?: string }
@@ -256,6 +256,8 @@ export interface JobCard {
   internalNotes: string;
   /** A business customer's site details (gate code, unloading, hours) and site contact. Missing on older cached cards. */
   siteInfo?: string;
+  /** The rental partner bringing partner steel (crew only; customers never see it). */
+  supplier?: string | null;
   siteContact?: { name: string; phone: string };
   assignment: Assignment;
   crew: string;

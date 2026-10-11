@@ -290,16 +290,30 @@ test("business pricing: systems side by side, 3+ storeys flagged, quote requests
 
   // The partner's steel systems: offered for big buildings once the office switches them on, never for a small house.
   const pr0 = (await req("GET", "/api/office/pricing", undefined, owner)).json.pricing;
-  await req("PUT", "/api/office/pricing", { pricing: { ...pr0, systems: { ...pr0.systems, alfix100: { enabled: true, erectPerM2: pr0.erectPerM2 * 1.3 } } } }, owner);
+  await req("PUT", "/api/office/pricing", { pricing: { ...pr0, systems: { ...pr0.systems, alfix100: { enabled: true, erectPerM2: pr0.erectPerM2 * 1.3 }, allround: { enabled: true } } } }, owner);
   const small = (await req("POST", "/api/biz/quote", house, c)).json;
   assert.ok(!small.types.some((t) => t.system === "alfix100"));
-  const bigQ = (await req("POST", "/api/biz/quote", { ...house, storeys: 4 }, c)).json;
+  // Asking for steel doesn't make a small house big: the portal prices it with our own system, and won't order steel.
+  const smallSteel = (await req("POST", "/api/biz/quote", { ...house, system: "alfix100" }, c)).json;
+  assert.equal(smallSteel.system, "layher");
+  assert.ok(!smallSteel.types.some((t) => t.partner));
+  assert.equal((await req("POST", "/api/biz/orders", { ...house, start: start(), address: "Pientalo 1, Vantaa", system: "alfix100" }, c)).json.error, "system_off");
+  const bigRes = await req("POST", "/api/biz/quote", { ...house, storeys: 4, system: "alfix100" }, c);
+  const bigQ = bigRes.json;
+  assert.equal(bigQ.system, "alfix100");
   const steel = bigQ.types.find((t) => t.system === "alfix100");
   assert.equal(steel.material, "steel");
   assert.equal(steel.loadClass, 4);
   assert.equal(steel.partner, true);
-  assert.equal(steel.supplier, undefined, "customers don't see the partner's name");
   assert.ok(steel.total > bigQ.types.find((t) => t.system === "layher").total);
+  // Customers never see the partner's name, in the portal or on the website, and the website offers our own systems only.
+  assert.doesNotMatch(bigRes.text, /Renta|Ramirent/);
+  const pub = await req("POST", "/api/quote", { ...house, system: "alfix100" });
+  assert.equal(pub.json.estimate.system, "layher");
+  assert.deepEqual(pub.json.options.map((o) => o.system), ["layher", "monzon"]);
+  assert.doesNotMatch(pub.text, /Renta|Ramirent|alfix|allround/i);
+  assert.ok(!(await req("GET", "/api/config")).json.systems.some((x) => x.key === "alfix100"));
+  assert.equal((await req("POST", "/api/orders", { ...house, floors: "2", urgency: "standard", start: E.earliestStart("standard", helsinkiNow()), name: "Testi", phone: "040 111 2299", address: "Testikatu 1, Vantaa", source: "form", system: "alfix100" })).json.error, "system_off");
   await req("PUT", "/api/office/pricing", { pricing: pr0 }, owner);
   // A 3+ storey building ordered in the portal is flagged for the office's check, like on the website.
   const tall = await req("POST", "/api/biz/orders", { ...house, start: start(), address: "Kerrostalo 4, Vantaa", storeys: 4, system: "monzon" }, c);

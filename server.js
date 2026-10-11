@@ -323,7 +323,8 @@ route("GET", /^\/api\/config$/, () => {
     zones: o.zones,
     earliest,
     examples: O.priceExamples(p),
-    systems: E.SYSTEM_KEYS.map((k) => ({ key: k, enabled: Boolean(p.systems[k].enabled) }))
+    // Our own systems only: the partner's steel is offered in the business portal.
+    systems: E.SYSTEM_KEYS.filter((k) => !E.SYSTEMS[k].supplier).map((k) => ({ key: k, enabled: Boolean(p.systems[k].enabled) }))
   };
 });
 
@@ -383,7 +384,7 @@ route("POST", /^\/api\/quote$/, async (req) => {
   const body = await readJson(req, 4096);
   const f = await withModel(O.parseQuoteInput(body), body);
   const p = pricing();
-  if (!O.systemsOn(p).includes(f.system)) f.system = O.systemsOn(p)[0];
+  if (!O.ownSystemsOn(p).includes(f.system)) f.system = O.ownSystemsOn(p)[0];
   const out = O.quoteFor(f, p);
   const account = partnerByCode(req, body.partnerCode);
   // The website's pages show prices with VAT; a reverse-charge company's invoice drops the VAT (see buildInvoice).
@@ -533,7 +534,7 @@ route("POST", /^\/api\/orders$/, async (req) => {
   const o0 = ops();
   if (f.urgency !== "standard" && !o0.urgencies[f.urgency]) throw new HttpError(409, "urgency_off", "That delivery speed isn't available right now.");
   if (!o0.zones[f.zone]) throw new HttpError(409, "zone_off", "We don't deliver to that area right now. Contact us.");
-  if (!O.systemsOn(pricing()).includes(f.system)) throw new HttpError(409, "system_off", "That scaffold system isn't available right now.");
+  if (!O.ownSystemsOn(pricing()).includes(f.system)) throw new HttpError(409, "system_off", "That scaffold system isn't available right now.");
   const p = pricing();
   const order = O.buildOrder(f, p, (ref) => Boolean(store.getOrder(ref)));
   const account = partnerByCode(req, f.partnerCode);
@@ -770,7 +771,6 @@ function bizType(f, p, account, system) {
   const rc = Boolean(account.reverseCharge);
   const q = P.applyDiscount(E.quote(est, { days: f.days, zone: f.zone, urgency: f.urgency }, p), account.discountPct || 0, p, rc);
   const checks = checksFor(h, est);
-  const hc = checks.find((c) => c.code === "too_high" || c.code === "height_ok");
   const R = RULES[system] || RULES.layher;
   const S0 = E.SYSTEMS[system];
   const compact = O.compactEstimate(est);
@@ -778,23 +778,35 @@ function bizType(f, p, account, system) {
     system, name: S0.name, loadClass: R.loadClass.cls, kNm2: R.loadClass.kNm2, kgM2: Math.round(R.loadClass.kNm2 * 100),
     widthClass: S0.widthClass || "W06", walkway: S0.walkway || 0.64, bay: S0.bay, frameWidth: S0.width, lift: E.SYS.lift || 2,
     material: S0.material || "aluminium", kind: S0.kind || "frame", partner: Boolean(S0.supplier),
-    maxHeight: R.maxHeight.m, maxHeightBrackets: R.maxHeight.withBrackets || null, height: hc ? hc.vars.h : null,
+    maxHeight: R.maxHeight.m, maxHeightBrackets: R.maxHeight.withBrackets || null, height: heightOf(checks),
     total: q.total, net: q.net, vat: q.vat, area: compact.area, perM2: compact.area ? Math.round((q.net / compact.area) * 100) / 100 : null,
     weightKg: compact.weightKg, engineer: engineerCodes(checks), earliest: availableDates(compact.parts, f.days)[f.urgency] || null
   };
 }
+/** Highest point of the scaffold (m) from its checks: guardrails or the roof catch over the top deck. */
+const heightOf = (checks) => {
+  const c = checks.find((x) => x.code === "too_high" || x.code === "height_ok");
+  return c ? c.vars.h : null;
+};
+const isPartner = (sys) => Boolean(E.SYSTEMS[sys] && E.SYSTEMS[sys].supplier);
+/** The partner's steel systems are for large or tall buildings: bigger than the online limits, 3+ storeys, or a
+ * scaffold over 9 m with our own systems. Decided by the building, never by the system asked for. */
+function bigBuilding(f, storeys, ownHeights) {
+  return O.isLarge(f) || storeys >= 3 || ownHeights.some((x) => (x || 0) > 9);
+}
 function bizPrice(f, p, account, body) {
+  const storeys = Math.round(Number(body.storeys) || 0);
+  const own = O.ownSystemsOn(p).map((sys) => bizType(f, p, account, sys));
+  const big = bigBuilding(f, storeys, own.map((t) => t.height));
+  const types = own.concat(big ? O.systemsOn(p).filter(isPartner).map((sys) => bizType(f, p, account, sys)) : []);
+  if (!types.some((t) => t.system === f.system)) f.system = types[0].system;
   const out = O.quoteFor(f, p, { brand: true });
   const rc = Boolean(account.reverseCharge);
   out.quote = P.applyDiscount(out.quote, account.discountPct || 0, p, rc);
   out.available = availableDates(out.estimate.parts, f.days);
   out.system = f.system;
-  const storeys = Math.round(Number(body.storeys) || 0);
-  const own = O.systemsOn(p).filter((sys) => !E.SYSTEMS[sys].supplier).map((sys) => bizType(f, p, account, sys));
-  // The partner's steel systems are for large or tall buildings (3+ storeys, over 9 m, or bigger than the online price).
-  const big = O.isLarge(f) || storeys >= 3 || own.some((t) => (t.height || 0) > 9) || Boolean(E.SYSTEMS[f.system] && E.SYSTEMS[f.system].supplier);
-  out.types = own.concat(big ? O.systemsOn(p).filter((sys) => E.SYSTEMS[sys].supplier).map((sys) => bizType(f, p, account, sys)) : []);
-  const mine = out.types.find((t) => t.system === f.system) || out.types[0];
+  out.types = types;
+  const mine = types.find((t) => t.system === f.system);
   // Why the office checks the job (and the portal sends a quote request instead of an order).
   out.review = { storeys: storeys >= 3 ? storeys : null, large: O.isLarge(f), measured: Boolean(f.walls), engineer: mine ? mine.engineer : [], height: mine ? mine.height : null };
   out.review.request = out.review.engineer.length > 0 || (out.review.large && !out.review.measured);
@@ -808,7 +820,7 @@ route("POST", /^\/api\/biz\/quote$/, async (req) => {
   const f = await withModel(O.parseQuoteInput(body, O.LARGE), body);
   if (O.isLarge(f) && !f.walls) throw new HttpError(409, "model_required", "A building this size is priced by offer: send a quote request.");
   const p = pricing();
-  if (!O.systemsOn(p).includes(f.system)) f.system = O.systemsOn(p)[0];
+  if (!O.systemsOn(p).includes(f.system)) f.system = O.ownSystemsOn(p)[0];
   return bizPrice(f, p, s.account, body);
 });
 
@@ -831,7 +843,14 @@ route("POST", /^\/api\/biz\/orders$/, async (req) => {
   const p = pricing();
   if (!O.systemsOn(p).includes(f.system)) {
     if (body.system) throw new HttpError(409, "system_off", "That scaffold system isn't available right now.");
-    f.system = O.systemsOn(p)[0];
+    f.system = O.ownSystemsOn(p)[0];
+  }
+  if (isPartner(f.system)) {
+    const heights = O.ownSystemsOn(p).map((sys) => {
+      const h = O.houseOf({ ...f, system: sys });
+      return heightOf(checksFor(h, E.estimate(h)));
+    });
+    if (!bigBuilding(f, Math.round(Number(body.storeys) || 0), heights)) throw new HttpError(409, "system_off", "That scaffold system is for large buildings only.");
   }
   const est = E.estimate(O.houseOf(f));
   const engineer = engineerCodes(checksFor(O.houseOf(f), est));

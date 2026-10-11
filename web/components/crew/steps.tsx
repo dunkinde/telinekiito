@@ -117,6 +117,8 @@ export function LoadStep({ view, act, isCurrent, backBar }: StepProps) {
         </p>
       </Card>
 
+      {view.supplier ? <Card tone="info">{t("load.supplier", { supplier: view.supplier })}</Card> : null}
+
       {parts.length ? (
         <ul className="space-y-2">
           {parts.map((p) => {
@@ -162,9 +164,7 @@ export function LoadStep({ view, act, isCurrent, backBar }: StepProps) {
             );
           })}
         </ul>
-      ) : view.estimate?.supplier ? (
-        <Card tone="info">{t("load.supplier", { supplier: view.estimate.supplier })}</Card>
-      ) : (
+      ) : view.supplier ? null : (
         <Card tone="warn">{t("load.noParts")}</Card>
       )}
 

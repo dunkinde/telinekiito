@@ -163,6 +163,8 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
           if (!alive) return;
           setPrice(r);
           setPriceBlocked(false);
+          // A type that isn't offered for this building any more (steel is for large ones): back to the default.
+          if (f.system && !r.types.some((ty) => ty.system === f.system)) setF((x) => ({ ...x, system: "" }));
         })
         .catch((e) => {
           if (!alive) return;

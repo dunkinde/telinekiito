@@ -146,7 +146,8 @@ function PricesTab() {
                     const sys = d.systems?.[k] || { enabled: true };
                     const setSys = (patch: Partial<NonNullable<Pricing["systems"]>[SystemKey]>) =>
                       setD({ ...d, systems: { ...(d.systems || { layher: { enabled: true }, monzon: { enabled: true }, alfix100: { enabled: false }, allround: { enabled: false } }), [k]: { ...sys, ...patch } } });
-                    const onCount = SYSTEM_KEYS.filter((x) => d.systems?.[x]?.enabled !== false).length;
+                    // One of our own systems stays on for the website (partner steel is for business accounts).
+                    const onCount = SYSTEM_SUPPLIER[k] ? Infinity : SYSTEM_KEYS.filter((x) => !SYSTEM_SUPPLIER[x] && d.systems?.[x]?.enabled !== false).length;
                     const rate = (r: "rentPerM2Day" | "erectPerM2" | "dismantlePerM2", label: string, unit: string) => (
                       <Field label={label} hint={<>{t("set.sys.general")}: {number(d[r], lang, 2)} {unit}</>}>
                         {(id, h) => (

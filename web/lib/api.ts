@@ -76,7 +76,6 @@ export interface Quote {
 export interface Estimate {
   system?: SystemKey;
   /** A partner's steel system: who rents the material (office and crew only). */
-  supplier?: string | null;
   sheeting?: { m2: number } | null;
   roof?: { span: number; length: number; pitch: number; support: number; sections: number; tarpWidth: number; planM2: number } | null;
   area: number;
