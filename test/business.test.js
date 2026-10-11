@@ -305,19 +305,32 @@ test("business pricing: systems side by side, 3+ storeys flagged, quote requests
   const ref = asked.json.ref;
   assert.equal(asked.json.order.quoteRequest, "open");
   assert.equal((await req("PATCH", `/api/office/orders/${ref}`, { status: "confirmed" }, owner)).json.error, "offer_open");
+  assert.equal((await req("PATCH", `/api/office/orders/${ref}`, { status: "erected" }, owner)).json.error, "offer_open");
   // The office's offer: the company accepts it in the portal, then the order can be confirmed.
   assert.equal((await req("POST", `/api/office/orders/${ref}/offer`, { net: 9800 }, owner)).json.error, "reason_required");
   const offered = await req("POST", `/api/office/orders/${ref}/offer`, { net: 9800, reason: "Halli, 2 nosturikäyntiä" }, owner);
   assert.equal(offered.status, 200, offered.text);
   const listed = (await req("GET", "/api/biz/orders", undefined, c)).json.orders.find((o) => o.ref === ref);
   assert.ok(listed.needsAction.includes("price_change"), listed.needsAction.join());
-  const pcId = (await req("GET", `/api/biz/orders/${ref}`, undefined, c)).json.order.priceChange.id;
+  await req("PATCH", `/api/office/orders/${ref}`, { message: "Tarvitsemme piirustukset." }, owner);
+  await req("GET", `/api/biz/orders/${ref}`, undefined, c); // copying a site for a new order reads it without opening it
+  assert.ok((await req("GET", "/api/biz/orders", undefined, c)).json.orders.find((o) => o.ref === ref).needsAction.includes("message"));
+  const pcId = (await req("GET", `/api/biz/orders/${ref}?seen=1`, undefined, c)).json.order.priceChange.id;
+  assert.ok(!(await req("GET", "/api/biz/orders", undefined, c)).json.orders.find((o) => o.ref === ref).needsAction.includes("message"));
   const acc2 = await req("POST", `/api/biz/orders/${ref}/price-change/accept`, { id: pcId }, c);
   assert.equal(acc2.status, 200, acc2.text);
   assert.equal(acc2.json.order.quote.net, 9800);
   assert.equal(acc2.json.order.quoteRequest, "accepted");
   assert.equal((await req("PATCH", `/api/office/orders/${ref}`, { status: "confirmed" }, owner)).status, 200);
   assert.ok((await req("GET", `/api/biz/orders/${ref}/plan`, undefined, c)).json.plan.systemName);
+  // A longer rental adds only the rent for the extra days to the agreed offer; the offer stays.
+  const ch = await req("POST", `/api/biz/orders/${ref}/change`, { type: "days", days: 35 }, c);
+  assert.equal(ch.status, 200, ch.text);
+  const chId = (await req("GET", `/api/office/orders/${ref}`, undefined, owner)).json.order.changes.find((x) => x.status === "pending").id;
+  assert.equal((await req("POST", `/api/office/changes/${chId}/approve`, {}, owner)).status, 200);
+  const longer = (await req("GET", `/api/office/orders/${ref}`, undefined, owner)).json.order;
+  assert.ok(longer.quote.lines.some((l) => l.key === "offer"));
+  assert.ok(longer.quote.net > 9800 && longer.quote.net < 9800 * 1.5, String(longer.quote.net));
 
   // Rates raised in Settings later don't change the invoice: it uses the rates the price was confirmed with.
   const before = (await req("GET", "/api/office/pricing", undefined, owner)).json.pricing;
@@ -325,7 +338,7 @@ test("business pricing: systems side by side, 3+ storeys flagged, quote requests
   const iv = (await req("POST", `/api/office/orders/${tall.json.ref}/invoice`, undefined, owner)).json.invoice;
   assert.equal(iv.net, tallOffice.quote.net);
   const iv2 = (await req("POST", `/api/office/orders/${ref}/invoice`, undefined, owner)).json.invoice;
-  assert.equal(iv2.net, 9800);
+  assert.equal(iv2.net, longer.quote.net);
   assert.ok(iv2.lines.some((l) => l.key === "offer"));
   await req("PUT", "/api/office/pricing", { pricing: before }, owner);
 

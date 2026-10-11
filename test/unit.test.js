@@ -639,3 +639,19 @@ test("temporary roof on a Z-shaped house: both long edges carried end to end, ev
   assert.ok(work.length >= 7, `every wall keeps a work scaffold (${work.length})`);
   assert.equal(plan.systemName, undefined, "customers don't see the scaffold brand");
 });
+
+test("an accepted offer is the agreed price for its days: other days change only the rent", () => {
+  const P = require("../lib/platform");
+  const O = require("../lib/orders");
+  const p = O.mergePricing({});
+  const o = { ...O.exampleOrders(p)[0], discountPct: 10 };
+  const days = o.schedule.days;
+  o.house = { ...o.house, offer: { net: 5000, days } };
+  assert.equal(P.repriceOrder(o, p).quote.net, 5000);
+  const rent = (d) => P.repriceOrder({ ...o, house: { ...o.house, offer: undefined } }, p, { days: d }).quote.lines.filter((l) => l.key === "rent" || l.key === "roofRent").reduce((s, l) => s + l.amount, 0);
+  const short = P.repriceOrder(o, p, { days: Math.max(1, days - 10) }).quote;
+  assert.ok(short.net < 5000 && short.net > 0);
+  assert.ok(Math.abs(short.net - (5000 - (rent(days) - rent(Math.max(1, days - 10))) * 0.9)) < 0.05);
+  // The labour share follows the agreed price.
+  assert.ok(short.labourGross <= short.total);
+});

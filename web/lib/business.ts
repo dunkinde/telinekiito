@@ -162,7 +162,8 @@ export interface BizQuote extends QuoteResult {
 export const bizQuote = (body: Record<string, unknown>) => call<BizQuote>("POST", "/api/biz/quote", body);
 export const bizPlan = (ref: string) => call<{ plan: ScaffoldPlan }>("GET", `/api/biz/orders/${enc(ref)}/plan`);
 export const bizOrders = () => call<{ orders: BizOrderSummary[]; contacts: SiteContact[] }>("GET", "/api/biz/orders");
-export const bizOrder = (ref: string) => call<{ order: BizOrder }>("GET", `/api/biz/orders/${enc(ref)}`);
+/** One site. `seen`: the site page is open, so its messages are read. */
+export const bizOrder = (ref: string, seen = false) => call<{ order: BizOrder }>("GET", `/api/biz/orders/${enc(ref)}${seen ? "?seen=1" : ""}`);
 export const bizPlaceOrder = (body: Record<string, unknown>) => call<{ ref: string; order: BizOrder }>("POST", "/api/biz/orders", body);
 export const bizSaveDetails = (ref: string, body: Partial<BizDetails>) => call<{ order: BizOrder }>("PATCH", `/api/biz/orders/${enc(ref)}`, body);
 export const bizPreview = (ref: string, body: ChangeBody) => call<ChangePreview>("POST", `/api/biz/orders/${enc(ref)}/preview`, body);

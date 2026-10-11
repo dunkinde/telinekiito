@@ -386,11 +386,11 @@ route("POST", /^\/api\/quote$/, async (req) => {
   if (!O.systemsOn(p).includes(f.system)) f.system = O.systemsOn(p)[0];
   const out = O.quoteFor(f, p);
   const account = partnerByCode(req, body.partnerCode);
-  const rc = Boolean(account && account.reverseCharge);
-  if (account && (account.discountPct || rc)) out.quote = P.applyDiscount(out.quote, account.discountPct || 0, p, rc);
+  // The website's pages show prices with VAT; a reverse-charge company's invoice drops the VAT (see buildInvoice).
+  if (account && account.discountPct) out.quote = P.applyDiscount(out.quote, account.discountPct, p);
   // The same house with each scaffold system, so the customer can pick one.
-  out.options = O.quoteOptions(f, p).map((o) => (account && (account.discountPct || rc) ? { ...o, total: P.applyDiscount({ net: o.net, lines: [], labourGross: 0 }, account.discountPct || 0, p, rc).total } : o));
-  out.partner = account ? { name: account.name, discountPct: account.discountPct, reverseCharge: rc } : body.partnerCode ? { invalid: true } : null;
+  out.options = O.quoteOptions(f, p).map((o) => (account && account.discountPct ? { ...o, total: P.applyDiscount({ net: o.net, lines: [], labourGross: 0 }, account.discountPct, p).total } : o));
+  out.partner = account ? { name: account.name, discountPct: account.discountPct } : body.partnerCode ? { invalid: true } : null;
   out.available = availableDates(out.estimate.parts, f.days);
   return out;
 });
@@ -457,6 +457,20 @@ route("POST", /^\/api\/ai\/drawing$/, async (req) => {
 });
 
 /** Never sell scaffolding we won't have: check parts and crews for the chosen dates (409 with the first free date). */
+/** An order already in the books (a quote request about to go ahead): enough parts and crews on its dates? */
+function assertStillAvailable(o) {
+  const o0 = ops();
+  const orders = store.listOrders();
+  const st = stockCfg();
+  const start = (o.assignment && o.assignment.date) || o.schedule.start;
+  const parts = S.check(orders, st, o.estimate.parts, start, S.addDays(start, o.schedule.days + st.bufferDays), { today: P.today(), exceptRef: o.ref });
+  const cap = S.capacityPerDay(o0, crews());
+  const full = cap !== Infinity && S.jobsOn(orders, start, o.ref) >= cap;
+  if (!parts.ok || full) {
+    const next = S.earliestStart(orders.filter((x) => x.ref !== o.ref), st, o0, crews(), o.estimate.parts, o.schedule.days, start, P.today());
+    throw new HttpError(409, parts.ok ? "fully_booked" : "not_enough_stock", next ? `Those dates are booked. The first free start is ${next}: move the delivery date first.` : "There isn't enough scaffolding for these dates.", { date: next });
+  }
+}
 function assertAvailable(order, f) {
   const o0 = ops();
   const orders = store.listOrders();
@@ -526,8 +540,7 @@ route("POST", /^\/api\/orders$/, async (req) => {
   if (account) {
     order.accountId = account.id;
     order.discountPct = account.discountPct || 0;
-    order.reverseCharge = Boolean(account.reverseCharge);
-    order.quote = P.applyDiscount(order.quote, order.discountPct, p, order.reverseCharge);
+    order.quote = P.applyDiscount(order.quote, order.discountPct, p);
   }
   assertAvailable(order, f);
   applyReviewFlags(order, body);
@@ -735,10 +748,11 @@ function markSeen(s, o) {
   const kept = Object.entries({ ...seen, [o.ref]: last.at }).sort((a, b) => b[1].localeCompare(a[1])).slice(0, 300);
   store.put("bizuser", { ...s.user, seen: Object.fromEntries(kept) });
 }
-route("GET", /^\/api\/biz\/orders\/([A-Z0-9-]+)$/, (req, m) => {
+route("GET", /^\/api\/biz\/orders\/([A-Z0-9-]+)$/, (req, m, url) => {
   const s = requireBiz(req);
   const o = bizOrder(s, m[1]);
-  markSeen(s, o);
+  // Opening the site page marks its messages read; copying the site for a new order doesn't.
+  if (url.searchParams.get("seen") === "1") markSeen(s, o);
   return { order: bizDetail(o) };
 });
 
@@ -1276,16 +1290,14 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/offer$/, async (req, m) => 
   const net = Number(body.net);
   if (!Number.isFinite(net) || net <= 0 || net > 5e6) throw new HttpError(400, "bad_total", "Give the offer's price before VAT.");
   const p = pricing();
-  const house = { ...o.house };
-  delete house.offer;
-  const base = P.repriceOrder(o, p, { house });
-  house.offer = { net: Math.round((net - base.quote.net) * 100) / 100 };
+  // The agreed net for the order's days; other days later add or take off only the rent.
+  const house = { ...o.house, offer: { net: Math.round(net * 100) / 100, days: o.schedule.days } };
   const r = P.repriceOrder(o, p, { house });
   const reason = O.str(body.reason, 500);
   if (!reason) throw new HttpError(400, "reason_required", "Tell the customer what the offer covers.");
   const pc = P.proposePriceChange(o, { house, estimate: r.estimate, quote: r.quote, reason, user, source: "offer", pricing: p });
   saveOrder(o);
-  notify.event(o, "price_change", { newTotal: pc.after.total, vars: { reason } });
+  notify.event(o, "offer", { newTotal: pc.after.total, vars: { reason } });
   P.audit(store, user, "offer_sent", o.ref, { id: pc.id, total: pc.after.total });
   return { order: officeOrderView(o) };
 });
@@ -1420,11 +1432,12 @@ route("POST", /^\/api\/(office|crew)\/changes\/([\w-]+)\/(approve|reject)$/, asy
   // A size the crew (or anyone but the customer) found that moves the price: the office approves the size,
   // the customer accepts the new price. A change the customer asked for was priced for them already.
   if (approve && c.status === "pending" && c.type === "house" && c.source !== "customer") {
-    const after = P.repriceOrder(o, pricing(), { house: c.proposed.house });
+    const proposed = { ...c.proposed.house, ...(o.house.offer ? { offer: o.house.offer } : {}) };
+    const after = P.repriceOrder(o, pricing(), { house: proposed });
     if (after.quote.total !== o.quote.total) {
       const reason = O.str(body.reason, 500) || c.note || P.describeChange(c, o.lang);
       P.decideChange(store, o, c, true, { user, pricing: pricing(), reason: body.reason, apply: false });
-      const pc = P.proposePriceChange(o, { house: { ...c.proposed.house }, estimate: after.estimate, quote: after.quote, reason, user, source: "change", changeId: c.id, pricing: pricing() });
+      const pc = P.proposePriceChange(o, { house: proposed, estimate: after.estimate, quote: after.quote, reason, user, source: "change", changeId: c.id, pricing: pricing() });
       saveOrder(o);
       notify.event(o, "price_change", { newTotal: pc.after.total, vars: { reason } });
       P.audit(store, user, "change_approved", o.ref, { id: c.id, priceChange: pc.id });
@@ -1485,7 +1498,9 @@ route("PATCH", /^\/api\/office\/orders\/([A-Z0-9-]+)$/, async (req, m) => {
   } else if (body.status === "cancelled") {
     throw new HttpError(400, "use_cancel", "Use cancel to cancel an order.");
   }
-  if (body.status === "confirmed" && prev === "received" && o.quoteRequest && !o.quoteRequest.acceptedAt) throw new HttpError(409, "offer_open", "This is a quote request: send the offer and wait for the customer to accept it first.");
+  if (body.status && !["received", "cancelled"].includes(body.status) && body.status !== prev && o.quoteRequest && !o.quoteRequest.acceptedAt) throw new HttpError(409, "offer_open", "This is a quote request: send the offer and wait for the customer to accept it first.");
+  // A quote request held no stock while open: before it goes ahead, its dates must still have parts and crews.
+  if (body.status && ["confirmed", "loading", "en_route", "erected"].includes(body.status) && ["received", "cancelled"].includes(prev) && o.quoteRequest) assertStillAvailable(o);
   const { message, ...rest } = body;
   O.officePatch(o, { ...rest, status: body.cancel ? undefined : body.status, message: undefined });
   if (body.status && prev === "cancelled" && body.status !== "cancelled") o.cancelled = null;

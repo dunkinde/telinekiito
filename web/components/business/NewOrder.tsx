@@ -105,8 +105,8 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
     setBiz({ ...blankBiz, project: o.business.project, costCentre: o.business.costCentre, siteContact: { ...o.business.siteContact }, siteInfo: o.business.siteInfo });
     setGeo(o.geo ? { ...o.geo, for: o.address } : null);
     setUnlocked(false);
-    // Look the address up again so the 3D model and the size checks come back with it.
-    if (o.address) void find(o.address);
+    // Look the address up again so the 3D model and the size checks come back with it (the copied size stays).
+    if (o.address) void find(o.address, 0, true);
   };
   const copied = useRef(false);
   useEffect(() => {
@@ -186,7 +186,9 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
 
   const addressNow = useRef("");
   addressNow.current = f.address.trim();
-  async function find(address?: string, retry = 0) {
+  const fNow = useRef(f);
+  fNow.current = f;
+  async function find(address?: string, retry = 0, keepSize = false) {
     const text = (address ?? f.address).trim();
     if (text.length < 5) return setLookup({ busy: false, msg: t("biz.new.addrShort"), ok: false });
     setLookup({ busy: true, msg: null, ok: false });
@@ -194,19 +196,26 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
       const r = await lookupAddress(text);
       if (!r.found) return setLookup({ busy: false, msg: t("biz.new.notFound"), ok: false });
       const h = r.house;
-      setUnlocked(false);
-      setF((x) => {
-        const floors = h.floors ?? x.floors;
-        return {
-          ...x,
-          zone: r.zone ?? x.zone,
-          ...(h.length && h.width ? { length: String(h.length), width: String(h.width) } : {}),
-          ...(floors ? { floors } : {}),
-          ...(h.roofType ? { roofType: h.roofType } : {}),
-          ...(h.pitch != null ? { pitch: String(h.pitch) } : {}),
-          eave: h.eave ? String(h.eave) : floors ? String(EAVE_BY_FLOORS[floors]) : x.eave
-        };
-      });
+      if (keepSize) {
+        // A copied site keeps its size; the measured building is used only while that size still matches it.
+        const now = fNow.current;
+        const near = (x: number | null | undefined, y: string) => x != null && Math.abs(x - (parseNum(y) ?? -99)) < 0.051;
+        setUnlocked(!(near(h.length, now.length) && near(h.width, now.width) && near(h.eave, now.eave)));
+      } else {
+        setUnlocked(false);
+        setF((x) => {
+          const floors = h.floors ?? x.floors;
+          return {
+            ...x,
+            zone: r.zone ?? x.zone,
+            ...(h.length && h.width ? { length: String(h.length), width: String(h.width) } : {}),
+            ...(floors ? { floors } : {}),
+            ...(h.roofType ? { roofType: h.roofType } : {}),
+            ...(h.pitch != null ? { pitch: String(h.pitch) } : {}),
+            eave: h.eave ? String(h.eave) : floors ? String(EAVE_BY_FLOORS[floors]) : x.eave
+          };
+        });
+      }
       const reg = r.details?.register?.storeys ?? null;
       setGeo({
         lat: r.match.lat, lon: r.match.lon, for: text, result: r, storeys: reg,
@@ -216,7 +225,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
       const how = modelOf(r) ? t("biz.new.model") : full ? t("biz.new.found") : t("biz.new.partial");
       setLookup({ busy: false, msg: `${r.match.short || r.match.display} – ${how}${r.modelPending ? ` (${t("biz.new.modelPending")})` : ""}`, ok: full });
       // The 3D model for a new area takes a moment to download: look again while the address is unchanged.
-      if (r.modelPending && retry < 3) window.setTimeout(() => addressNow.current === text && void find(text, retry + 1), 6000);
+      if (r.modelPending && retry < 3) window.setTimeout(() => addressNow.current === text && void find(text, retry + 1, keepSize), 6000);
     } catch (e) {
       setLookup({ busy: false, msg: errMessage(i, e), ok: false });
     }
@@ -359,7 +368,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
                 )}
               </Field>
               {lookup.msg ? <p className={cx("text-[13px]", lookup.ok ? "text-[#17663a]" : "text-[#b45309]")} role="status">{lookup.msg}</p> : null}
-              {storeys && storeys >= 3 ? <Callout tone="info">{t("biz.new.storeysMany", { n: storeys })}</Callout> : null}
+              {storeys && storeys >= 3 ? <Callout tone="info">{model ? t("biz.new.storeysMany", { n: storeys }) : t("biz.new.storeysNoModel", { n: storeys })}</Callout> : null}
               {model ? (
                 <div className="rounded-xl bg-mist px-4 py-3 text-[13px] text-ink-soft">
                   <p className="font-semibold text-ink">{t("biz.model.title")}</p>

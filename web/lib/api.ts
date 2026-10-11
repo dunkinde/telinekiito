@@ -68,6 +68,9 @@ export interface Quote {
   perM2: number;
   /** Business customer discount, when one was applied. */
   discountPct?: number;
+  /** Reverse charge (AVL 8 c §): no VAT in the price. */
+  reverseCharge?: boolean;
+  vatPct?: number;
 }
 
 export interface Estimate {

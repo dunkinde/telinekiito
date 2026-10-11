@@ -208,7 +208,7 @@ function TrackBody({ initialRef, initialPhone, initialKey }: { initialRef?: stri
     ...(order.rentalEnd && !cancelled ? ([[t("tr.ends"), fmt(order.rentalEnd)]] as [string, string][]) : []),
     ...(plan?.pickupDate ? ([[t("tr.pickupOn"), time(plan.pickupDate, plan.pickupTime)]] as [string, string][]) : []),
     [t("tr.scaffold"), `${order.estimate.area} m² · ${tk("job." + order.house.jobType)}`],
-    [t("tr.price"), order.quote ? eur(order.quote.total) : "—"],
+    [order.quote?.reverseCharge ? t("tr.priceRc") : t("tr.price"), order.quote ? eur(order.quote.total) : "—"],
     [t("tr.zone"), tk("zone." + order.site.zone)]
   ];
 

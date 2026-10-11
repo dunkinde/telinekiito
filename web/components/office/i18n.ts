@@ -1826,7 +1826,11 @@ const en = {
   "err.bad_total": "Give the offer's total price.",
   "err.business_id_required": "Reverse charge needs the customer's business ID.",
   "biz.type.same": "Same price",
-  "od.offer.vatAdded": (v) => `VAT ${v.vat} is added (at today's rate).`
+  "od.offer.vatAdded": (v) => `VAT ${v.vat} is added (at today's rate).`,
+  "biz.pc.offerNote": "Nothing is booked until you accept. If you decline, the request closes and we'll contact you.",
+  "biz.new.storeysNoModel": (v) => `The building register lists ${v.n} storeys. Check the size; the office checks it and the price before confirming.`,
+  "event.offer": "Offer for a quote request",
+  "set.tpl.when.offer": "When the office sends its offer for a business customer's quote request: they accept or decline it in the portal."
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -3643,7 +3647,11 @@ const fi: Record<Key, Entry> = {
   "err.bad_total": "Anna tarjouksen kokonaishinta.",
   "err.business_id_required": "Käännetty verovelvollisuus vaatii asiakkaan Y-tunnuksen.",
   "biz.type.same": "Sama hinta",
-  "od.offer.vatAdded": (v) => `Päälle lisätään alv ${v.vat} (nykyisellä verokannalla).`
+  "od.offer.vatAdded": (v) => `Päälle lisätään alv ${v.vat} (nykyisellä verokannalla).`,
+  "biz.pc.offerNote": "Mitään ei varata ennen kuin hyväksyt. Jos hylkäät, pyyntö suljetaan ja otamme yhteyttä.",
+  "biz.new.storeysNoModel": (v) => `Rakennusrekisterin mukaan kerroksia on ${v.n}. Tarkista mitat; toimisto tarkistaa ne ja hinnan ennen vahvistusta.`,
+  "event.offer": "Tarjous tarjouspyyntöön",
+  "set.tpl.when.offer": "Kun toimisto lähettää tarjouksen yritysasiakkaan tarjouspyyntöön: asiakas hyväksyy tai hylkää sen portaalissa."
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };

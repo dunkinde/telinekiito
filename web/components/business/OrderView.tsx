@@ -37,7 +37,7 @@ import { shrinkImage } from "@/lib/image";
 
 export function OrderView({ refNo }: { refNo: string }) {
   const { t } = useT();
-  const st = useBizLoad(() => bizOrder(refNo), [refNo], { poll: true });
+  const st = useBizLoad(() => bizOrder(refNo, true), [refNo], { poll: true });
   return (
     <div>
       <a href="#/sites" className="mb-4 inline-flex items-center gap-1.5 text-[14px] font-semibold text-ink-soft hover:text-ink">
@@ -285,7 +285,7 @@ function PriceChangeCard({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder)
     const r = await run(accept ? "pc-accept" : "pc-decline", () => bizAnswerPriceChange(o.ref, accept, pc.id, accept ? undefined : note.trim()), t(accept ? "biz.pc.acceptedToast" : "biz.pc.declinedToast"));
     if (r) onChange(r.order);
     // The offer may have changed meanwhile: show the current one.
-    else void bizOrder(o.ref).then((x) => onChange(x.order)).catch(() => {});
+    else void bizOrder(o.ref, true).then((x) => onChange(x.order)).catch(() => {});
   };
   if (pc.status !== "pending") {
     return (
@@ -302,7 +302,7 @@ function PriceChangeCard({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder)
       <CardHead id="biz-pc" title={pc.source === "offer" ? t("biz.pc.offerTitle") : t("biz.pc.title")} sub={pc.source === "offer" ? t("biz.pc.offerSub") : t("biz.pc.sub")} />
       <div className="px-5 pb-5">
         <PriceCompare pc={pc} />
-        <p className="mt-3 text-[12.5px] text-muted">{t("biz.pc.valid")}</p>
+        <p className="mt-3 text-[12.5px] text-muted">{pc.source === "offer" ? t("biz.pc.offerNote") : t("biz.pc.valid")}</p>
         {!canOrder ? (
           <p className="mt-3 text-[13px] text-ink-soft">{t("biz.pc.noRights")}</p>
         ) : declining ? (
