@@ -22,7 +22,7 @@ const ROOFS: RoofType[] = ["gable", "hip", "flat"];
 const FLOORS: Floors[] = ["1", "1.5", "2"];
 /** What the online price covers without the 3D model; measured buildings and quote requests go further. */
 const NORMAL = { L: 60, W: 40, E: 12 };
-const LARGE = { L: 150, W: 100, E: 40 };
+const LARGE = { L: 300, W: 300, E: 60 };
 /** Load classes per EN 12811-1, for the legend under the systems. */
 const CLASSES = [
   { cls: 3, kn: 2.0 },
@@ -552,7 +552,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
               <Btn variant="primary" className="mt-5 w-full" onClick={() => void submit()} busy={sending} disabled={!house.ok || !f.address.trim()}>
                 {mustAsk ? t("biz.new.quoteBtn") : t("biz.new.submit")}
               </Btn>
-              {!house.ok || !f.address.trim() ? <p className="mt-2 text-[12px] text-[#8a4b00]">{!f.address.trim() ? t("biz.new.needAddress") : t("biz.new.needSize")}</p> : null}
+              {!house.ok || !f.address.trim() ? <p className="mt-2 text-[12px] text-[#8a4b00]">{!f.address.trim() ? t("biz.new.needAddress") : house.L > LARGE.L || house.W > LARGE.W || house.E > LARGE.E ? t("biz.new.tooLarge") : t("biz.new.needSize")}</p> : null}
               <p className="mt-2 text-[12px] text-muted">{mustAsk ? t("biz.new.quoteHint") : t("biz.new.submitHint")}</p>
               {!mustAsk && house.ok && f.address.trim() ? (
                 <button type="button" className="mt-3 text-[12.5px] font-semibold text-ink-soft underline underline-offset-2 hover:text-ink" onClick={() => void submit(true)} disabled={sending}>
