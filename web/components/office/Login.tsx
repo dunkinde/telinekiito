@@ -4,15 +4,15 @@ import { useState } from "react";
 import { loginWithPassword, loginWithPin, type Me } from "@/lib/platform";
 import { Logo } from "../Logo";
 import { useT } from "./context";
-import { errMessage, LANG_NAMES, LANGS } from "./i18n";
+import { errMessage, LANG_NAMES } from "./i18n";
 import { IExternal, IHelmet, ILock } from "./icons";
 import { Btn, Callout, Field, Input, Tabs, cx } from "./ui";
 
 export function LangSwitch({ dark = false, className }: { dark?: boolean; className?: string }) {
-  const { lang, setLang, t } = useT();
+  const { lang, langs, setLang, t } = useT();
   return (
     <div role="group" aria-label={t("ui.language")} className={cx("inline-flex rounded-full p-0.5 text-[12.5px] font-bold ring-1 ring-inset", dark ? "ring-white/15" : "ring-line bg-white", className)}>
-      {LANGS.map((l) => (
+      {langs.map((l) => (
         <button
           key={l}
           type="button"

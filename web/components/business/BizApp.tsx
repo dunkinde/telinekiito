@@ -19,9 +19,12 @@ import { Invoices } from "./Invoices";
 import { Users } from "./Users";
 import { AuthFrame, Register } from "./Register";
 
+/** Customers use the portal in Finnish or English; Russian is only in our staff's apps. */
+const BIZ_LANGS: ("fi" | "en")[] = ["fi", "en"];
+
 export default function BizApp() {
   return (
-    <I18nProvider>
+    <I18nProvider langs={BIZ_LANGS}>
       <ToastProvider>
         <Root />
       </ToastProvider>

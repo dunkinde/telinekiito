@@ -14,29 +14,32 @@ import {
   type Me,
   type StaffUser
 } from "@/lib/platform";
-import { errMessage, hasKey, isLang, translate, type Key, type Lang, type T, type Vars } from "./i18n";
+import { errMessage, hasKey, isLang, LANGS, translate, type Key, type Lang, type T, type Vars } from "./i18n";
 
 /* ---------------- Language ---------------- */
 const LANG_KEY = "tk_office_lang";
 interface I18n extends T {
+  /** The languages offered here: the business portal is Finnish and English; Russian is for our own staff. */
+  langs: Lang[];
   setLang: (l: Lang) => void;
   /** Use the logged-in user's language unless the visitor already chose one on this device. */
   preferUserLang: (l: string) => void;
 }
 const LangCtx = createContext<I18n | null>(null);
 
-export function I18nProvider({ children }: { children: React.ReactNode }) {
+export function I18nProvider({ children, langs = LANGS }: { children: React.ReactNode; langs?: Lang[] }) {
   const [lang, setLangState] = useState<Lang>("fi");
   const chosen = useRef(false);
+  const allowed = (l: unknown): l is Lang => isLang(l) && langs.includes(l);
   useEffect(() => {
     try {
       // The language chosen on this device; otherwise the website's (?lang=en) until the user's own applies.
       const s = window.localStorage.getItem(LANG_KEY);
       const q = new URLSearchParams(window.location.search).get("lang");
-      if (isLang(s)) {
+      if (allowed(s)) {
         chosen.current = true;
         setLangState(s);
-      } else if (isLang(q)) setLangState(q);
+      } else if (allowed(q)) setLangState(q);
     } catch {
       /* storage blocked */
     }
@@ -53,18 +56,23 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
       /* ignore */
     }
   }, []);
-  const preferUserLang = useCallback((l: string) => {
-    if (!chosen.current && isLang(l)) setLangState(l);
-  }, []);
+  const preferUserLang = useCallback(
+    (l: string) => {
+      if (!chosen.current && allowed(l)) setLangState(l);
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [langs]
+  );
   const value = useMemo<I18n>(
     () => ({
       lang,
+      langs,
       setLang,
       preferUserLang,
       t: (key: Key, vars?: Vars) => translate(lang, key, vars),
       tk: (key: string, vars?: Vars, fallback?: string) => (hasKey(key) ? translate(lang, key, vars) : fallback ?? key)
     }),
-    [lang, setLang, preferUserLang]
+    [lang, langs, setLang, preferUserLang]
   );
   return <LangCtx.Provider value={value}>{children}</LangCtx.Provider>;
 }

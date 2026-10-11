@@ -5,7 +5,7 @@ import { BIZ_ROLES, bizRemoveUser, bizSaveUser, bizUsers, type BizRole, type Biz
 import type { StaffLang } from "@/lib/platform";
 import { useT } from "../office/context";
 import { dateTime } from "../office/format";
-import { errMessage, LANG_NAMES, LANGS } from "../office/i18n";
+import { errMessage, LANG_NAMES } from "../office/i18n";
 import { IEdit, ITeam, ITrash } from "../office/icons";
 import { Async, Badge, Btn, Card, Confirm, Dialog, Empty, Field, IconBtn, Input, Select, Switch } from "../office/ui";
 import { IconPlus } from "../ui/Icons";
@@ -191,7 +191,7 @@ export function UserDialog({
         <Field label={t("biz.users.email")} optional hint={t("biz.users.emailHint")}>
           {(id, h) => <Input id={id} type="email" value={d.email} onChange={(v) => setD({ ...d, email: v })} maxLength={120} describedBy={h} />}
         </Field>
-        <Field label={t("team.lang")}>{(id) => <Select id={id} value={d.lang} onChange={(v) => setD({ ...d, lang: v as StaffLang })} options={LANGS.map((l) => ({ value: l, label: LANG_NAMES[l] }))} />}</Field>
+        <Field label={t("team.lang")}>{(id) => <Select id={id} value={d.lang} onChange={(v) => setD({ ...d, lang: v as StaffLang })} options={(["fi", "en"] as const).map((l) => ({ value: l, label: LANG_NAMES[l] }))} />}</Field>
         <Field label={t("team.role")} hint={t(`biz.roleHint.${d.role}`)} className="sm:col-span-2">
           {(id, h) => <Select id={id} value={d.role} onChange={(v) => setD({ ...d, role: v as BizRole })} options={BIZ_ROLES.map((r) => ({ value: r, label: t(`biz.role.${r}`), disabled: self && r !== "admin" }))} describedBy={h} />}
         </Field>
