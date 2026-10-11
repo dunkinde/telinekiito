@@ -71,7 +71,7 @@ const GROUPS: { key: "daily" | "sales" | "resources" | "money"; items: Section[]
 ];
 
 function useBadges() {
-  const { orders, pending, alerts } = useOffice();
+  const { orders, pending, alerts, registrations } = useOffice();
   return useMemo(() => {
     const real = (orders || []).filter((o) => !o.example);
     const received = real.filter((o) => o.status === "received").length;
@@ -82,10 +82,9 @@ function useBadges() {
       return false;
     }).length;
     const unread = (alerts || []).filter((a) => !a.read).length;
-    const requests = (alerts || []).filter((a) => a.type === "biz_registration").length;
-    const b: Partial<Record<Section, number>> = { orders: received, calendar: unplanned, approvals: (pending || []).length, messages: unread, customers: requests };
+    const b: Partial<Record<Section, number>> = { orders: received, calendar: unplanned, approvals: (pending || []).length, messages: unread, customers: registrations };
     return b;
-  }, [orders, pending, alerts]);
+  }, [orders, pending, alerts, registrations]);
 }
 
 function NavList({ onPick }: { onPick?: () => void }) {
@@ -187,6 +186,7 @@ function Bell() {
     if (!a.read) read([a.id]);
     if (a.ref) openOrder(a.ref);
     else if (a.type === "contact") nav("messages", { tab: "contact" });
+    else if (a.type === "biz_registration") nav("customers");
     else nav("messages");
   }
   return (

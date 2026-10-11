@@ -14,7 +14,7 @@ const { createAddressService } = require("./lib/address");
 const { createNls3d } = require("./lib/nls3d");
 const { outlineHouse } = require("./lib/outline");
 const { createSuggest } = require("./lib/suggest");
-const { checksFor } = require("./lib/checks");
+const { checksFor, RULES } = require("./lib/checks");
 const { createAI } = require("./lib/ai");
 const { createNotifier, mergeTemplates } = require("./lib/notify");
 const { createWeather } = require("./lib/weather");
@@ -57,6 +57,11 @@ const stockCfg = () => S.mergeStock(store.getSetting("stock"));
 const crews = () => store.list("crew").sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 // Tracking links in customer messages carry the order's key, so customers never need the phone digits.
 const notify = createNotifier({ store, getOps: ops, orderKey: (ref) => (auth.enabled ? auth.orderKey(ref) : null) });
+
+// Orders from before the confirmed rates were kept on the order: today's rates become theirs.
+for (const o of store.listOrders(store.countOrders())) if (!o.pricing) store.saveOrder({ ...o, pricing: O.rateCard(pricing()) });
+// Portal logins of accounts deleted before deleting took their logins along would block those phone numbers.
+for (const u of store.list("bizuser", { limit: 100000 })) if (!store.get("account", u.accountId)) store.del("bizuser", u.id);
 
 if (store.countOrders() === 0 && process.env.SEED_EXAMPLES !== "0") {
   for (const o of O.exampleOrders(pricing())) store.insertOrder(o);
@@ -381,10 +386,11 @@ route("POST", /^\/api\/quote$/, async (req) => {
   if (!O.systemsOn(p).includes(f.system)) f.system = O.systemsOn(p)[0];
   const out = O.quoteFor(f, p);
   const account = partnerByCode(req, body.partnerCode);
-  if (account && account.discountPct) out.quote = P.applyDiscount(out.quote, account.discountPct, p);
+  const rc = Boolean(account && account.reverseCharge);
+  if (account && (account.discountPct || rc)) out.quote = P.applyDiscount(out.quote, account.discountPct || 0, p, rc);
   // The same house with each scaffold system, so the customer can pick one.
-  out.options = O.quoteOptions(f, p).map((o) => (account && account.discountPct ? { ...o, total: P.applyDiscount({ net: o.net, lines: [], labourGross: 0 }, account.discountPct, p).total } : o));
-  out.partner = account ? { name: account.name, discountPct: account.discountPct } : body.partnerCode ? { invalid: true } : null;
+  out.options = O.quoteOptions(f, p).map((o) => (account && (account.discountPct || rc) ? { ...o, total: P.applyDiscount({ net: o.net, lines: [], labourGross: 0 }, account.discountPct || 0, p, rc).total } : o));
+  out.partner = account ? { name: account.name, discountPct: account.discountPct, reverseCharge: rc } : body.partnerCode ? { invalid: true } : null;
   out.available = availableDates(out.estimate.parts, f.days);
   return out;
 });
@@ -489,8 +495,8 @@ async function checkZone(order) {
   order.internalNotes = [order.internalNotes, `Check the delivery zone: the address is in zone ${zone}, but the order was priced for zone ${order.site.zone}.`].filter(Boolean).join("\n");
 }
 
-function applyReviewFlags(order, body) {
-  const reasons = [];
+function applyReviewFlags(order, body, extra = []) {
+  const reasons = [...extra];
   const storeys = Math.round(Number(body.storeys) || 0);
   if (storeys >= 3 && storeys <= 50) reasons.push({ code: "storeys_many", n: storeys });
   const checks = Array.isArray(body.checks) ? body.checks.filter((c) => typeof c === "string" && REVIEW_CHECKS[c]) : [];
@@ -498,7 +504,11 @@ function applyReviewFlags(order, body) {
   if (!reasons.length) return;
   order.needsReview = true;
   order.sizeCheck = { reasons, at: new Date().toISOString() };
-  const words = reasons.map((r) => (r.code === "storeys_many" ? `the building register lists ${r.n} storeys (the online price covers up to 2)` : REVIEW_CHECKS[r.code]));
+  const words = reasons.map((r) =>
+    r.code === "storeys_many" ? `the building register lists ${r.n} storeys (the online price covers up to 2)`
+      : r.code === "too_large" ? `the building (${r.l} × ${r.w} m, eave ${r.e} m) is larger than the online price covers`
+        : r.code === "engineer" ? `the scaffold needs a separate plan or calculation (${(r.what || []).join(", ")})`
+          : REVIEW_CHECKS[r.code]);
   order.internalNotes = `Check the size before confirming: ${words.join("; ")}. Look at the satellite view and ask the customer for photos of each side or the house drawings.`;
 }
 
@@ -516,7 +526,8 @@ route("POST", /^\/api\/orders$/, async (req) => {
   if (account) {
     order.accountId = account.id;
     order.discountPct = account.discountPct || 0;
-    order.quote = P.applyDiscount(order.quote, order.discountPct, p);
+    order.reverseCharge = Boolean(account.reverseCharge);
+    order.quote = P.applyDiscount(order.quote, order.discountPct, p, order.reverseCharge);
   }
   assertAvailable(order, f);
   applyReviewFlags(order, body);
@@ -665,7 +676,7 @@ function bizDetail(o) {
 }
 function bizAccountView(a) {
   return { id: a.id, name: a.name, businessId: a.businessId || "", code: a.code, discountPct: a.discountPct || 0, paymentDays: a.paymentDays,
-    billingAddress: a.billingAddress || "", einvoiceAddress: a.einvoiceAddress || "", einvoiceOperator: a.einvoiceOperator || "", email: a.email || "" };
+    billingAddress: a.billingAddress || "", einvoiceAddress: a.einvoiceAddress || "", einvoiceOperator: a.einvoiceOperator || "", email: a.email || "", reverseCharge: Boolean(a.reverseCharge) };
 }
 
 route("POST", /^\/api\/biz\/login$/, async (req, m, url, res) => {
@@ -709,16 +720,82 @@ route("GET", /^\/api\/biz\/orders$/, (req) => {
   const pending = {};
   for (const c of store.list("change", { status: "pending" })) pending[c.ref] = (pending[c.ref] || 0) + 1;
   const today = P.today();
-  const orders = store.listOrders(5000).filter((o) => o.accountId === s.account.id)
-    .map((o) => B.summary(o, { rentalEnd: P.rentalEnd(o), today, pending: pending[o.ref] || 0 }));
-  return { orders };
+  const mine = store.listOrders(5000).filter((o) => o.accountId === s.account.id);
+  const seen = s.user.seen || {};
+  // Photos are looked up only for sites waiting for the size check.
+  const photosOf = (o) => (o.needsReview ? store.list("file", { ref: o.ref }).filter((f) => f.kind === "photo" && f.stage === "customer").length : 0);
+  const orders = mine.map((o) => B.summary(o, { rentalEnd: P.rentalEnd(o), today, pending: pending[o.ref] || 0, customerPhotos: photosOf(o), seenAt: seen[o.ref] || null }));
+  return { orders, contacts: B.siteContacts(mine) };
 });
+/** This user has read the office's messages on the site (written only when there is a newer one). */
+function markSeen(s, o) {
+  const last = (o.messages || []).filter((x) => x.from === "office").slice(-1)[0];
+  const seen = s.user.seen || {};
+  if (!last || (seen[o.ref] && seen[o.ref] >= last.at)) return;
+  const kept = Object.entries({ ...seen, [o.ref]: last.at }).sort((a, b) => b[1].localeCompare(a[1])).slice(0, 300);
+  store.put("bizuser", { ...s.user, seen: Object.fromEntries(kept) });
+}
 route("GET", /^\/api\/biz\/orders\/([A-Z0-9-]+)$/, (req, m) => {
   const s = requireBiz(req);
-  return { order: bizDetail(bizOrder(s, m[1])) };
+  const o = bizOrder(s, m[1]);
+  markSeen(s, o);
+  return { order: bizDetail(o) };
 });
 
 // A new order from the portal: the account's discount applies, contact details come from the user.
+/* Business pricing: every scaffold system side by side, with brand, load class and limits (business accounts only). */
+// What the office must check before the job can be priced online, as codes the portal explains.
+const ENGINEER_WHAT = { too_high: "height", catch_steep: "roof_edge", catch_din: "roof_edge", roof_anchor: "roof_anchor", mz_not_covered: "not_covered" };
+function engineerCodes(checks) {
+  return [...new Set(checks.filter((c) => c.level === "engineer").map((c) => ENGINEER_WHAT[c.code] || "other"))];
+}
+/** The house priced with one system for this company: total with its discount and VAT treatment, limits, first date. */
+function bizType(f, p, account, system) {
+  const h = O.houseOf({ ...f, system });
+  const est = E.estimate(h);
+  const rc = Boolean(account.reverseCharge);
+  const q = P.applyDiscount(E.quote(est, { days: f.days, zone: f.zone, urgency: f.urgency }, p), account.discountPct || 0, p, rc);
+  const checks = checksFor(h, est);
+  const hc = checks.find((c) => c.code === "too_high" || c.code === "height_ok");
+  const R = RULES[system] || RULES.layher;
+  const S0 = E.SYSTEMS[system];
+  const compact = O.compactEstimate(est);
+  return {
+    system, name: S0.name, loadClass: R.loadClass.cls, kNm2: R.loadClass.kNm2, kgM2: Math.round(R.loadClass.kNm2 * 100),
+    widthClass: "W06", walkway: 0.64, bay: S0.bay, frameWidth: S0.width, lift: E.SYS.lift || 2,
+    maxHeight: R.maxHeight.m, maxHeightBrackets: R.maxHeight.withBrackets || null, height: hc ? hc.vars.h : null,
+    total: q.total, net: q.net, vat: q.vat, area: compact.area, perM2: compact.area ? Math.round((q.net / compact.area) * 100) / 100 : null,
+    weightKg: compact.weightKg, engineer: engineerCodes(checks), earliest: availableDates(compact.parts, f.days)[f.urgency] || null
+  };
+}
+function bizPrice(f, p, account, body) {
+  const out = O.quoteFor(f, p, { brand: true });
+  const rc = Boolean(account.reverseCharge);
+  out.quote = P.applyDiscount(out.quote, account.discountPct || 0, p, rc);
+  out.available = availableDates(out.estimate.parts, f.days);
+  out.system = f.system;
+  out.types = O.systemsOn(p).map((sys) => bizType(f, p, account, sys));
+  const mine = out.types.find((t) => t.system === f.system) || out.types[0];
+  const storeys = Math.round(Number(body.storeys) || 0);
+  // Why the office checks the job (and the portal sends a quote request instead of an order).
+  out.review = { storeys: storeys >= 3 ? storeys : null, large: O.isLarge(f), measured: Boolean(f.walls), engineer: mine ? mine.engineer : [], height: mine ? mine.height : null };
+  out.review.request = out.review.engineer.length > 0 || (out.review.large && !out.review.measured);
+  return out;
+}
+// The company's live price in the portal. Bigger buildings are priced when the 3D model measured them.
+route("POST", /^\/api\/biz\/quote$/, async (req) => {
+  const s = requireBiz(req);
+  limit(req, "quote", 600, 10 * 60e3);
+  const body = await readJson(req, 4096);
+  const f = await withModel(O.parseQuoteInput(body, O.LARGE), body);
+  if (O.isLarge(f) && !f.walls) throw new HttpError(409, "model_required", "A building this size is priced by offer: send a quote request.");
+  const p = pricing();
+  if (!O.systemsOn(p).includes(f.system)) f.system = O.systemsOn(p)[0];
+  return bizPrice(f, p, s.account, body);
+});
+
+// A new site from the portal. With request: true (or when the job needs the office's own plan or price) it's a quote
+// request: the office sends an offer the company accepts in the portal, and only then confirms the order.
 route("POST", /^\/api\/biz\/orders$/, async (req) => {
   const s = requireBiz(req, BIZ_ORDERING);
   limit(req, "biz-order", 30, 60 * 60e3);
@@ -726,27 +803,50 @@ route("POST", /^\/api\/biz\/orders$/, async (req) => {
   const bf = B.parseBizFields(body);
   const contactName = bf.siteContact.name || s.user.name;
   const contactPhone = bf.siteContact.phone || s.user.phone;
-  const f = await withModel(O.parseOrderInput({ ...body, name: `${s.account.name} / ${contactName}`, phone: contactPhone, email: s.user.email || s.account.email || "", lang: s.user.lang === "en" ? "en" : "fi" }), body);
+  const measured = Boolean(body.model && typeof body.model.id === "string");
+  const asked = body.request === true;
+  const input = { ...body, name: `${s.account.name} / ${contactName}`, phone: contactPhone, email: s.user.email || s.account.email || "", lang: s.user.lang === "en" ? "en" : "fi" };
+  const f = await withModel(O.parseOrderInput(input, measured || asked ? O.LARGE : O.NORMAL), body);
   const o0 = ops();
   if (f.urgency !== "standard" && !o0.urgencies[f.urgency]) throw new HttpError(409, "urgency_off", "That delivery speed isn't available right now.");
   if (!o0.zones[f.zone]) throw new HttpError(409, "zone_off", "We don't deliver to that area right now. Contact us.");
-  if (!O.systemsOn(pricing()).includes(f.system)) throw new HttpError(409, "system_off", "That scaffold system isn't available right now.");
   const p = pricing();
+  if (!O.systemsOn(p).includes(f.system)) {
+    if (body.system) throw new HttpError(409, "system_off", "That scaffold system isn't available right now.");
+    f.system = O.systemsOn(p)[0];
+  }
+  const est = E.estimate(O.houseOf(f));
+  const engineer = engineerCodes(checksFor(O.houseOf(f), est));
+  const large = O.isLarge(f);
+  const request = asked || engineer.length > 0 || (large && !f.walls);
   const order = O.buildOrder(f, p, (ref) => Boolean(store.getOrder(ref)));
   order.accountId = s.account.id;
   order.discountPct = s.account.discountPct || 0;
-  order.quote = P.applyDiscount(order.quote, order.discountPct, p);
+  order.reverseCharge = Boolean(s.account.reverseCharge);
+  order.quote = P.applyDiscount(order.quote, order.discountPct, p, order.reverseCharge);
   order.history[0].by = "customer";
   B.applyBizFields(order, { ...bf, orderedBy: s.user.name, orderedById: s.user.id });
-  applyReviewFlags(order, body);
+  const extra = [];
+  if (large) extra.push({ code: "too_large", l: f.length, w: f.width, e: f.eave });
+  if (engineer.length) extra.push({ code: "engineer", what: engineer });
+  applyReviewFlags(order, body, extra);
   await checkZone(order);
-  assertAvailable(order, f);
+  if (request) order.quoteRequest = { at: new Date().toISOString(), by: s.user.name, asked, reasons: extra.map((r) => r.code) };
+  else assertAvailable(order, f);
   store.insertOrder(order);
   store.bump("orders");
-  notify.event(order, "order_received");
-  notify.alert("new_order", order.ref, `New order ${order.ref}: ${order.site.address}, ${order.estimate.area} m², start ${order.schedule.start}`);
-  P.audit(store, bizActor(s), "order_created", order.ref, { total: order.quote.total, partner: s.account.name, po: bf.po || null });
+  if (request) notify.alert("quote_request", order.ref, `Quote request ${order.ref}: ${order.site.address} from ${s.account.name}`);
+  else {
+    notify.event(order, "order_received");
+    notify.alert("new_order", order.ref, `New order ${order.ref}: ${order.site.address}, ${order.estimate.area} m², start ${order.schedule.start}`);
+  }
+  P.audit(store, bizActor(s), "order_created", order.ref, { total: order.quote.total, partner: s.account.name, po: bf.po || null, request });
   return { ref: order.ref, order: bizDetail(order) };
+});
+// The site's scaffold in 3D, with the system named (business accounts only).
+route("GET", /^\/api\/biz\/orders\/([A-Z0-9-]+)\/plan$/, (req, m) => {
+  const s = requireBiz(req);
+  return { plan: O.orderPlan(bizOrder(s, m[1])) };
 });
 
 // Order details the company keeps up to date itself (no approval needed): PO, project, cost centre, site contact.
@@ -1150,7 +1250,7 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) =>
     // A new price: the customer accepts it first; the old one stays valid until then.
     const reason = O.str(body.reason, 500);
     if (!reason) throw new HttpError(400, "reason_required", "Tell the customer why the price changes.");
-    const pc = P.proposePriceChange(o, { house, estimate: r.estimate, quote: r.quote, reason, user, source: "layout" });
+    const pc = P.proposePriceChange(o, { house, estimate: r.estimate, quote: r.quote, reason, user, source: "layout", pricing: pricing() });
     saveOrder(o);
     notify.event(o, "price_change", { newTotal: pc.after.total, vars: { reason } });
     P.audit(store, user, "price_change_proposed", o.ref, { id: pc.id, before, after: pc.after.total });
@@ -1160,9 +1260,33 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) =>
   o.house = house;
   o.estimate = r.estimate;
   o.quote = r.quote;
+  o.pricing = O.rateCard(pricing());
   O.pushHistory(o, { event: "Scaffold layout changed", code: "layout_changed", at: new Date().toISOString(), by: user.name, detail: { before, after: r.quote.total, system: house.system } });
   o.updatedAt = new Date().toISOString();
   saveOrder(o);
+  return { order: officeOrderView(o) };
+});
+// The office's price for a quote request (or any order): the customer accepts or declines it like other price changes.
+route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/offer$/, async (req, m) => {
+  const user = requireOffice(req);
+  const o = getOrderOr404(m[1]);
+  if (["dismantled", "closed", "cancelled"].includes(o.status)) throw new HttpError(409, "order_finished", "This order is already finished.");
+  const body = await readJson(req, 4096);
+  // Offers to companies are priced before VAT; VAT (or reverse charge) is added as on every price.
+  const net = Number(body.net);
+  if (!Number.isFinite(net) || net <= 0 || net > 5e6) throw new HttpError(400, "bad_total", "Give the offer's price before VAT.");
+  const p = pricing();
+  const house = { ...o.house };
+  delete house.offer;
+  const base = P.repriceOrder(o, p, { house });
+  house.offer = { net: Math.round((net - base.quote.net) * 100) / 100 };
+  const r = P.repriceOrder(o, p, { house });
+  const reason = O.str(body.reason, 500);
+  if (!reason) throw new HttpError(400, "reason_required", "Tell the customer what the offer covers.");
+  const pc = P.proposePriceChange(o, { house, estimate: r.estimate, quote: r.quote, reason, user, source: "offer", pricing: p });
+  saveOrder(o);
+  notify.event(o, "price_change", { newTotal: pc.after.total, vars: { reason } });
+  P.audit(store, user, "offer_sent", o.ref, { id: pc.id, total: pc.after.total });
   return { order: officeOrderView(o) };
 });
 // The office takes back a price change the customer hasn't answered yet.
@@ -1300,7 +1424,7 @@ route("POST", /^\/api\/(office|crew)\/changes\/([\w-]+)\/(approve|reject)$/, asy
     if (after.quote.total !== o.quote.total) {
       const reason = O.str(body.reason, 500) || c.note || P.describeChange(c, o.lang);
       P.decideChange(store, o, c, true, { user, pricing: pricing(), reason: body.reason, apply: false });
-      const pc = P.proposePriceChange(o, { house: { ...c.proposed.house }, estimate: after.estimate, quote: after.quote, reason, user, source: "change", changeId: c.id });
+      const pc = P.proposePriceChange(o, { house: { ...c.proposed.house }, estimate: after.estimate, quote: after.quote, reason, user, source: "change", changeId: c.id, pricing: pricing() });
       saveOrder(o);
       notify.event(o, "price_change", { newTotal: pc.after.total, vars: { reason } });
       P.audit(store, user, "change_approved", o.ref, { id: c.id, priceChange: pc.id });
@@ -1361,6 +1485,7 @@ route("PATCH", /^\/api\/office\/orders\/([A-Z0-9-]+)$/, async (req, m) => {
   } else if (body.status === "cancelled") {
     throw new HttpError(400, "use_cancel", "Use cancel to cancel an order.");
   }
+  if (body.status === "confirmed" && prev === "received" && o.quoteRequest && !o.quoteRequest.acceptedAt) throw new HttpError(409, "offer_open", "This is a quote request: send the offer and wait for the customer to accept it first.");
   const { message, ...rest } = body;
   O.officePatch(o, { ...rest, status: body.cancel ? undefined : body.status, message: undefined });
   if (body.status && prev === "cancelled" && body.status !== "cancelled") o.cancelled = null;
@@ -1468,7 +1593,7 @@ route("GET", /^\/api\/office\/alerts$/, (req) => {
   // Alerts of a deleted order are left out (orders deleted before their alerts were removed with them).
   // Business account requests only for the owner, who approves them.
   const alerts = store.list("alert", { limit: 200 }).filter((a) => (!a.ref || store.getOrder(a.ref)) && (a.type !== "biz_registration" || user.role === "owner"));
-  return { alerts: alerts.map((a) => ({ ...a, read: (a.readBy || []).includes(user.id) })) };
+  return { alerts: alerts.map((a) => ({ ...a, read: (a.readBy || []).includes(user.id) })), registrations: user.role === "owner" ? B.pendingAccounts(store).length : 0 };
 });
 route("POST", /^\/api\/office\/alerts\/read$/, async (req) => {
   const user = requireOffice(req);
@@ -1648,7 +1773,7 @@ route("PATCH", /^\/api\/office\/accounts\/([\w-]+)$/, async (req, m) => {
 /** An account goes with its portal logins (their phone numbers become free) and its registration alert. */
 function removeAccount(id) {
   for (const u of store.list("bizuser", { limit: 5000 })) if (u.accountId === id) store.del("bizuser", u.id);
-  for (const a of store.list("alert", { limit: 1000 })) if (a.type === "biz_registration" && a.data && a.data.accountId === id) store.del("alert", a.id);
+  for (const a of store.list("alert", { limit: 100000 })) if (a.type === "biz_registration" && a.data && a.data.accountId === id) store.del("alert", a.id);
   return store.del("account", id);
 }
 route("DELETE", /^\/api\/office\/accounts\/([\w-]+)$/, (req, m) => {
@@ -1683,8 +1808,8 @@ route("POST", /^\/api\/office\/accounts\/([\w-]+)\/approve$/, async (req, m) => 
   a.approvedAt = new Date().toISOString();
   a.approvedBy = user.name;
   store.put("account", a);
-  for (const x of store.list("alert", { limit: 1000 })) if (x.type === "biz_registration" && x.data && x.data.accountId === a.id) store.del("alert", x.id);
-  if (admin) notify.direct({ event: "biz_approved", email: admin.email || a.email, phone: admin.phone, lang: admin.lang, ...B.approvedMessage(admin.lang, { name: admin.name.split(" ")[0], company: a.name, url: notify.siteUrl() }) });
+  for (const x of store.list("alert", { limit: 100000 })) if (x.type === "biz_registration" && x.data && x.data.accountId === a.id) store.del("alert", x.id);
+  if (admin) notify.direct({ event: "biz_approved", email: admin.email || a.email, phone: admin.phone, lang: admin.lang, ...B.approvedMessage(admin.lang, { name: admin.name.split(" ")[0], company: a.name, code: a.code, url: notify.siteUrl() }) });
   P.audit(store, user, "biz_approved", null, { name: a.name, discountPct: a.discountPct });
   return { account: officeAccount(a) };
 });
@@ -1839,7 +1964,7 @@ route("GET", /^\/doc\/(confirmation|inspection)\/([A-Z0-9-]+)$/, (req, m, url) =
   const fileUrl = (id) => `/api/files/${id}${t ? `?t=${encodeURIComponent(t)}` : ""}`;
   const company = ops().company;
   const html = m[1] === "confirmation"
-    ? Docs.confirmation(o, { company, vatPct: pricing().vat })
+    ? Docs.confirmation(o, { company, vatPct: o.quote && o.quote.reverseCharge ? 0 : pricing().vat })
     : Docs.inspection(o, { company, fileUrl, items: P.requiredItems(o) });
   return new Raw(html, { ...DOC_HEADERS, "Content-Type": "text/html; charset=utf-8" });
 });

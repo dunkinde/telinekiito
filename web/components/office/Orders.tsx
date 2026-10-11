@@ -33,6 +33,11 @@ export function OrderFlags({ o }: { o: FullOrder }) {
   return (
     <>
       {o.example ? <ExampleBadge /> : null}
+      {o.quoteRequest && !o.quoteRequest.acceptedAt && !["cancelled", "closed"].includes(o.status) ? (
+        <Badge tone="sun" dot>
+          {t("orders.quoteRequest")}
+        </Badge>
+      ) : null}
       {o.needsReview && ["received", "confirmed"].includes(o.status) ? (
         <Badge tone="orange" dot>
           {t("orders.checkSize")}

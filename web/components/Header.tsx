@@ -117,12 +117,13 @@ export function Header() {
           <button type="button" onClick={() => openTrack()} className="nav-link hidden text-[15px] font-medium whitespace-nowrap text-ink-soft hover:text-ink xl:inline">
             {t("nav.track")}
           </button>
-          <a href={portal} aria-label={t("nav.loginLabel")} title={t("nav.loginLabel")} className="hidden h-10 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-semibold whitespace-nowrap text-ink ring-1 ring-inset ring-ink/15 transition-colors hover:ring-ink/40 md:inline-flex lg:max-xl:w-10 lg:max-xl:justify-center lg:max-xl:px-0">
+          <a href={portal} title={t("nav.loginLabel")} className="hidden h-10 shrink-0 items-center gap-2 rounded-full px-4 text-[15px] font-semibold whitespace-nowrap text-ink ring-1 ring-inset ring-ink/15 transition-colors hover:ring-ink/40 md:inline-flex lg:max-xl:w-10 lg:max-xl:justify-center lg:max-xl:px-0">
             <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="8" r="4" />
               <path d="M4 21a8 8 0 0 1 16 0" />
             </svg>
-            <span className="lg:max-xl:sr-only">{t("nav.login")}</span>
+            <span className="lg:max-xl:sr-only">{t("nav.login")}</span>{" "}
+            <span className="sr-only">{t("nav.loginAs")}</span>
           </a>
           <span className="hidden sm:block">
             <Button size="sm" onClick={() => openQuote()}>

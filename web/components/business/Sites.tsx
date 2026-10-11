@@ -1,30 +1,31 @@
 "use client";
 // All of the company's sites: what needs attention, live status, the next delivery or pickup, and cost so far.
 import { useMemo, useState } from "react";
-import { bizOrders, type BizOrderSummary } from "@/lib/business";
+import { type BizOrderSummary, type SiteContact } from "@/lib/business";
 import { useT } from "../office/context";
 import { day, daysBetween, money } from "../office/format";
 import { jobLabel } from "../office/i18n";
-import { IOrders, IRight } from "../office/icons";
+import { IOrders, IRefresh, IRight } from "../office/icons";
 import { Async, Badge, Btn, Card, Chips, Empty, Input, Select, StatusBadge, cx } from "../office/ui";
-import { useBiz, useBizLoad } from "./context";
+import { useBiz } from "./context";
+import type { LoadState } from "./context";
 import { go } from "./BizApp";
 
-type Filter = "active" | "upcoming" | "ending" | "finished" | "all";
+type Filter = "action" | "active" | "upcoming" | "ending" | "finished" | "all";
 const ON_SITE = ["erected", "pickup_requested"];
 const BEFORE = ["received", "confirmed", "loading", "en_route"];
 /** Open on the first group that has sites: on site now, then coming up, then everything. */
 const firstFilter = (all: BizOrderSummary[]): Filter => {
   const real = all.filter((o) => !o.example);
+  if (real.some((o) => o.needsAction.length)) return "action";
   if (real.some((o) => ON_SITE.includes(o.status))) return "active";
   if (real.some((o) => BEFORE.includes(o.status))) return "upcoming";
   return "all";
 };
 
-export function Sites() {
+export function Sites({ st }: { st: LoadState<{ orders: BizOrderSummary[]; contacts: SiteContact[] }> }) {
   const { t } = useT();
   const { me, canOrder } = useBiz();
-  const st = useBizLoad(bizOrders, [], { poll: true });
   const [filter, setFilter] = useState<Filter | null>(null);
   const [q, setQ] = useState("");
   const [project, setProject] = useState("");
@@ -52,6 +53,7 @@ function SitesBody({ all, today, filter, setFilter, q, setQ, project, setProject
   const real = all.filter((o) => !o.example);
   const endingSoon = (o: BizOrderSummary) => ON_SITE.includes(o.status) && o.rentalEnd && daysBetween(today, o.rentalEnd) <= 7;
   const groups: Record<Filter, BizOrderSummary[]> = {
+    action: real.filter((o) => o.needsAction.length),
     active: real.filter((o) => ON_SITE.includes(o.status)),
     upcoming: real.filter((o) => BEFORE.includes(o.status)),
     ending: real.filter(endingSoon),
@@ -68,6 +70,7 @@ function SitesBody({ all, today, filter, setFilter, q, setQ, project, setProject
   const costNow = groups.active.reduce((s, o) => s + o.costToDate, 0);
 
   const kpis = [
+    { label: t("biz.kpi.action"), value: String(groups.action.length), f: "action" as Filter, warn: groups.action.length > 0 },
     { label: t("biz.kpi.onSite"), value: String(groups.active.length), f: "active" as Filter },
     { label: t("biz.kpi.upcoming"), value: String(groups.upcoming.length), f: "upcoming" as Filter },
     { label: t("biz.kpi.ending"), value: String(groups.ending.length), f: "ending" as Filter, warn: groups.ending.length > 0 },
@@ -83,7 +86,7 @@ function SitesBody({ all, today, filter, setFilter, q, setQ, project, setProject
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {kpis.map((k) => (
           <li key={k.label}>
             <button
@@ -105,7 +108,7 @@ function SitesBody({ all, today, filter, setFilter, q, setQ, project, setProject
           label={t("biz.filter")}
           value={filter}
           onChange={setFilter}
-          options={(["active", "upcoming", "ending", "finished", "all"] as Filter[]).map((f) => ({ key: f, label: t(`biz.f.${f}`), count: groups[f].length }))}
+          options={(["action", "active", "upcoming", "ending", "finished", "all"] as Filter[]).filter((f) => f !== "action" || groups.action.length || filter === "action").map((f) => ({ key: f, label: t(`biz.f.${f}`), count: groups[f].length }))}
         />
         <div className="ml-auto flex w-full flex-wrap gap-2 sm:w-auto">
           {projects.length ? (
@@ -119,7 +122,7 @@ function SitesBody({ all, today, filter, setFilter, q, setQ, project, setProject
         <ul className="mt-4 grid gap-3 md:grid-cols-2">
           {list.map((o) => (
             <li key={o.ref}>
-              <SiteCard o={o} today={today} />
+              <SiteCard o={o} today={today} canOrder={canOrder} />
             </li>
           ))}
         </ul>
@@ -132,7 +135,7 @@ function SitesBody({ all, today, filter, setFilter, q, setQ, project, setProject
   );
 }
 
-function SiteCard({ o, today }: { o: BizOrderSummary; today: string }) {
+function SiteCard({ o, today, canOrder }: { o: BizOrderSummary; today: string; canOrder: boolean }) {
   const i = useT();
   const { t, lang } = i;
   const left = o.rentalEnd ? daysBetween(today, o.rentalEnd) : null;
@@ -143,10 +146,12 @@ function SiteCard({ o, today }: { o: BizOrderSummary; today: string }) {
       })
     : null;
   return (
-    <a href={`#/sites/${o.ref}`} className="group flex h-full flex-col rounded-2xl bg-white p-4 ring-1 ring-line transition-shadow hover:shadow-lg hover:shadow-ink/5 hover:ring-ink/20 focus-visible:outline-2 focus-visible:outline-sun sm:p-5">
+    <div className={cx("group relative flex h-full flex-col rounded-2xl bg-white p-4 ring-1 transition-shadow focus-within:ring-2 focus-within:ring-sun hover:shadow-lg hover:shadow-ink/5 sm:p-5", o.needsAction.length ? "ring-2 ring-sun" : "ring-line hover:ring-ink/20")}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate font-display text-[16.5px] font-bold text-ink">{o.address}</p>
+          <a href={`#/sites/${o.ref}`} className="block truncate font-display text-[16.5px] font-bold text-ink outline-none after:absolute after:inset-0 after:rounded-2xl after:content-['']">
+            {o.address}
+          </a>
           <p className="text-[12.5px] text-muted">
             <span className="font-mono">{o.ref}</span> · {jobLabel(i, o.jobType)} · {o.area} m²
           </p>
@@ -166,18 +171,28 @@ function SiteCard({ o, today }: { o: BizOrderSummary; today: string }) {
         </div>
         <div className="rounded-xl bg-mist px-3 py-2">
           <p className="text-[11.5px] text-muted">{ON_SITE.includes(o.status) ? t("biz.costToDate") : t("biz.price")}</p>
-          <p className="font-semibold text-ink tabular-nums">{money(ON_SITE.includes(o.status) ? o.costToDate : o.total, lang, 0)}</p>
+          <p className="font-semibold text-ink tabular-nums">{o.quoteRequest === "open" ? t("biz.quote.badge") : money(ON_SITE.includes(o.status) ? o.costToDate : o.total, lang, 0)}</p>
         </div>
       </div>
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[12.5px]">
         {ON_SITE.includes(o.status) && left != null ? (
           <Badge tone={left < 0 ? "red" : left <= 7 ? "orange" : "neutral"}>{left < 0 ? t("biz.overdue", { n: -left }) : t("biz.daysLeft", { n: left })}</Badge>
         ) : null}
-        {o.pendingChanges ? <Badge tone="sun">{t("biz.changeWaiting")}</Badge> : null}
-        <span className="ml-auto inline-flex items-center gap-1 font-semibold text-ink-soft group-hover:text-ink">
+        {o.needsAction.map((k) => (
+          <Badge key={k} tone="sun">
+            {t(`biz.na.${k}`)}
+          </Badge>
+        ))}
+        {o.pendingChanges ? <Badge tone="neutral">{t("biz.changeWaiting")}</Badge> : null}
+        {canOrder ? (
+          <a href={`#/new/${o.ref}`} className="relative z-10 ml-auto inline-flex items-center gap-1 rounded-full px-2 py-1 font-semibold text-ink-soft hover:bg-mist hover:text-ink" aria-label={t("biz.againFor", { address: o.address })}>
+            <IRefresh className="h-4 w-4" /> {t("biz.again")}
+          </a>
+        ) : null}
+        <span aria-hidden className={cx("inline-flex items-center gap-1 font-semibold text-ink-soft group-hover:text-ink", !canOrder && "ml-auto")}>
           {t("biz.open")} <IRight className="h-4 w-4" />
         </span>
       </div>
-    </a>
+    </div>
   );
 }

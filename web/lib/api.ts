@@ -226,7 +226,7 @@ export interface OrderView {
 export interface PriceChange {
   id: string;
   status: "pending" | "accepted" | "declined" | "replaced" | "withdrawn" | "outdated";
-  source: "layout" | "change";
+  source: "layout" | "change" | "offer";
   reason: string;
   at: string;
   by: string;

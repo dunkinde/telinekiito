@@ -12,6 +12,7 @@ import {
   previewLayout,
   saveLayout,
   shareOrderPlan,
+  sendOffer,
   withdrawPriceChange,
   type LayoutAdjust,
   type LayoutBase,
@@ -69,6 +70,7 @@ import {
   Field,
   IconBtn,
   KV,
+  NumInput,
   Select,
   StatusBadge,
   TableWrap,
@@ -199,6 +201,7 @@ function SummaryTab({ o, crews, reload }: { o: OfficeOrderDetail; crews: Crew[];
             {t("od.zoneCheck.text", { zone: o.zoneCheck.zone, chosen: o.zoneCheck.chosen })}
           </Callout>
         ) : null}
+        {o.quoteRequest && !o.quoteRequest.acceptedAt && !["cancelled", "closed", "dismantled"].includes(o.status) ? <OfferCard o={o} reload={reload} /> : null}
         {o.priceChange ? <PriceChangeCard o={o} reload={reload} /> : null}
         <StatusCard o={o} reload={reload} />
         <ScheduleCard o={o} crews={crews} reload={reload} />
@@ -550,7 +553,7 @@ function ReviewCallout({ o }: { o: OfficeOrderDetail }) {
     <Callout tone="warn" title={t("rv.title")}>
       <ul className="list-disc space-y-0.5 pl-5">
         {(o.sizeCheck?.reasons || [{ code: "storeys_many" }]).map((r, k) => (
-          <li key={k}>{i.tk(`rv.${r.code}`, { n: r.n ?? "" }, r.code)}</li>
+          <li key={k}>{i.tk(`rv.${r.code}`, { n: r.n ?? "", l: r.l ?? "", w: r.w ?? "", e: r.e ?? "", what: (r.what || []).map((c) => i.tk(`biz.eng.${c}`, undefined, c)).join(", ") }, r.code)}</li>
         ))}
       </ul>
       <p className="mt-2">{photos ? t("rv.photos", { n: photos }) : t("rv.noPhotos")}</p>
@@ -558,6 +561,39 @@ function ReviewCallout({ o }: { o: OfficeOrderDetail }) {
         {t("rv.satellite")} <IExternal className="h-3.5 w-3.5" />
       </a>
     </Callout>
+  );
+}
+
+/** A business customer's quote request: the office's own price, which the customer accepts in the portal. */
+function OfferCard({ o, reload }: { o: OfficeOrderDetail; reload: () => void }) {
+  const { t, lang } = useT();
+  const { busy, run } = useAct();
+  const [total, setTotal] = useState<number | null>(Math.round(o.quote.net));
+  const [reason, setReason] = useState("");
+  const waiting = o.priceChange && o.priceChange.status === "pending" && o.priceChange.source === "offer";
+  async function send() {
+    if (!total || total <= 0 || !reason.trim()) return;
+    const r = await run("offer", () => sendOffer(o.ref, { net: total, reason: reason.trim() }), t("od.offer.sent"));
+    if (r) reload();
+  }
+  return (
+    <Card as="section" aria-labelledby="od-offer" className="ring-2 ring-sun">
+      <CardHead id="od-offer" title={t("od.offer.title")} sub={t("od.offer.sub", { by: o.quoteRequest?.by || "", engine: money(o.quote.total, lang) })} />
+      <div className="space-y-3 px-5 pb-5">
+        {waiting ? <Callout tone="info">{t("od.offer.waiting")}</Callout> : null}
+        <div className="grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)]">
+          <Field label={t("od.offer.total")} hint={o.reverseCharge ? t("od.offer.totalRc") : t("od.offer.vatAdded", { vat: money(Math.round((total || 0) * (o.quote.net ? o.quote.vat / o.quote.net : 0) * 100) / 100, lang) })}>
+            {(id, h) => <NumInput id={id} lang={lang} value={total} onChange={setTotal} suffix="€" describedBy={h} />}
+          </Field>
+          <Field label={t("od.offer.reason")} hint={t("od.offer.reasonHint")}>
+            {(id, h) => <TextArea id={id} rows={2} value={reason} onChange={setReason} maxLength={500} describedBy={h} />}
+          </Field>
+        </div>
+        <Btn variant="dark" size="sm" onClick={send} busy={busy === "offer"} disabled={!total || total <= 0 || !reason.trim()}>
+          {waiting ? t("od.offer.resend") : t("od.offer.send")}
+        </Btn>
+      </div>
+    </Card>
   );
 }
 

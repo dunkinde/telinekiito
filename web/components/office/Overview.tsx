@@ -144,6 +144,7 @@ function AlertsCard() {
                 onClick={() => {
                   if (!a.read) markAlertsRead([a.id]).then(refresh, () => {});
                   if (a.ref) openOrder(a.ref);
+                  else if (a.type === "biz_registration") nav("customers");
                   else nav("messages", a.type === "contact" ? { tab: "contact" } : {});
                 }}
                 className="flex w-full gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-mist"

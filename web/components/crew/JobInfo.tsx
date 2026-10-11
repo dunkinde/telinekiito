@@ -7,7 +7,7 @@ import { Plan3DOverlay } from "../scaffold3d/Plan3DOverlay";
 import { HouseModel } from "../HouseModel";
 import { useApp } from "./context";
 import { fmtDay, fmtNum, fmtStamp, roofLabel, sideLabel, stageLabel, statusLabel, urgencyLabel, jobTypeLabel, type Key } from "./i18n";
-import { ICamera, IChat, IClose, IWarn } from "./icons";
+import { ICamera, IChat, IClose, IKey, IWarn } from "./icons";
 import type { Op, ViewCard } from "./queue";
 import { Btn, Chip, cx, IconBtn, SectionTitle, Spinner } from "./ui";
 
@@ -105,10 +105,34 @@ export function SiteModel({ view }: { view: ViewCard }) {
 export function NotesBlock({ view, compact = false }: { view: ViewCard; compact?: boolean }) {
   const { t, lang } = useApp();
   const msgs = (view.messages || []).slice(-5).reverse();
-  const nothing = !view.notes && !view.internalNotes && !msgs.length;
+  const sc = view.siteContact;
+  const site = Boolean(view.siteInfo || sc?.name || sc?.phone);
+  const nothing = !site && !view.notes && !view.internalNotes && !msgs.length;
   if (nothing) return compact ? null : <p className="rounded-xl bg-mist px-4 py-3 text-[16px] text-muted">{t("drive.noNotes")}</p>;
   return (
     <div className="space-y-3">
+      {site ? (
+        <div className="rounded-2xl bg-white p-4 ring-2 ring-ink/80">
+          <p className="flex items-center gap-2 text-[14px] font-bold tracking-wide text-ink uppercase">
+            <IKey className="h-5 w-5" />
+            {t("drive.site")}
+          </p>
+          {view.siteInfo ? <p className="mt-1 text-[17px] leading-snug whitespace-pre-line text-ink">{view.siteInfo}</p> : null}
+          {sc?.name || sc?.phone ? (
+            <p className="mt-2 text-[16px] text-ink-soft">
+              {t("drive.siteContact")}: <span className="font-semibold text-ink">{sc.name}</span>
+              {sc.phone ? (
+                <>
+                  {sc.name ? " · " : ""}
+                  <a href={`tel:${sc.phone.replace(/[^\d+]/g, "")}`} className="font-semibold text-ink underline underline-offset-2">
+                    {sc.phone}
+                  </a>
+                </>
+              ) : null}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {view.notes ? (
         <div className="rounded-2xl bg-sun-soft p-4 ring-1 ring-sun/50">
           <p className="text-[14px] font-bold tracking-wide text-[#7a5a00] uppercase">{t("drive.notes")}</p>

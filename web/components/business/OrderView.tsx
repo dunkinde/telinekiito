@@ -9,6 +9,7 @@ import {
   bizMessage,
   bizOrder,
   bizPickup,
+  bizPlan,
   bizPreview,
   bizSaveDetails,
   bizUploadPhoto,
@@ -19,15 +20,18 @@ import {
   type BizDetails,
   type BizOrder,
   type ChangeBody,
-  type ChangePreview
+  type ChangePreview,
+  type SiteContact
 } from "@/lib/business";
 import { ORDER_FLOW } from "@/lib/platform";
 import { useT } from "../office/context";
 import { dateTime, day, daysBetween, money, telHref } from "../office/format";
-import { jobLabel, photoStageLabel, statusLabel, urgLabel } from "../office/i18n";
-import { IDoc, IDownload, IEdit, ILeft, IPickup, ISend } from "../office/icons";
-import { Async, Badge, Btn, Callout, Card, CardHead, Chips, Confirm, Dialog, Field, Input, KV, StatusBadge, TextArea, cx } from "../office/ui";
+import { jobLabel, photoStageLabel, sideText, statusLabel, urgLabel } from "../office/i18n";
+import { IDoc, IDownload, IEdit, ILeft, IPickup, IRefresh, ISend } from "../office/icons";
+import { Async, Badge, Btn, Callout, Card, CardHead, Chips, Confirm, Dialog, Field, Input, KV, Select, StatusBadge, TextArea, cx } from "../office/ui";
 import { PriceChangeMeta, PriceCompare } from "../office/PriceChange";
+import { Plan3DOverlay } from "../scaffold3d/Plan3DOverlay";
+import type { PlanSide } from "@/lib/plan";
 import { useBiz, useBizAct, useBizLoad } from "./context";
 import { shrinkImage } from "@/lib/image";
 
@@ -52,6 +56,7 @@ function Body({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void })
   const [changeOpen, setChangeOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [pickupAsk, setPickupAsk] = useState(false);
+  const [show3d, setShow3d] = useState(false);
   const finished = ["dismantled", "closed", "cancelled"].includes(o.status);
   const pending = o.changes.find((c) => c.status === "pending" && c.by.role === "customer");
   const onSite = o.status === "erected" || o.status === "pickup_requested";
@@ -79,18 +84,32 @@ function Body({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void })
           <StatusBadge status={o.status} />
         </div>
         {!o.cancelled ? <Progress o={o} /> : <Callout tone="danger" className="mt-4">{t("biz.cancelled")}</Callout>}
-        {canOrder && !finished ? (
+        {canOrder && !o.example ? (
           <div className="mt-5 flex flex-wrap gap-2">
-            <Btn variant="dark" size="sm" onClick={() => setChangeOpen(true)} disabled={!!pending} title={pending ? t("biz.ch.pendingHint") : undefined}>
-              {t("biz.ch.ask")}
-            </Btn>
-            <Btn size="sm" icon={<IPickup className="h-4 w-4" />} onClick={() => setPickupAsk(true)} disabled={o.status !== "erected"} title={o.status !== "erected" ? t("biz.pickupLater") : undefined}>
-              {t("biz.pickup")}
-            </Btn>
-            <Btn size="sm" variant="ghost" icon={<IEdit className="h-4 w-4" />} onClick={() => setDetailsOpen(true)}>
-              {t("biz.details.edit")}
+            {!finished ? (
+              <>
+                <Btn variant="dark" size="sm" onClick={() => setChangeOpen(true)} disabled={!!pending} title={pending ? t("biz.ch.pendingHint") : undefined}>
+                  {t("biz.ch.ask")}
+                </Btn>
+                <Btn size="sm" icon={<IPickup className="h-4 w-4" />} onClick={() => setPickupAsk(true)} disabled={o.status !== "erected"} title={o.status !== "erected" ? t("biz.pickupLater") : undefined}>
+                  {t("biz.pickup")}
+                </Btn>
+                <Btn size="sm" variant="ghost" icon={<IEdit className="h-4 w-4" />} onClick={() => setDetailsOpen(true)}>
+                  {t("biz.details.edit")}
+                </Btn>
+              </>
+            ) : null}
+            <Btn size="sm" variant="ghost" icon={<IRefresh className="h-4 w-4" />} href={`#/new/${o.ref}`}>
+              {t("biz.again")}
             </Btn>
           </div>
+        ) : null}
+        {o.needsAction.includes("rental_over") ? <Callout tone="warn" className="mt-4">{t("biz.na.rentalOverText")}</Callout> : null}
+        {o.quoteRequest === "open" && !o.cancelled ? <Callout tone="info" className="mt-4" title={t("biz.quote.openTitle")}>{t("biz.quote.open")}</Callout> : null}
+        {!o.cancelled ? (
+          <Btn size="sm" variant="light" className="mt-4" onClick={() => setShow3d(true)}>
+            {t("biz.p3d.open")}
+          </Btn>
         ) : null}
         {pending ? <p className="mt-3 text-[13px] text-ink-soft">{t("biz.ch.pendingHint")}</p> : null}
         {o.needsPhotos && !finished ? <Callout tone="warn" className="mt-4">{t("biz.photosNeeded")}</Callout> : null}
@@ -170,7 +189,7 @@ function Body({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void })
             <div className="px-5 pb-4">
               <KV
                 items={[
-                  { k: t("biz.totalVat"), v: <b className="tabular-nums">{money(o.total, lang)}</b> },
+                  { k: o.reverseCharge ? t("biz.totalRc") : o.quoteRequest === "open" ? t("biz.totalPrelim") : t("biz.totalVat"), v: <b className="tabular-nums">{money(o.total, lang)}</b> },
                   ...(onSite || finished ? [{ k: t("biz.costToDate"), v: <span className="tabular-nums">{money(o.costToDate, lang)}</span> }] : []),
                   { k: t("biz.discount"), v: o.quote.discountPct ? `−${o.quote.discountPct} %` : "–" }
                 ]}
@@ -221,6 +240,19 @@ function Body({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder) => void })
         </div>
       </div>
 
+      {show3d ? (
+        <Plan3DOverlay
+          load={() => bizPlan(o.ref).then((r) => r.plan)}
+          texts={{
+            hint: t("p3d.hint"), reset: t("p3d.reset"), loading: t("p3d.loading"), failed: t("p3d.failed"), close: t("p3d.close"), notice: t("biz.p3d.notice"),
+            sideName: (s: PlanSide) => sideText(i, s.name),
+            sideInfo: (s: PlanSide) => t("p3d.info", { bays: s.bays, levels: s.lifts, area: s.area })
+          }}
+          title={`${t("biz.p3d.title")} · ${o.address}`}
+          showSystem
+          onClose={() => setShow3d(false)}
+        />
+      ) : null}
       <ChangeDialog open={changeOpen} onClose={() => setChangeOpen(false)} o={o} onDone={onChange} />
       <DetailsDialog open={detailsOpen} onClose={() => setDetailsOpen(false)} o={o} onDone={onChange} />
       <Confirm
@@ -267,7 +299,7 @@ function PriceChangeCard({ o, onChange }: { o: BizOrder; onChange: (o: BizOrder)
   }
   return (
     <Card className="ring-2 ring-sun" aria-labelledby="biz-pc">
-      <CardHead id="biz-pc" title={t("biz.pc.title")} sub={t("biz.pc.sub")} />
+      <CardHead id="biz-pc" title={pc.source === "offer" ? t("biz.pc.offerTitle") : t("biz.pc.title")} sub={pc.source === "offer" ? t("biz.pc.offerSub") : t("biz.pc.sub")} />
       <div className="px-5 pb-5">
         <PriceCompare pc={pc} />
         <p className="mt-3 text-[12.5px] text-muted">{t("biz.pc.valid")}</p>
@@ -528,15 +560,31 @@ function DetailsDialog({ open, onClose, o, onDone }: { open: boolean; onClose: (
   );
 }
 
-/** PO, project, cost centre, site contact and site details (also used when ordering). */
-export function BizFields({ d, setD }: { d: BizDetails; setD: (d: BizDetails) => void }) {
+/** PO, project, cost centre, site contact and site details (also used when ordering, with earlier contacts to pick). */
+export function BizFields({ d, setD, contacts = [] }: { d: BizDetails; setD: (d: BizDetails) => void; contacts?: SiteContact[] }) {
   const { t } = useT();
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <Field label={t("biz.po")} optional>{(id) => <Input id={id} value={d.po} onChange={(v) => setD({ ...d, po: v })} maxLength={40} />}</Field>
       <Field label={t("biz.project")} optional>{(id) => <Input id={id} value={d.project} onChange={(v) => setD({ ...d, project: v })} maxLength={80} />}</Field>
       <Field label={t("biz.costCentre")} optional>{(id) => <Input id={id} value={d.costCentre} onChange={(v) => setD({ ...d, costCentre: v })} maxLength={40} />}</Field>
-      <div className="hidden sm:block" />
+      {contacts.length ? (
+        <Field label={t("biz.contacts.saved")} optional>
+          {(id) => (
+            <Select
+              id={id}
+              value=""
+              onChange={(v) => {
+                const c = contacts[Number(v)];
+                if (c) setD({ ...d, siteContact: { name: c.name, phone: c.phone } });
+              }}
+              options={[{ value: "", label: t("biz.contacts.pick") }, ...contacts.map((c, k) => ({ value: String(k), label: [c.name, c.phone].filter(Boolean).join(" · ") }))]}
+            />
+          )}
+        </Field>
+      ) : (
+        <div className="hidden sm:block" />
+      )}
       <Field label={t("biz.siteContactName")} optional>{(id) => <Input id={id} value={d.siteContact.name} onChange={(v) => setD({ ...d, siteContact: { ...d.siteContact, name: v } })} maxLength={80} />}</Field>
       <Field label={t("biz.siteContactPhone")} optional hint={t("biz.siteContactHint")}>
         {(id, h) => <Input id={id} type="tel" value={d.siteContact.phone} onChange={(v) => setD({ ...d, siteContact: { ...d.siteContact, phone: v } })} maxLength={40} describedBy={h} />}

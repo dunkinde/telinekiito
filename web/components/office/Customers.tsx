@@ -12,8 +12,8 @@ import { ICopy, ICustomers, IEdit, IExternal, ITrash } from "./icons";
 import { RefLink } from "./bits";
 import { Async, Badge, Btn, Callout, Card, Confirm, Dialog, Empty, Field, IconBtn, Input, NumInput, Switch, TextArea, Toolbar, cx, useCopy } from "./ui";
 
-type Draft = { name: string; businessId: string; contactName: string; email: string; phone: string; code: string; discountPct: number | null; paymentDays: number | null; notes: string; active: boolean; billingAddress: string; einvoiceAddress: string; einvoiceOperator: string };
-const blank: Draft = { name: "", businessId: "", contactName: "", email: "", phone: "", code: "", discountPct: 0, paymentDays: 14, notes: "", active: true, billingAddress: "", einvoiceAddress: "", einvoiceOperator: "" };
+type Draft = { name: string; businessId: string; contactName: string; email: string; phone: string; code: string; discountPct: number | null; paymentDays: number | null; notes: string; active: boolean; billingAddress: string; einvoiceAddress: string; einvoiceOperator: string; reverseCharge: boolean };
+const blank: Draft = { name: "", businessId: "", contactName: "", email: "", phone: "", code: "", discountPct: 0, paymentDays: 14, notes: "", active: true, billingAddress: "", einvoiceAddress: "", einvoiceOperator: "", reverseCharge: false };
 
 function AccountDialog({ open, onClose, account, onSaved }: { open: boolean; onClose: () => void; account: Account | null; onSaved: () => void }) {
   const { t, lang } = useT();
@@ -39,7 +39,8 @@ function AccountDialog({ open, onClose, account, onSaved }: { open: boolean; onC
               active: account.active,
               billingAddress: account.billingAddress || "",
               einvoiceAddress: account.einvoiceAddress || "",
-              einvoiceOperator: account.einvoiceOperator || ""
+              einvoiceOperator: account.einvoiceOperator || "",
+              reverseCharge: Boolean(account.reverseCharge)
             }
           : blank
       );
@@ -61,7 +62,8 @@ function AccountDialog({ open, onClose, account, onSaved }: { open: boolean; onC
       active: d.active,
       billingAddress: d.billingAddress.trim(),
       einvoiceAddress: d.einvoiceAddress.trim(),
-      einvoiceOperator: d.einvoiceOperator.trim()
+      einvoiceOperator: d.einvoiceOperator.trim(),
+      reverseCharge: d.reverseCharge
     };
     const r = await run("save", () => saveAccount(body, account?.id), account ? t("acc.saved") : t("acc.created"));
     if (r) {
@@ -128,6 +130,7 @@ function AccountDialog({ open, onClose, account, onSaved }: { open: boolean; onC
         <Field label={t("acc.notes")} optional className="sm:col-span-2">
           {(id) => <TextArea id={id} rows={3} value={d.notes} onChange={(v) => up({ notes: v })} maxLength={1000} />}
         </Field>
+        <Switch className="sm:col-span-2" checked={d.reverseCharge} onChange={(v) => up({ reverseCharge: v })} label={t("acc.rc")} hint={t("acc.rcHint")} />
         <Switch className="sm:col-span-2" checked={d.active} onChange={(v) => up({ active: v })} label={t("acc.active")} hint={t("acc.activeHint")} />
         <button type="submit" className="sr-only">
           {t("ui.save")}
@@ -182,6 +185,7 @@ function AccountCard({ a, onEdit, onDelete, onUsers }: { a: Account; onEdit: () 
         <Badge tone="sun">{t("acc.discountV", { pct: a.discountPct })}</Badge>
         <Badge tone="neutral">{t("acc.payDaysV", { n: a.paymentDays })}</Badge>
         {a.einvoiceAddress ? <Badge tone="green">{t("acc.einvoiceOn")}</Badge> : null}
+        {a.reverseCharge ? <Badge tone="blue">{t("acc.rcOn")}</Badge> : null}
       </div>
       <div className="mt-3 px-5">
         <Btn size="xs" variant="light" onClick={onUsers}>

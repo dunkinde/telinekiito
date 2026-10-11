@@ -30,13 +30,13 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
   const chosen = useRef(false);
   useEffect(() => {
     try {
-      // A link from the website brings its language (?lang=en); otherwise the one chosen on this device.
+      // The language chosen on this device; otherwise the website's (?lang=en) until the user's own applies.
+      const s = window.localStorage.getItem(LANG_KEY);
       const q = new URLSearchParams(window.location.search).get("lang");
-      const s = isLang(q) ? q : window.localStorage.getItem(LANG_KEY);
       if (isLang(s)) {
         chosen.current = true;
         setLangState(s);
-      }
+      } else if (isLang(q)) setLangState(q);
     } catch {
       /* storage blocked */
     }
@@ -116,6 +116,8 @@ interface Office {
   crewById: (id?: string | null) => Crew | undefined;
   orders: FullOrder[] | null;
   alerts: Alert[] | null;
+  /** Business account requests waiting for the owner. */
+  registrations: number;
   pending: ChangeRequest[] | null;
   /** Grows after every refresh; lists that follow live data reload when it changes. */
   version: number;
@@ -141,6 +143,7 @@ export function OfficeProvider({ me, onLogout, onExpired, children }: { me: Me; 
   const [orders, setOrders] = useState<FullOrder[] | null>(null);
   const [crews, setCrews] = useState<Crew[]>(() => me.crews.map((c) => ({ ...c, truck: "" })));
   const [alerts, setAlerts] = useState<Alert[] | null>(null);
+  const [registrations, setRegistrations] = useState(0);
   const [pending, setPending] = useState<ChangeRequest[] | null>(null);
   const [version, setVersion] = useState(0);
   const [route, setRoute] = useState<Route>({ section: homeSection(me.user.role), params: {} });
@@ -169,7 +172,10 @@ export function OfficeProvider({ me, onLogout, onExpired, children }: { me: Me; 
         setOrders(o.value.orders);
         setCrews(o.value.crews);
       }
-      if (a.status === "fulfilled") setAlerts(a.value.alerts);
+      if (a.status === "fulfilled") {
+        setAlerts(a.value.alerts);
+        setRegistrations(a.value.registrations || 0);
+      }
       if (c.status === "fulfilled") setPending(c.value.changes);
       const auth = [o, a, c].find((r) => r.status === "rejected" && isAuthError(r.reason));
       if (auth && auth.status === "rejected") fail(auth.reason);
@@ -255,6 +261,7 @@ export function OfficeProvider({ me, onLogout, onExpired, children }: { me: Me; 
       crewById: (id) => (id ? crews.find((c) => c.id === id) : undefined),
       orders,
       alerts,
+      registrations,
       pending,
       version,
       refresh,
@@ -267,7 +274,7 @@ export function OfficeProvider({ me, onLogout, onExpired, children }: { me: Me; 
       notify: toast,
       logout: onLogout
     }),
-    [me, owner, crews, orders, alerts, pending, version, refresh, route, nav, setParams, openOrder, closeOrder, fail, toast, onLogout]
+    [me, owner, crews, orders, alerts, registrations, pending, version, refresh, route, nav, setParams, openOrder, closeOrder, fail, toast, onLogout]
   );
   return <OfficeCtx.Provider value={value}>{children}</OfficeCtx.Provider>;
 }

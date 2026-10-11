@@ -107,6 +107,12 @@ test("business portal: users, own orders only, ordering, changes, invoices, Finv
 
   // Own details are edited directly; a change of rental is previewed, then waits for the office.
   assert.equal((await req("PATCH", `/api/biz/orders/${ref}`, { po: "PO-78" }, a)).json.order.business.po, "PO-78");
+  // Site details reach the crew's job card, also when changed later.
+  await req("PATCH", `/api/biz/orders/${ref}`, { siteInfo: "Portin koodi 5678, purku pihalla", siteContact: { name: "Tiina", phone: "040 777 1234" } }, a);
+  const card = (await req("GET", `/api/crew/jobs/${ref}`, undefined, owner)).json;
+  const job = card.job || card.card || card;
+  assert.equal(job.siteInfo, "Portin koodi 5678, purku pihalla");
+  assert.deepEqual(job.siteContact, { name: "Tiina", phone: "040 777 1234" });
   const pv = (await req("POST", `/api/biz/orders/${ref}/preview`, { type: "days", days: 42 }, a)).json;
   assert.equal(pv.before.days, 28);
   assert.equal(pv.after.days, 42);
@@ -259,4 +265,92 @@ test("registration: a company registers, the office approves it, then the PIN wo
   // Bots filling the hidden field get "ok" and nothing is saved.
   assert.equal((await register({ ...form, company: "Botti Oy", website: "x" })).status, 200);
   assert.ok(!(await list()).some((a) => a.name === "Botti Oy"));
+});
+
+test("business pricing: systems side by side, 3+ storeys flagged, quote requests answered with an offer, invoices at confirmed rates", async () => {
+  const owner = await loginAs({ password: PASSWORD });
+  const acc = (await req("POST", "/api/office/accounts", { name: "Iso Rakennus Oy", businessId: "1234567-1", discountPct: 10 }, owner)).json.account;
+  await req("POST", `/api/office/accounts/${acc.id}/users`, { name: "Iida", phone: "040 900 0101", pin: "2222", role: "admin" }, owner);
+  const c = await bizLogin("040 900 0101", "2222");
+
+  // Every system with its brand, load class and price with the company's discount; the 3D plan names the system.
+  const q = await req("POST", "/api/biz/quote", { ...house, storeys: 4 }, c);
+  assert.equal(q.status, 200, q.text);
+  assert.deepEqual(q.json.types.map((t) => t.system).sort(), ["layher", "monzon"]);
+  const lay = q.json.types.find((t) => t.system === "layher");
+  assert.equal(lay.loadClass, 3);
+  assert.equal(lay.kgM2, 200);
+  assert.match(lay.name, /Layher/);
+  assert.equal(lay.total, q.json.quote.total);
+  assert.ok(q.json.quote.lines.some((l) => l.key === "discount"));
+  assert.ok(q.json.plan.systemName);
+  assert.equal(q.json.review.storeys, 4);
+  // The public calculator still never names a brand.
+  assert.equal((await req("POST", "/api/quote", house)).json.plan.systemName, undefined);
+
+  // A 3+ storey building ordered in the portal is flagged for the office's check, like on the website.
+  const tall = await req("POST", "/api/biz/orders", { ...house, start: start(), address: "Kerrostalo 4, Vantaa", storeys: 4, system: "monzon" }, c);
+  assert.equal(tall.status, 200, tall.text);
+  const tallOffice = (await req("GET", `/api/office/orders/${tall.json.ref}`, undefined, owner)).json.order;
+  assert.equal(tallOffice.needsReview, true);
+  assert.equal(tallOffice.sizeCheck.reasons[0].code, "storeys_many");
+  assert.equal(tallOffice.house.system, "monzon");
+
+  // Too big for the online price without a 3D model: no price, but a quote request goes through.
+  const big = { ...house, length: 80, width: 30 };
+  assert.equal((await req("POST", "/api/biz/quote", big, c)).json.error, "model_required");
+  assert.equal((await req("POST", "/api/biz/orders", { ...big, start: start(), address: "Halli 1, Vantaa" }, c)).status, 400);
+  const asked = await req("POST", "/api/biz/orders", { ...big, start: start(), address: "Halli 1, Vantaa", request: true }, c);
+  assert.equal(asked.status, 200, asked.text);
+  const ref = asked.json.ref;
+  assert.equal(asked.json.order.quoteRequest, "open");
+  assert.equal((await req("PATCH", `/api/office/orders/${ref}`, { status: "confirmed" }, owner)).json.error, "offer_open");
+  // The office's offer: the company accepts it in the portal, then the order can be confirmed.
+  assert.equal((await req("POST", `/api/office/orders/${ref}/offer`, { net: 9800 }, owner)).json.error, "reason_required");
+  const offered = await req("POST", `/api/office/orders/${ref}/offer`, { net: 9800, reason: "Halli, 2 nosturikäyntiä" }, owner);
+  assert.equal(offered.status, 200, offered.text);
+  const listed = (await req("GET", "/api/biz/orders", undefined, c)).json.orders.find((o) => o.ref === ref);
+  assert.ok(listed.needsAction.includes("price_change"), listed.needsAction.join());
+  const pcId = (await req("GET", `/api/biz/orders/${ref}`, undefined, c)).json.order.priceChange.id;
+  const acc2 = await req("POST", `/api/biz/orders/${ref}/price-change/accept`, { id: pcId }, c);
+  assert.equal(acc2.status, 200, acc2.text);
+  assert.equal(acc2.json.order.quote.net, 9800);
+  assert.equal(acc2.json.order.quoteRequest, "accepted");
+  assert.equal((await req("PATCH", `/api/office/orders/${ref}`, { status: "confirmed" }, owner)).status, 200);
+  assert.ok((await req("GET", `/api/biz/orders/${ref}/plan`, undefined, c)).json.plan.systemName);
+
+  // Rates raised in Settings later don't change the invoice: it uses the rates the price was confirmed with.
+  const before = (await req("GET", "/api/office/pricing", undefined, owner)).json.pricing;
+  await req("PUT", "/api/office/pricing", { pricing: { ...before, rentPerM2Day: before.rentPerM2Day * 3, erectPerM2: before.erectPerM2 * 2 } }, owner);
+  const iv = (await req("POST", `/api/office/orders/${tall.json.ref}/invoice`, undefined, owner)).json.invoice;
+  assert.equal(iv.net, tallOffice.quote.net);
+  const iv2 = (await req("POST", `/api/office/orders/${ref}/invoice`, undefined, owner)).json.invoice;
+  assert.equal(iv2.net, 9800);
+  assert.ok(iv2.lines.some((l) => l.key === "offer"));
+  await req("PUT", "/api/office/pricing", { pricing: before }, owner);
+
+  // Reverse charge: needs a business ID; then no VAT on the company's prices and invoices.
+  const noId = (await req("POST", "/api/office/accounts", { name: "Ei Tunnusta Oy" }, owner)).json.account;
+  assert.equal((await req("PATCH", `/api/office/accounts/${noId.id}`, { reverseCharge: true }, owner)).json.error, "business_id_required");
+  await req("PATCH", `/api/office/accounts/${acc.id}`, { reverseCharge: true }, owner);
+  const rcq = (await req("POST", "/api/biz/quote", house, c)).json;
+  assert.equal(rcq.quote.vat, 0);
+  assert.equal(rcq.quote.total, rcq.quote.net);
+  assert.equal(rcq.quote.reverseCharge, true);
+  assert.ok(rcq.types.every((t) => t.vat === 0));
+  // The invoice and its Finvoice file say so: 0 %, VAT code AE, the legal note and both business IDs.
+  const rcOrder = (await req("POST", "/api/biz/orders", { ...house, start: start(), address: "Käännetty 1, Vantaa" }, c)).json;
+  assert.equal(rcOrder.order.quote.vat, 0);
+  const rcIv = (await req("POST", `/api/office/orders/${rcOrder.ref}/invoice`, undefined, owner)).json.invoice;
+  assert.equal(rcIv.vatPct, 0);
+  assert.equal(rcIv.reverseCharge, true);
+  assert.equal(rcIv.total, rcIv.net);
+  const xml = (await req("GET", `/api/office/invoices/${rcIv.id}/finvoice`, undefined, owner)).text;
+  assert.match(xml, /<VatCode>AE<\/VatCode>/);
+  assert.match(xml, /<RowVatCode>AE<\/RowVatCode>/);
+  assert.match(xml, /<VatRatePercent>0,00<\/VatRatePercent>/);
+  assert.match(xml, /AVL 8 c §/);
+  assert.match(xml, /<BuyerOrganisationTaxCode>FI12345671<\/BuyerOrganisationTaxCode>/);
+  const doc = (await req("GET", `/api/office/invoices/${rcIv.id}/doc`, undefined, owner)).text;
+  if (doc.includes("<html")) assert.match(doc, /8 c §/);
 });

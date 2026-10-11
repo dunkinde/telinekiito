@@ -86,6 +86,8 @@ export function useBizLoad<R>(fn: () => Promise<R>, deps: readonly unknown[], op
   return { data, error, loading, reload: () => run(), setData };
 }
 
+export type LoadState<R> = ReturnType<typeof useBizLoad<R>>;
+
 /** Runs an action with a busy key, shows the success toast or the error. */
 export function useBizAct() {
   const { fail, notify } = useBiz();

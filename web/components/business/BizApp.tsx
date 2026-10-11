@@ -1,8 +1,8 @@
 "use client";
 // Business customer portal (/business): a company's people follow every site live, order new ones,
 // ask for changes (the office approves them) and get their invoices and e-invoice files. FI / EN / RU.
-import { useCallback, useEffect, useState } from "react";
-import { bizLogin, bizLogout, bizMe, type BizMe } from "@/lib/business";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { bizLogin, bizLogout, bizMe, bizOrders, type BizMe, type BizOrderSummary, type SiteContact } from "@/lib/business";
 import { Logo } from "../Logo";
 import { ToastProvider } from "../ui/Toast";
 import { I18nProvider, isAuthError, useT } from "../office/context";
@@ -11,7 +11,7 @@ import { IInvoice, ILock, ILogout, IOrders, ITeam } from "../office/icons";
 import { LangSwitch } from "../office/Login";
 import { Btn, Callout, Field, Input, Spinner, cx } from "../office/ui";
 import { IconPlus } from "../ui/Icons";
-import { BizProvider, useBiz } from "./context";
+import { BizProvider, useBiz, useBizLoad } from "./context";
 import { Sites } from "./Sites";
 import { OrderView } from "./OrderView";
 import { NewOrder } from "./NewOrder";
@@ -87,7 +87,12 @@ function Root() {
 function LoggedOut({ onDone }: { onDone: () => void }) {
   const [hash, setHash] = useState("");
   useEffect(() => {
-    const on = () => setHash(window.location.hash);
+    let first = true;
+    const on = () => {
+      setHash(window.location.hash);
+      if (!first) window.scrollTo(0, 0);
+      first = false;
+    };
     on();
     window.addEventListener("hashchange", on);
     return () => window.removeEventListener("hashchange", on);
@@ -172,10 +177,20 @@ function Shell() {
   const { t } = useT();
   const { me, canOrder, isAdmin, logout } = useBiz();
   const [route, setRoute] = useState<Route>({ page: "sites" });
+  // The company's sites, polled live: the list and the count of sites waiting for the company come from here.
+  const accountantOnly = me.user.role === "accountant";
+  const orders = useBizLoad<{ orders: BizOrderSummary[]; contacts: SiteContact[] }>(() => (accountantOnly ? Promise.resolve({ orders: [], contacts: [] }) : bizOrders()), [accountantOnly], { poll: true });
+  const waiting = (orders.data?.orders || []).filter((o) => !o.example && o.needsAction.length).length;
+  const reloadOrders = useRef(orders.reload);
+  reloadOrders.current = orders.reload;
   useEffect(() => {
+    let first = true;
     const on = () => {
       setRoute(parse(window.location.hash));
       window.scrollTo(0, 0);
+      // After acting on a site, the list and the count catch up when going back.
+      if (!first) void reloadOrders.current();
+      first = false;
     };
     on();
     window.addEventListener("hashchange", on);
@@ -184,7 +199,7 @@ function Shell() {
   // Accountants see invoices only.
   const accountant = me.user.role === "accountant";
   const tabs = [
-    ...(!accountant ? [{ hash: "#/sites", label: t("biz.nav.sites"), icon: IOrders, on: route.page === "sites" || route.page === "order" }] : []),
+    ...(!accountant ? [{ hash: "#/sites", label: t("biz.nav.sites"), icon: IOrders, on: route.page === "sites" || route.page === "order", count: waiting }] : []),
     { hash: "#/invoices", label: t("biz.nav.invoices"), icon: IInvoice, on: route.page === "invoices" },
     ...(isAdmin ? [{ hash: "#/users", label: t("biz.nav.users"), icon: ITeam, on: route.page === "users" }] : [])
   ];
@@ -224,6 +239,11 @@ function Shell() {
             >
               <x.icon className={cx("h-[18px] w-[18px]", x.on ? "text-sun" : "")} />
               {x.label}
+              {"count" in x && x.count ? (
+                <span className="grid h-5 min-w-5 place-items-center rounded-full bg-sun px-1.5 text-[11.5px] font-bold text-ink" aria-label={t("biz.nav.actionCount", { n: x.count })}>
+                  {x.count}
+                </span>
+              ) : null}
             </a>
           ))}
           {canOrder ? (
@@ -234,11 +254,11 @@ function Shell() {
         </nav>
       </header>
       <main id="main" tabIndex={-1} className="mx-auto max-w-6xl px-4 py-6 outline-none sm:px-6 sm:py-8">
-        {page.page === "sites" ? <Sites /> : null}
+        {page.page === "sites" ? <Sites st={orders} /> : null}
         {page.page === "order" ? <OrderView refNo={page.ref} /> : null}
-        {page.page === "new" ? canOrder ? <NewOrder copyFrom={page.copy} /> : <Sites /> : null}
+        {page.page === "new" ? canOrder ? <NewOrder key={page.copy || "new"} copyFrom={page.copy} onPlaced={() => void orders.reload()} /> : <Sites st={orders} /> : null}
         {page.page === "invoices" ? <Invoices /> : null}
-        {page.page === "users" ? isAdmin ? <Users /> : <Sites /> : null}
+        {page.page === "users" ? isAdmin ? <Users /> : <Sites st={orders} /> : null}
       </main>
       <div className="flex justify-center pb-8 sm:hidden">
         <LangSwitch />

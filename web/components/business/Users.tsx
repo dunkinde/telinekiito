@@ -25,6 +25,9 @@ export function Users() {
         <div>
           <h1 className="font-display text-[1.7rem] font-extrabold tracking-[-0.01em] text-ink">{t("biz.users.title")}</h1>
           <p className="text-[14px] text-muted">{t("biz.users.sub")}</p>
+          <p className="mt-1 text-[13.5px] text-ink-soft">
+            {t("biz.users.code")} <span className="rounded-md bg-ink px-2 py-0.5 font-mono text-[13px] font-bold tracking-wider text-white">{me.account.code}</span>
+          </p>
         </div>
         <Btn variant="primary" size="sm" icon={<IconPlus className="h-4 w-4" />} onClick={() => setAdding(true)}>
           {t("biz.users.add")}

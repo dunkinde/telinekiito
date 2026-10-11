@@ -1,7 +1,7 @@
 "use client";
 // Registration for a business account: the company and its first admin, who chooses the PIN. The office calls the
 // company and approves the account; until then logging in says the registration is waiting.
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { bizRegister } from "@/lib/business";
 import { Logo } from "../Logo";
 import { useT } from "../office/context";
@@ -47,6 +47,10 @@ export function Register() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const up = (p: Partial<Form>) => setF((x) => ({ ...x, ...p }));
+  const doneRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (done) doneRef.current?.focus();
+  }, [done]);
 
   const errs: Partial<Record<keyof Form, string>> = {};
   if (!f.company.trim()) errs.company = t("biz.reg.err.required");
@@ -96,7 +100,7 @@ export function Register() {
       <AuthFrame>
         <div className="w-full max-w-[520px] rounded-3xl bg-white p-6 shadow-[0_24px_60px_-20px_rgba(14,18,23,0.35)] ring-1 ring-line sm:p-8" role="status">
           <span aria-hidden className="grid h-12 w-12 place-items-center rounded-2xl bg-sun text-2xl font-bold text-ink">✓</span>
-          <h1 className="mt-4 font-display text-[1.6rem] leading-tight font-extrabold text-ink">{t("biz.reg.doneTitle")}</h1>
+          <h1 ref={doneRef} tabIndex={-1} className="mt-4 font-display text-[1.6rem] leading-tight font-extrabold text-ink outline-none">{t("biz.reg.doneTitle")}</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-ink-soft">{t("biz.reg.doneText", { phone: f.phone.trim() })}</p>
           <Btn variant="dark" className="mt-6" href="#/">
             {t("biz.reg.back")}
@@ -136,11 +140,8 @@ export function Register() {
             </Field>
           </fieldset>
           <fieldset className="grid gap-4 border-t border-line pt-5 sm:grid-cols-2">
-            <legend className="sr-only">{t("biz.reg.you")}</legend>
-            <div className="sm:col-span-2" aria-hidden>
-              <p className="font-display text-[15px] font-bold text-ink">{t("biz.reg.you")}</p>
-              <p className="mt-0.5 text-[13px] text-muted">{t("biz.reg.youHint")}</p>
-            </div>
+            <legend className="mb-1 font-display text-[15px] font-bold text-ink">{t("biz.reg.you")}</legend>
+            <p className="-mt-3 text-[13px] text-muted sm:col-span-2">{t("biz.reg.youHint")}</p>
             <Field label={t("biz.reg.name")} error={show("contactName")} className="sm:col-span-2">
               {(id, d) => <Input id={id} {...inv("contactName")} value={f.contactName} onChange={(v) => up({ contactName: v })} maxLength={80} autoComplete="name" describedBy={d} required />}
             </Field>

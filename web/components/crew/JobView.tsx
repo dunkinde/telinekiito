@@ -171,6 +171,10 @@ export function JobView({ refId, kind }: { refId: string; kind?: "delivery" | "p
   }
 
   const shown = viewStep && flow.steps.includes(viewStep) ? viewStep : flow.current;
+
+  // Notes open by default when there is something to read, the site details of a business customer included.
+
+  const hasNotes = !!(view.notes || view.internalNotes || view.messages?.length || view.siteInfo || view.siteContact?.name || view.siteContact?.phone);
   const isCurrent = shown === flow.current;
   const pickupMode = flow.mode === "pickup";
   const a = view.assignment || {};
@@ -295,8 +299,8 @@ export function JobView({ refId, kind }: { refId: string; kind?: "delivery" | "p
           <Collapsible
             title={t("drive.notes")}
             icon={<IChat className="h-5 w-5" />}
-            open={open.notes ?? !!(view.notes || view.internalNotes || view.messages?.length)}
-            onToggle={() => setOpen((o) => ({ ...o, notes: !(o.notes ?? !!(view.notes || view.internalNotes || view.messages?.length)) }))}
+            open={open.notes ?? hasNotes}
+            onToggle={() => setOpen((o) => ({ ...o, notes: !(o.notes ?? hasNotes) }))}
           >
             <NotesBlock view={view} />
           </Collapsible>

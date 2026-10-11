@@ -1,5 +1,6 @@
 // Typed client for the business customer portal (/business) and the office's management of portal users.
-import type { JobType, PriceChange, Quote, Urgency, Zone } from "./api";
+import type { JobType, PriceChange, Quote, QuoteResult, SystemKey, Urgency, Zone } from "./api";
+import type { ScaffoldPlan } from "./plan";
 import { call, type House, type OrderStatus, type StaffLang } from "./platform";
 
 export type BizRole = "admin" | "manager" | "accountant";
@@ -28,6 +29,8 @@ export interface BizAccount {
   einvoiceAddress: string;
   einvoiceOperator: string;
   email: string;
+  /** Reverse charge VAT (AVL 8 c §): prices and invoices without VAT. */
+  reverseCharge?: boolean;
 }
 export interface BizMe {
   user: BizUser;
@@ -39,6 +42,9 @@ export interface BizMe {
   minRentDays?: number;
 }
 
+/** What waits for the company on a site. */
+export type BizAction = "price_change" | "photos" | "message" | "rental_over";
+export interface SiteContact { name: string; phone: string; lastUsed: string; sites: number }
 export interface NextEvent { kind: "delivery" | "pickup" | "rentalEnd"; date: string; time: string; planned: boolean }
 export interface BizOrderSummary {
   ref: string;
@@ -64,6 +70,11 @@ export interface BizOrderSummary {
   createdAt: string;
   updatedAt: string;
   example: boolean;
+  needsAction: BizAction[];
+  /** A quote request: "open" until the company accepts the office's offer. */
+  quoteRequest: "open" | "accepted" | null;
+  /** Priced without VAT (reverse charge). */
+  reverseCharge: boolean;
 }
 export interface BizChange {
   id: string;
@@ -116,7 +127,41 @@ export interface BizRegistration { company: string; businessId: string; billingA
 export const bizRegister = (body: BizRegistration) => call<{ ok: true }>("POST", "/api/biz/register", body);
 export const bizLogout = () => call<{ ok: true }>("POST", "/api/biz/logout");
 export const bizMe = () => call<BizMe>("GET", "/api/biz/me");
-export const bizOrders = () => call<{ orders: BizOrderSummary[] }>("GET", "/api/biz/orders");
+/** One scaffold system priced for the company's house, with its brand, load class and limits. */
+export interface BizType {
+  system: SystemKey;
+  name: string;
+  loadClass: number;
+  kNm2: number;
+  kgM2: number;
+  widthClass: string;
+  walkway: number;
+  bay: number;
+  frameWidth: number;
+  lift: number;
+  maxHeight: number;
+  maxHeightBrackets: number | null;
+  /** Highest point of this scaffold on this house, m. */
+  height: number | null;
+  total: number;
+  net: number;
+  vat: number;
+  area: number;
+  perM2: number | null;
+  weightKg: number;
+  /** What needs the office's own plan or calculation: height, roof_edge, roof_anchor, not_covered, other. */
+  engineer: string[];
+  earliest: string | null;
+}
+export interface BizQuote extends QuoteResult {
+  system: SystemKey;
+  types: BizType[];
+  plan?: ScaffoldPlan;
+  review: { storeys: number | null; large: boolean; measured: boolean; engineer: string[]; height: number | null; request: boolean };
+}
+export const bizQuote = (body: Record<string, unknown>) => call<BizQuote>("POST", "/api/biz/quote", body);
+export const bizPlan = (ref: string) => call<{ plan: ScaffoldPlan }>("GET", `/api/biz/orders/${enc(ref)}/plan`);
+export const bizOrders = () => call<{ orders: BizOrderSummary[]; contacts: SiteContact[] }>("GET", "/api/biz/orders");
 export const bizOrder = (ref: string) => call<{ order: BizOrder }>("GET", `/api/biz/orders/${enc(ref)}`);
 export const bizPlaceOrder = (body: Record<string, unknown>) => call<{ ref: string; order: BizOrder }>("POST", "/api/biz/orders", body);
 export const bizSaveDetails = (ref: string, body: Partial<BizDetails>) => call<{ order: BizOrder }>("PATCH", `/api/biz/orders/${enc(ref)}`, body);

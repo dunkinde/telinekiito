@@ -120,7 +120,11 @@ export interface FullOrder {
   internalNotes?: string;
   /** The size from online data can't be trusted: the office checks it before confirming. */
   needsReview?: boolean;
-  sizeCheck?: { reasons: { code: string; n?: number }[]; at: string };
+  sizeCheck?: { reasons: { code: string; n?: number; l?: number; w?: number; e?: number; what?: string[] }[]; at: string };
+  /** A business customer's quote request: the office sends an offer; it's accepted before the order is confirmed. */
+  quoteRequest?: { at: string; by: string; asked: boolean; reasons: string[]; acceptedAt?: string };
+  /** Priced without VAT (reverse charge, AVL 8 c §). */
+  reverseCharge?: boolean;
   /** The address is in another delivery zone than the order was priced for. */
   zoneCheck?: { zone: string; chosen: string };
   messages: Message[];
@@ -249,6 +253,9 @@ export interface JobCard {
   estimate: FullEstimate;
   notes: string;
   internalNotes: string;
+  /** A business customer's site details (gate code, unloading, hours) and site contact. Missing on older cached cards. */
+  siteInfo?: string;
+  siteContact?: { name: string; phone: string };
   assignment: Assignment;
   crew: string;
   eta: string;
@@ -360,6 +367,8 @@ export interface Account {
   billingAddress?: string;
   einvoiceAddress?: string;
   einvoiceOperator?: string;
+  /** Reverse charge VAT (AVL 8 c §) on this customer's prices and invoices. */
+  reverseCharge?: boolean;
   portalUsers?: number;
   active: boolean;
   /** Registered itself on the portal and waits for the office to call and approve it. */
@@ -493,6 +502,7 @@ export const previewLayout = (ref: string, adjust: LayoutAdjust | null | undefin
 /** Saves the layout; when the price moves it goes to the customer to accept, with the reason. */
 export const saveLayout = (ref: string, adjust: LayoutAdjust | null, system?: SystemKey, reason?: string) =>
   call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/layout`, { adjust, ...(system ? { system } : {}), ...(reason ? { reason } : {}) });
+export const sendOffer = (ref: string, body: { net: number; reason: string }) => call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/offer`, body);
 export const withdrawPriceChange = (ref: string) => call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/price-change/withdraw`, {});
 export const getOrderPlan = (ref: string) => call<{ plan: ScaffoldPlan }>("GET", `/api/office/orders/${enc(ref)}/plan`);
 export const shareOrderPlan = (ref: string) => call<{ token: string }>("POST", `/api/office/orders/${enc(ref)}/share`, {});
@@ -519,7 +529,7 @@ export const saveStock = (body: { enabled?: boolean; owned?: Parts; prices?: Par
 export const stockMove = (part: PartKey, delta: number, reason: string, ref?: string) => call<StockOverview>("POST", "/api/office/stock/move", { part, delta, reason, ref });
 
 // Office: alerts, messages, contact form
-export const getAlerts = () => call<{ alerts: Alert[] }>("GET", "/api/office/alerts");
+export const getAlerts = () => call<{ alerts: Alert[]; registrations?: number }>("GET", "/api/office/alerts");
 export const markAlertsRead = (ids: string[] | "all") => call<{ ok: true }>("POST", "/api/office/alerts/read", ids === "all" ? { all: true } : { ids });
 export const getOutbox = () => call<{ messages: OutboxMessage[]; status: Messaging }>("GET", "/api/office/outbox");
 export const sendOutboxMessage = (id: string) => call<{ message: OutboxMessage }>("POST", `/api/office/outbox/${enc(id)}/send`, {});
