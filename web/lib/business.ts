@@ -141,6 +141,10 @@ export interface BizType {
   lift: number;
   maxHeight: number;
   maxHeightBrackets: number | null;
+  material: "aluminium" | "steel";
+  kind: "frame" | "modular";
+  /** Material from our rental partner: the office confirms availability. */
+  partner: boolean;
   /** Highest point of this scaffold on this house, m. */
   height: number | null;
   total: number;

@@ -288,6 +288,19 @@ test("business pricing: systems side by side, 3+ storeys flagged, quote requests
   // The public calculator still never names a brand.
   assert.equal((await req("POST", "/api/quote", house)).json.plan.systemName, undefined);
 
+  // The partner's steel systems: offered for big buildings once the office switches them on, never for a small house.
+  const pr0 = (await req("GET", "/api/office/pricing", undefined, owner)).json.pricing;
+  await req("PUT", "/api/office/pricing", { pricing: { ...pr0, systems: { ...pr0.systems, alfix100: { enabled: true, erectPerM2: pr0.erectPerM2 * 1.3 } } } }, owner);
+  const small = (await req("POST", "/api/biz/quote", house, c)).json;
+  assert.ok(!small.types.some((t) => t.system === "alfix100"));
+  const bigQ = (await req("POST", "/api/biz/quote", { ...house, storeys: 4 }, c)).json;
+  const steel = bigQ.types.find((t) => t.system === "alfix100");
+  assert.equal(steel.material, "steel");
+  assert.equal(steel.loadClass, 4);
+  assert.equal(steel.partner, true);
+  assert.equal(steel.supplier, undefined, "customers don't see the partner's name");
+  assert.ok(steel.total > bigQ.types.find((t) => t.system === "layher").total);
+  await req("PUT", "/api/office/pricing", { pricing: pr0 }, owner);
   // A 3+ storey building ordered in the portal is flagged for the office's check, like on the website.
   const tall = await req("POST", "/api/biz/orders", { ...house, start: start(), address: "Kerrostalo 4, Vantaa", storeys: 4, system: "monzon" }, c);
   assert.equal(tall.status, 200, tall.text);

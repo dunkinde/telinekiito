@@ -2,6 +2,7 @@
 // Settings (head of company): prices, operations, company details, message templates, website content, messaging.
 import { useEffect, useMemo, useState } from "react";
 import { SYSTEM_KEYS, SYSTEM_NAMES, type Pricing, type SystemKey } from "@/lib/api";
+import { SYSTEM_SUPPLIER } from "./systems";
 import { FAQ as SITE_FAQ } from "@/lib/content";
 import { SITE } from "@/lib/site";
 import {
@@ -144,7 +145,7 @@ function PricesTab() {
                   {SYSTEM_KEYS.map((k) => {
                     const sys = d.systems?.[k] || { enabled: true };
                     const setSys = (patch: Partial<NonNullable<Pricing["systems"]>[SystemKey]>) =>
-                      setD({ ...d, systems: { ...(d.systems || { layher: { enabled: true }, monzon: { enabled: true } }), [k]: { ...sys, ...patch } } });
+                      setD({ ...d, systems: { ...(d.systems || { layher: { enabled: true }, monzon: { enabled: true }, alfix100: { enabled: false }, allround: { enabled: false } }), [k]: { ...sys, ...patch } } });
                     const onCount = SYSTEM_KEYS.filter((x) => d.systems?.[x]?.enabled !== false).length;
                     const rate = (r: "rentPerM2Day" | "erectPerM2" | "dismantlePerM2", label: string, unit: string) => (
                       <Field label={label} hint={<>{t("set.sys.general")}: {number(d[r], lang, 2)} {unit}</>}>
@@ -156,6 +157,7 @@ function PricesTab() {
                     return (
                       <div key={k} className="rounded-xl p-4 ring-1 ring-line">
                         <p className="font-semibold text-ink">{SYSTEM_NAMES[k]}</p>
+                        {SYSTEM_SUPPLIER[k] ? <p className="mt-0.5 text-[12.5px] text-muted">{t("set.sys.partner", { supplier: SYSTEM_SUPPLIER[k] || "" })}</p> : null}
                         <Switch
                           className="mt-3"
                           checked={sys.enabled !== false}

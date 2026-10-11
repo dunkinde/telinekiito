@@ -235,7 +235,7 @@ test("two scaffold systems: options in the quote, the chosen one on the order, o
   assert.deepEqual(q.json.options.map((o) => o.system), ["layher", "monzon"]);
   assert.equal(q.json.options.find((o) => o.system === "monzon").total, q.json.quote.total);
   const cfg = await req("GET", "/api/config");
-  assert.deepEqual(cfg.json.systems.map((s) => [s.key, s.enabled]), [["layher", true], ["monzon", true]]);
+  assert.deepEqual(cfg.json.systems.map((s) => [s.key, s.enabled]), [["layher", true], ["monzon", true], ["alfix100", false], ["allround", false]]);
 
   const start = E.earliestStart("standard", helsinkiNow());
   const order = { ...house, floors: "1.5", urgency: "standard", start, name: "Monzon Testi", phone: "040 111 2222", address: "Testikatu 9, Hamina", source: "form", system: "monzon" };

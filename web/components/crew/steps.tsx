@@ -162,6 +162,8 @@ export function LoadStep({ view, act, isCurrent, backBar }: StepProps) {
             );
           })}
         </ul>
+      ) : view.estimate?.supplier ? (
+        <Card tone="info">{t("load.supplier", { supplier: view.estimate.supplier })}</Card>
       ) : (
         <Card tone="warn">{t("load.noParts")}</Card>
       )}

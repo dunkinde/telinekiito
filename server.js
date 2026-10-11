@@ -776,7 +776,8 @@ function bizType(f, p, account, system) {
   const compact = O.compactEstimate(est);
   return {
     system, name: S0.name, loadClass: R.loadClass.cls, kNm2: R.loadClass.kNm2, kgM2: Math.round(R.loadClass.kNm2 * 100),
-    widthClass: "W06", walkway: 0.64, bay: S0.bay, frameWidth: S0.width, lift: E.SYS.lift || 2,
+    widthClass: S0.widthClass || "W06", walkway: S0.walkway || 0.64, bay: S0.bay, frameWidth: S0.width, lift: E.SYS.lift || 2,
+    material: S0.material || "aluminium", kind: S0.kind || "frame", partner: Boolean(S0.supplier),
     maxHeight: R.maxHeight.m, maxHeightBrackets: R.maxHeight.withBrackets || null, height: hc ? hc.vars.h : null,
     total: q.total, net: q.net, vat: q.vat, area: compact.area, perM2: compact.area ? Math.round((q.net / compact.area) * 100) / 100 : null,
     weightKg: compact.weightKg, engineer: engineerCodes(checks), earliest: availableDates(compact.parts, f.days)[f.urgency] || null
@@ -788,9 +789,12 @@ function bizPrice(f, p, account, body) {
   out.quote = P.applyDiscount(out.quote, account.discountPct || 0, p, rc);
   out.available = availableDates(out.estimate.parts, f.days);
   out.system = f.system;
-  out.types = O.systemsOn(p).map((sys) => bizType(f, p, account, sys));
-  const mine = out.types.find((t) => t.system === f.system) || out.types[0];
   const storeys = Math.round(Number(body.storeys) || 0);
+  const own = O.systemsOn(p).filter((sys) => !E.SYSTEMS[sys].supplier).map((sys) => bizType(f, p, account, sys));
+  // The partner's steel systems are for large or tall buildings (3+ storeys, over 9 m, or bigger than the online price).
+  const big = O.isLarge(f) || storeys >= 3 || own.some((t) => (t.height || 0) > 9) || Boolean(E.SYSTEMS[f.system] && E.SYSTEMS[f.system].supplier);
+  out.types = own.concat(big ? O.systemsOn(p).filter((sys) => E.SYSTEMS[sys].supplier).map((sys) => bizType(f, p, account, sys)) : []);
+  const mine = out.types.find((t) => t.system === f.system) || out.types[0];
   // Why the office checks the job (and the portal sends a quote request instead of an order).
   out.review = { storeys: storeys >= 3 ? storeys : null, large: O.isLarge(f), measured: Boolean(f.walls), engineer: mine ? mine.engineer : [], height: mine ? mine.height : null };
   out.review.request = out.review.engineer.length > 0 || (out.review.large && !out.review.measured);

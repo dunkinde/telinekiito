@@ -470,6 +470,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
                           <Badge tone="neutral">{t("biz.type.class", { cls: ty.loadClass, kn: numText(ty.kNm2, lang), kg: ty.kgM2 })}</Badge>
                           <Badge tone="neutral">{t("biz.type.width", { wc: ty.widthClass, w: numText(ty.walkway, lang) })}</Badge>
                           <Badge tone="neutral">{ty.maxHeightBrackets ? t("biz.type.maxHB", { m: ty.maxHeight, b: ty.maxHeightBrackets }) : t("biz.type.maxH", { m: ty.maxHeight })}</Badge>
+                          {ty.partner ? <Badge tone="blue">{t("biz.type.partner")}</Badge> : null}
                         </span>
                         <span className="mt-2 block text-[12.5px] text-muted">
                           <b className="font-semibold text-ink-soft">{t("biz.type.uses")}</b> {t(`biz.sys.${ty.system}.uses`)}

@@ -1830,7 +1830,21 @@ const en = {
   "biz.pc.offerNote": "Nothing is booked until you accept. If you decline, the request closes and we'll contact you.",
   "biz.new.storeysNoModel": (v) => `The building register lists ${v.n} storeys. Check the size; the office checks it and the price before confirming.`,
   "event.offer": "Offer for a quote request",
-  "set.tpl.when.offer": "When the office sends its offer for a business customer's quote request: they accept or decline it in the portal."
+  "set.tpl.when.offer": "When the office sends its offer for a business customer's quote request: they accept or decline it in the portal.",
+  "chk.anchor_8m": "Wall ties every 8 m up the scaffold, neighbouring standard lines offset by 4 m; with nets or tarps every 4 m (or 2 m) – follow the supplier's instructions.",
+  "chk.supplier": (v) => `Material rented from ${v.supplier}: confirm availability and get their assembly instructions with the delivery.`,
+  "od.sys.own": "Our aluminium systems",
+  "od.sys.partner": "Partner's steel systems (rented)",
+  "od.supplier.title": (v) => `Steel scaffold from ${v.supplier}`,
+  "od.supplier.text": (v) => `${v.system} is not in our stock. Book the material from ${v.supplier} for these dates before confirming, and agree on delivery and pickup. Their price goes in the system's rates in Settings.`,
+  "set.sys.partner": (v) => `Steel, rented from ${v.supplier} (not our stock). Set rates that cover their rent and your work; switch it on to offer it to business customers for large buildings.`,
+  "biz.sys.alfix100.kind": "German steel frame scaffold",
+  "biz.sys.alfix100.desc": "Steel frame scaffold with wide 1.09 m frames and 3.07 m bays. Load class 4 – heavy enough for masonry and rendering with material on the decks, and a sturdy choice for large facades.",
+  "biz.sys.alfix100.uses": "masonry, rendering and plastering, large facades, apartment blocks",
+  "biz.sys.allround.kind": "German steel modular scaffold",
+  "biz.sys.allround.desc": "Steel modular system with a rosette every 0.5 m: it follows corners, projections, curved walls and steps in the building, and extends to stair towers and weather protection. Load class 3 as a facade scaffold; heavier set-ups are planned separately.",
+  "biz.sys.allround.uses": "complex and tall buildings, renovation of apartment blocks, stair towers, industrial sites",
+  "biz.type.partner": "From our rental partner – the office confirms availability"
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -3651,7 +3665,21 @@ const fi: Record<Key, Entry> = {
   "biz.pc.offerNote": "Mitään ei varata ennen kuin hyväksyt. Jos hylkäät, pyyntö suljetaan ja otamme yhteyttä.",
   "biz.new.storeysNoModel": (v) => `Rakennusrekisterin mukaan kerroksia on ${v.n}. Tarkista mitat; toimisto tarkistaa ne ja hinnan ennen vahvistusta.`,
   "event.offer": "Tarjous tarjouspyyntöön",
-  "set.tpl.when.offer": "Kun toimisto lähettää tarjouksen yritysasiakkaan tarjouspyyntöön: asiakas hyväksyy tai hylkää sen portaalissa."
+  "set.tpl.when.offer": "Kun toimisto lähettää tarjouksen yritysasiakkaan tarjouspyyntöön: asiakas hyväksyy tai hylkää sen portaalissa.",
+  "chk.anchor_8m": "Seinäankkurit 8 m välein ylöspäin, viereiset pystylinjat 4 m porrastettuina; verkoilla tai peitteillä 4 m (tai 2 m) välein – noudata toimittajan ohjetta.",
+  "chk.supplier": (v) => `Materiaali vuokrataan toimittajalta (${v.supplier}): varmista saatavuus ja pyydä asennusohje toimituksen mukana.`,
+  "od.sys.own": "Omat alumiinijärjestelmät",
+  "od.sys.partner": "Kumppanin teräsjärjestelmät (vuokrattava)",
+  "od.supplier.title": (v) => `Terästeline: ${v.supplier}`,
+  "od.supplier.text": (v) => `${v.system} ei ole omassa varastossamme. Varaa materiaali toimittajalta (${v.supplier}) näille päiville ennen vahvistamista ja sovi toimitus ja nouto. Heidän hintansa kuuluu järjestelmän hintoihin Asetuksissa.`,
+  "set.sys.partner": (v) => `Teräs, vuokrataan toimittajalta (${v.supplier}), ei omaa varastoa. Aseta hinnat, jotka kattavat heidän vuokransa ja oman työnne; kytke päälle, niin sitä tarjotaan yritysasiakkaille suuriin kohteisiin.`,
+  "biz.sys.alfix100.kind": "Saksalainen teräskehysteline",
+  "biz.sys.alfix100.desc": "Teräskehysteline leveillä 1,09 m kehyksillä ja 3,07 m kentillä. Kuormaluokka 4 – kestää muurauksen ja rappauksen materiaaleineen tasoilla ja on tukeva valinta suurille julkisivuille.",
+  "biz.sys.alfix100.uses": "muuraus, rappaus ja tasoitus, suuret julkisivut, kerrostalot",
+  "biz.sys.allround.kind": "Saksalainen teräksinen modulaariteline",
+  "biz.sys.allround.desc": "Teräksinen modulaarijärjestelmä, jossa liitoslevy 0,5 m välein: se taipuu kulmiin, ulokkeisiin, kaareviin seiniin ja porrastuksiin ja laajenee porrastorneiksi ja sääsuojiksi. Julkisivutelineenä kuormaluokka 3; raskaammat rakenteet suunnitellaan erikseen.",
+  "biz.sys.allround.uses": "monimuotoiset ja korkeat rakennukset, kerrostalojen korjaukset, porrastornit, teollisuuskohteet",
+  "biz.type.partner": "Vuokrakumppaniltamme – toimisto vahvistaa saatavuuden"
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };

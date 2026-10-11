@@ -6,14 +6,14 @@ export type RoofType = "gable" | "hip" | "flat";
 export type JobType = "roof" | "facade" | "roof_facade" | "gutters";
 export type Floors = "1" | "1.5" | "2";
 /** Scaffold systems the price engine knows (lib/engine.js SYSTEMS). */
-export type SystemKey = "layher" | "monzon";
-export const SYSTEM_KEYS: SystemKey[] = ["layher", "monzon"];
-export const SYSTEM_NAMES: Record<SystemKey, string> = { layher: "Layher Blitz 70 Alu", monzon: "MonZon Modular Light" };
+export type SystemKey = "layher" | "monzon" | "alfix100" | "allround";
+export const SYSTEM_KEYS: SystemKey[] = ["layher", "monzon", "alfix100", "allround"];
+export const SYSTEM_NAMES: Record<SystemKey, string> = { layher: "Layher Blitz 70 Alu", monzon: "MonZon Modular Light", alfix100: "ALFIX 100", allround: "Layher Allround" };
 /** Weather protection follows the job (same rule as lib/engine.js): temporary roof with roof work, sheeting with facade scaffolding. */
 export const WEATHER_JOBS: Record<"weatherRoof" | "sheeting", JobType[]> = { weatherRoof: ["roof", "roof_facade"], sheeting: ["facade", "roof_facade"] };
 
 /** Bay length of each system, m (same as lib/engine.js). */
-export const SYSTEM_BAY: Record<SystemKey, number> = { layher: 3.07, monzon: 3.07 };
+export const SYSTEM_BAY: Record<SystemKey, number> = { layher: 3.07, monzon: 3.07, alfix100: 3.07, allround: 3.07 };
 
 export interface Pricing {
   rentPerM2Day: number;
@@ -75,6 +75,8 @@ export interface Quote {
 
 export interface Estimate {
   system?: SystemKey;
+  /** A partner's steel system: who rents the material (office and crew only). */
+  supplier?: string | null;
   sheeting?: { m2: number } | null;
   roof?: { span: number; length: number; pitch: number; support: number; sections: number; tarpWidth: number; planM2: number } | null;
   area: number;

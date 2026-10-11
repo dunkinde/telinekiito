@@ -267,6 +267,9 @@ const fi = {
   "load.doneToast": "Auto lastattu",
   "load.countTitle": "Lastattu määrä",
   "load.noParts": "Osaluetteloa ei ole. Tarkista kuorma toimistolta.",
+  "load.supplier": (v: Vars) => `Teline tulee vuokrakumppanilta (${v.supplier}). Tarkista kuorma heidän lähetyslistastaan.`,
+  "chk.anchor_8m": "Seinäankkurit 8 m välein ylöspäin, viereiset pystylinjat 4 m porrastettuina; verkoilla tai peitteillä tiheämmin – noudata toimittajan ohjetta.",
+  "chk.supplier": (v: Vars) => `Materiaali on vuokrattu (${v.supplier}): noudata heidän asennusohjettaan.`,
   "load.doneAt": (v: Vars) => `Lastattu ${v.time} (${v.by})`,
 
   "drive.title": "Aja työmaalle",
@@ -818,6 +821,9 @@ const en: Dict = {
   "load.doneToast": "Truck loaded",
   "load.countTitle": "Loaded count",
   "load.noParts": "No parts list. Check the load with the office.",
+  "load.supplier": (v) => `The scaffold comes from our rental partner (${v.supplier}). Check the load against their delivery note.`,
+  "chk.anchor_8m": "Wall ties every 8 m up, neighbouring standard lines offset by 4 m; denser with nets or tarps – follow the supplier's instructions.",
+  "chk.supplier": (v) => `Rented material (${v.supplier}): follow their assembly instructions.`,
   "load.doneAt": (v) => `Loaded ${v.time} (${v.by})`,
 
   "drive.title": "Drive to the site",
@@ -1366,6 +1372,9 @@ const ru: Dict = {
   "load.doneToast": "Машина загружена",
   "load.countTitle": "Загружено",
   "load.noParts": "Списка деталей нет. Уточните груз в офисе.",
+  "load.supplier": (v) => `Леса от партнёра по аренде (${v.supplier}). Проверьте груз по их накладной.`,
+  "chk.anchor_8m": "Анкеры через 8 м по высоте, соседние линии со смещением 4 м; с сетками или укрытием чаще – по инструкции поставщика.",
+  "chk.supplier": (v) => `Арендованный материал (${v.supplier}): следуйте их инструкции по монтажу.`,
   "load.doneAt": (v) => `Загружено ${v.time} (${v.by})`,
 
   "drive.title": "Езжайте на объект",

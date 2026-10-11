@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { SYSTEM_KEYS, SYSTEM_NAMES, type SystemKey } from "@/lib/api";
 import type { PlanSide, ScaffoldPlan } from "@/lib/plan";
 import { Scaffold3D } from "../scaffold3d/Scaffold3D";
+import { isPartnerSystem, SYSTEM_SUPPLIER, systemLabel } from "./systems";
 import {
   INSPECTION_ITEMS,
   ORDER_FLOW,
@@ -202,6 +203,11 @@ function SummaryTab({ o, crews, reload }: { o: OfficeOrderDetail; crews: Crew[];
           </Callout>
         ) : null}
         {o.quoteRequest && !o.quoteRequest.acceptedAt && !["cancelled", "closed", "dismantled"].includes(o.status) ? <OfferCard o={o} reload={reload} /> : null}
+        {isPartnerSystem(o.house.system) && ["received", "confirmed"].includes(o.status) ? (
+          <Callout tone="info" title={t("od.supplier.title", { supplier: SYSTEM_SUPPLIER[o.house.system!] || "" })}>
+            {t("od.supplier.text", { system: SYSTEM_NAMES[o.house.system!], supplier: SYSTEM_SUPPLIER[o.house.system!] || "" })}
+          </Callout>
+        ) : null}
         {o.priceChange ? <PriceChangeCard o={o} reload={reload} /> : null}
         <StatusCard o={o} reload={reload} />
         <ScheduleCard o={o} crews={crews} reload={reload} />
@@ -703,7 +709,7 @@ function ScaffoldTab({ o, reload }: { o: OfficeOrderDetail; reload?: () => void 
             <KV
               items={[
                 { k: t("od.house.job"), v: jobLabel(i, h.jobType) },
-                { k: t("od.house.system"), v: SYSTEM_NAMES[h.system || "layher"] },
+                { k: t("od.house.system"), v: systemLabel(h.system) },
                 { k: t("od.house.size"), v: `${number(h.length, lang, 2)} × ${number(h.width, lang, 2)} m` },
                 ...(h.model && h.walls?.length ? [{ k: t("od.house.model"), v: t("od.house.modelVal", { date: h.model.date ? day(h.model.date, lang, { year: true }) : "" }) }] : []),
                 { k: t("od.house.floors"), v: number(Number(h.floors), lang, 1) },
@@ -891,9 +897,16 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
                 value={edit.system}
                 onChange={(e) => { const system = e.target.value as SystemKey; setEdit({ ...edit, system }); preview(edit.adjust, system); }}
               >
-                {SYSTEM_KEYS.map((k) => (
-                  <option key={k} value={k}>{SYSTEM_NAMES[k]}</option>
-                ))}
+                <optgroup label={t("od.sys.own")}>
+                  {SYSTEM_KEYS.filter((k) => !isPartnerSystem(k)).map((k) => (
+                    <option key={k} value={k}>{SYSTEM_NAMES[k]}</option>
+                  ))}
+                </optgroup>
+                <optgroup label={t("od.sys.partner")}>
+                  {SYSTEM_KEYS.filter((k) => isPartnerSystem(k)).map((k) => (
+                    <option key={k} value={k}>{systemLabel(k)}</option>
+                  ))}
+                </optgroup>
               </select>
             </label>
             <ul className="divide-y divide-line rounded-xl ring-1 ring-line">

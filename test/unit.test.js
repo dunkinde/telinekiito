@@ -655,3 +655,25 @@ test("an accepted offer is the agreed price for its days: other days change only
   // The labour share follows the agreed price.
   assert.ok(short.labourGross <= short.total);
 });
+
+test("partner steel systems: planned on our grid, no parts of ours, heavier loads, their own rules", () => {
+  const E = require("../lib/engine");
+  const O = require("../lib/orders");
+  const { checksFor } = require("../lib/checks");
+  const h = { length: 30, width: 14, eave: 16, roofType: "flat", pitch: 0, jobType: "facade", gables: false };
+  const alu = E.estimate(O.houseOf({ ...h, system: "layher" }));
+  for (const sys of ["alfix100", "allround"]) {
+    const est = E.estimate(O.houseOf({ ...h, system: sys }));
+    assert.equal(est.system, sys);
+    assert.ok(est.supplier);
+    assert.equal(est.totals.area, alu.totals.area);
+    assert.deepEqual(Object.keys(est.totals.parts), []);
+    assert.ok(Math.abs(est.totals.weightKg - est.totals.area * E.SYSTEMS[sys].kgM2) < E.SYSTEMS[sys].kgM2);
+    const codes = checksFor(O.houseOf({ ...h, system: sys }), est).map((c) => c.code);
+    assert.ok(codes.includes("anchor_8m") && codes.includes("supplier") && !codes.includes("mz_not_covered"));
+  }
+  assert.equal(checksFor(O.houseOf({ ...h, system: "alfix100" }), E.estimate(O.houseOf({ ...h, system: "alfix100" }))).find((c) => c.code === "load_class").vars.cls, 4);
+  // Off for customers until the office sets rates; the website's systems stay as they were.
+  const p = O.mergePricing({});
+  assert.deepEqual(O.systemsOn(p), ["layher", "monzon"]);
+});
