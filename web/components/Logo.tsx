@@ -1,6 +1,6 @@
 // TelineKiito "forward cut" wordmark, from the owner's outlined source (concept 04).
 // Letters take currentColor; the two slashes are always safety yellow.
-const LETTERS: [number, string][] = [
+export const LETTERS: [number, string][] = [
   [0, "M0 0H80V16H52V59H28V16H0Z"],
   [84, "M0 0H68V16H25V22H66V37H25V44H68V59H0Z"],
   [157, "M0 0H24V44H69V59H0Z"],
@@ -13,6 +13,7 @@ const LETTERS: [number, string][] = [
   [536, "M0 0H73V16H48V59H24V16H0Z"],
   [612, "M17 0H69C78 0 82 3 81 9C80.7 11.5 79.5 14 77.5 17L55 53C52.5 57 50.5 59 46 59H16C6 59 0 54 0 44V17C0 6 6 0 17 0ZM30 17C25 17 23 19 23 24V34C23 39 25 42 30 42H39C41 42 42 40 43 38L51 25C54 20 52 17 47 17Z"],
 ];
+export const SLASHES = ["M713 0H735L699 59H677Z", "M744 0H766L730 59H708Z"];
 
 // App icon: the two slashes on a dark tile.
 export function LogoMark({ className = "h-9 w-9" }: { className?: string }) {
@@ -32,7 +33,7 @@ export function Logo({ dark = false, className = "h-[18px] sm:h-[22px]" }: { dar
           <path key={x} transform={`translate(${x} 0)`} d={d} fillRule="evenodd" />
         ))}
       </g>
-      <path className="fill-sun" d="M713 0H735L699 59H677ZM744 0H766L730 59H708Z" />
+      <path className="fill-sun" d={SLASHES.join("")} />
     </svg>
   );
 }

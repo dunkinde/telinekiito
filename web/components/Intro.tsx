@@ -1,12 +1,11 @@
 "use client";
-// Page-load intro (about 1.4 s): the logo frame draws itself, the name rises letter by letter, then the panel lifts away.
+// Page-load intro (about 1.4 s): the wordmark rises letter by letter, the two slashes shoot in, then the panel lifts away.
 // Shown once per browser session on desktop; skipped on phones and tablets and for visitors who prefer reduced motion.
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { LETTERS, SLASHES } from "./Logo";
 import { useSite } from "./SiteContext";
 import { RICH_MOTION } from "./ui/useMedia";
-
-const NAME = "TelineKiito";
 
 export function Intro() {
   const { setIntroDone } = useSite();
@@ -44,29 +43,23 @@ export function Intro() {
           transition={{ duration: 0.55, ease: [0.76, 0, 0.24, 1] }}
           aria-hidden
         >
-          <div className="flex items-center gap-4">
-            <svg viewBox="0 0 40 40" className="h-14 w-14">
-              <motion.rect width="40" height="40" rx="10" fill="#ffc20e" initial={{ scale: 0.6, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }} style={{ transformOrigin: "20px 20px" }} />
-              <g stroke="#0e1217" strokeWidth="3.2" strokeLinecap="square" fill="none">
-                {["M12 9v22", "M28 9v22", "M12 15h16", "M12 25h16", "M12 25l16-10"].map((d, i) => (
-                  <motion.path key={d} d={d} initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.35, delay: 0.15 + i * 0.07, ease: "easeOut" }} />
-                ))}
-              </g>
-            </svg>
-            <span className="flex overflow-hidden font-display text-4xl font-extrabold tracking-[-0.01em] text-white sm:text-5xl">
-              {NAME.split("").map((ch, i) => (
-                <motion.span
-                  key={i}
-                  className={i >= 6 ? "text-sun" : undefined}
-                  initial={{ y: "110%" }}
-                  animate={{ y: "0%" }}
-                  transition={{ duration: 0.5, delay: 0.1 + i * 0.03, ease: [0.16, 1, 0.3, 1] }}
-                >
-                  {ch}
-                </motion.span>
+          <svg viewBox="0 0 766 59" className="h-12 w-auto max-w-[80vw]">
+            <defs>
+              <clipPath id="intro-clip">
+                <rect width="766" height="59" />
+              </clipPath>
+            </defs>
+            <g clipPath="url(#intro-clip)">
+              {LETTERS.map(([x, d], i) => (
+                <g key={x} transform={`translate(${x} 0)`}>
+                  <motion.path d={d} fillRule="evenodd" fill="#ffffff" initial={{ y: 64 }} animate={{ y: 0 }} transition={{ duration: 0.5, delay: 0.1 + i * 0.03, ease: [0.16, 1, 0.3, 1] }} />
+                </g>
               ))}
-            </span>
-          </div>
+              {SLASHES.map((d, i) => (
+                <motion.path key={d} d={d} fill="#ffc20e" initial={{ x: -48, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.4, delay: 0.45 + i * 0.08, ease: [0.16, 1, 0.3, 1] }} />
+              ))}
+            </g>
+          </svg>
           <motion.span
             className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-sun"
             initial={{ scaleX: 0 }}
