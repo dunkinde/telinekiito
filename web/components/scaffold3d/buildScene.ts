@@ -1,5 +1,6 @@
 // Builds the three.js scene for a scaffold plan: the house from its wall and roof polygons, and every side's
-// standards, ledgers, transoms, decks, guardrails, toe boards, diagonals and roof-catch net, bay by bay.
+// standards, ledgers, transoms, decks, guardrails, toe boards, diagonals and roof-catch net, bay by bay, with the
+// stair towers beside them.
 // Plan coordinates (x east, y north, z up) become three.js coordinates (x, z, -y).
 import type * as THREE_NS from "three";
 import type { P2, P3, PlanSide, ScaffoldPlan } from "@/lib/plan";
@@ -152,6 +153,17 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide, joins: Joins 
   const P = (t: number, d: number, z: number) => toV(T, [side.at[0] + side.dir[0] * t + side.out[0] * d, side.at[1] + side.dir[1] * t + side.out[1] * d, z]);
   const inner = gap, outer = gap + width, mid = gap + width / 2;
   const tl: [THREE_NS.Vector3, THREE_NS.Vector3][] = [];
+  // Stair towers: each beside one bay; they land on the top of a 1 m base frame and on every lift.
+  const towers = (side.stairs || []).map((st) => ({ ...st, t0: st.bay * bay, t1: (st.bay + 1) * bay })).sort((a, b) => a.t0 - b.t0);
+  const landings = [...(side.half ? [base] : []), ...Array.from({ length: side.lifts }, (_, k) => Z(k + 1))];
+  const atTower = (k: number) => towers.some((tw) => Math.abs(tw.t0 - k * bay) < 0.01);
+  // The stretches of the run where no tower opens onto the scaffold.
+  const clear: [number, number][] = [];
+  {
+    let a = 0;
+    for (const tw of towers) { if (tw.t0 > a + 0.01) clear.push([a, tw.t0]); a = Math.max(a, tw.t1); }
+    if (run > a + 0.01) clear.push([a, run]);
+  }
 
   for (let k = 0; k <= side.bays; k++) {
     const t = k * bay;
@@ -182,7 +194,7 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide, joins: Joins 
     if (atCatch && side.catchConsole) for (let k = 0; k < side.bays; k++) deckList.push({ c: P((k + 0.5) * bay, outer + cons / 2, z + 0.03), size: [bay - 0.04, 0.05, cons - 0.04], yaw });
     if (atCatch) continue; // the catch wall is the side protection here
     for (const h of [0.5, 1.0]) {
-      tl.push([P(0, outer, z + h), P(run, outer, z + h)]);
+      for (const [a, b] of clear) tl.push([P(a, outer, z + h), P(b, outer, z + h)]); // open where a tower lands
       // No end rail where the end is coupled to the next scaffold at this level.
       if (z > joins.top[0] + 0.01) tl.push([P(0, inner, z + h), P(0, outer, z + h)]);
       if (z > joins.top[1] + 0.01) tl.push([P(run, inner, z + h), P(run, outer, z + h)]);
@@ -190,13 +202,53 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide, joins: Joins 
     for (let k = 0; k < side.bays; k++) {
       const c = P((k + 0.5) * bay, mid, z + 0.03);
       (k === 0 && (side.access ?? 1) > 0 ? hatchList : deckList).push({ c, size: [bay - 0.04, 0.05, width - 0.06], yaw });
-      toeList.push({ c: P((k + 0.5) * bay, outer - 0.02, z + 0.08), size: [bay - 0.04, 0.15, 0.025], yaw });
+      if (!atTower(k)) toeList.push({ c: P((k + 0.5) * bay, outer - 0.02, z + 0.08), size: [bay - 0.04, 0.15, 0.025], yaw });
     }
   }
   // Above the eave the top deck has no wall beside it: guardrail on the inside too.
   if (side.innerRail) for (const h of [0.5, 1.0]) tl.push([P(0, inner, top + h), P(run, inner, top + h)]);
-  // Diagonal braces in the outer plane, every fifth bay, through all 2 m lifts.
-  for (let k = 0; k < side.bays; k += 5) for (let l = 0; l < side.lifts; l++) tl.push([P(k * bay, outer, l === 0 ? base : Z(l)), P((k + 1) * bay, outer, Z(l + 1))]);
+  // Diagonal braces in the outer plane, every fifth bay, through all 2 m lifts (in the next bay where a tower stands).
+  for (let k0 = 0; k0 < side.bays; k0 += 5) {
+    const k = atTower(k0) && k0 + 1 < side.bays && !atTower(k0 + 1) ? k0 + 1 : k0;
+    for (let l = 0; l < side.lifts; l++) tl.push([P(k * bay, outer, l === 0 ? base : Z(l)), P((k + 1) * bay, outer, Z(l + 1))]);
+  }
+  // The scaffold bay beside a tower is decked on every landing, closed at its ends where the run isn't decked.
+  const deckedZ = decked.map((x) => x.z);
+  for (const tw of towers) {
+    for (const z of landings) {
+      if (deckedZ.some((y) => Math.abs(y - z) < 0.01)) continue;
+      deckList.push({ c: P((tw.t0 + tw.t1) / 2, mid, z + 0.03), size: [tw.t1 - tw.t0 - 0.04, 0.05, width - 0.06], yaw });
+      for (const h of [0.5, 1.0]) {
+        tl.push([P(tw.t0, inner, z + h), P(tw.t0, outer, z + h)], [P(tw.t1, inner, z + h), P(tw.t1, outer, z + h)]);
+        if (gap > 0.35) tl.push([P(tw.t0, inner, z + h), P(tw.t1, inner, z + h)]);
+      }
+    }
+  }
+  // The towers: standards (MonZon's stand on the scaffold's outer ones), a transom at each end of every level, one
+  // flight per lift rising along the run to a landing at its far end, a gap deck over to the scaffold, the stair
+  // guardrail on the outside, guardrails round the top landing.
+  for (const tw of towers) {
+    const d0 = tw.d0, d1 = tw.d0 + tw.w, dm = (d0 + d1) / 2, L = tw.t1 - tw.t0;
+    const lv = [Z(0), ...landings], top = lv[lv.length - 1], land = Math.min(0.6, L * 0.22);
+    const posts: [number, number][] = [[tw.t0, d1], [tw.t1, d1]];
+    if (!tw.shared) posts.push([tw.t0, d0], [tw.t1, d0]);
+    for (const [t, d] of posts) tl.push([P(t, d, 0), P(t, d, top + 1)]);
+    for (const z of lv) tl.push([P(tw.t0, d0, z), P(tw.t0, d1, z)], [P(tw.t1, d0, z), P(tw.t1, d1, z)]);
+    tl.push([P(tw.t0, d1, Z(0)), P(tw.t1, d1, Z(0))]);
+    for (let i = 1; i < lv.length; i++) {
+      const za = lv[i - 1], zb = lv[i], rise = zb - za;
+      // A 1 m lift has the 1.30 m starter stair, a 2 m lift the full-length platform stair.
+      const tb = tw.t1 - land, ta = rise < 1.5 ? Math.max(tw.t0 + 0.1, tb - 1.3) : tw.t0 + 0.1;
+      for (const d of [d0 + 0.06, d1 - 0.06]) tl.push([P(ta, d, za), P(tb, d, zb)]);
+      const steps = Math.max(2, Math.round(rise / 0.2));
+      for (let j = 1; j < steps; j++) deckList.push({ c: P(ta + ((tb - ta) * j) / steps, dm, za + (rise * j) / steps), size: [0.22, 0.04, tw.w - 0.14], yaw });
+      deckList.push({ c: P(tw.t1 - land / 2, dm, zb + 0.03), size: [land - 0.02, 0.05, tw.w - 0.08], yaw });
+      if (d0 - outer > 0.06) deckList.push({ c: P((tw.t0 + tw.t1) / 2, (outer + d0) / 2, zb + 0.03), size: [L - 0.04, 0.05, d0 - outer - 0.02], yaw });
+      for (const h of [0.5, 1.0]) tl.push([P(ta, d1, za + h), P(tb, d1, zb + h)], [P(tb, d1, zb + h), P(tw.t1, d1, zb + h)]);
+    }
+    for (const h of [0.5, 1.0]) tl.push([P(tw.t0, d1, top + h), P(tw.t1, d1, top + h)], [P(tw.t0, d0, top + h), P(tw.t0, d1, top + h)], [P(tw.t1, d0, top + h), P(tw.t1, d1, top + h)]);
+    toeList.push({ c: P((tw.t0 + tw.t1) / 2, d1 - 0.02, top + 0.08), size: [L - 0.04, 0.15, 0.025], yaw });
+  }
   if (catchZ != null) {
     // Roof-catch wall: rails along it every 0.5 m and a toe board, the grids drawn as a fine mesh below.
     for (const h of [0.5, 1.0, 1.5, 2.0]) tl.push([P(0, catchD, catchZ + h), P(run, catchD, catchZ + h)]);
@@ -217,10 +269,13 @@ function sideObjects(T: THREE, plan: ScaffoldPlan, side: PlanSide, joins: Joins 
   if (plan.sheeting) {
     // Weather sheeting over the whole outer face.
     const h = Math.max(top + 1, catchZ != null ? catchZ + 2 : 0);
-    const a = P(0, outer + 0.05, 0), b = P(run, outer + 0.05, 0), c = P(run, outer + 0.05, h), d = P(0, outer + 0.05, h);
-    const g = new T.BufferGeometry().setFromPoints([a, b, c, a, c, d]);
-    g.computeVertexNormals();
-    group.add(new T.Mesh(g, new T.MeshStandardMaterial({ color: COLORS.sheet, transparent: true, opacity: 0.5, side: T.DoubleSide, depthWrite: false })));
+    const sheetMat = new T.MeshStandardMaterial({ color: COLORS.sheet, transparent: true, opacity: 0.5, side: T.DoubleSide, depthWrite: false });
+    for (const [t0, t1] of clear) {
+      const a = P(t0, outer + 0.05, 0), b = P(t1, outer + 0.05, 0), c = P(t1, outer + 0.05, h), d = P(t0, outer + 0.05, h);
+      const g = new T.BufferGeometry().setFromPoints([a, b, c, a, c, d]);
+      g.computeVertexNormals();
+      group.add(new T.Mesh(g, sheetMat));
+    }
   }
   if (catchZ != null) {
     // The side protection grids of the roof-catch wall.

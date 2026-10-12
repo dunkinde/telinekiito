@@ -32,6 +32,9 @@ export interface Pricing {
   sheetingPerM2?: number;
   roofRentPerM2Day?: number;
   roofWorkPerM2?: number;
+  /** Stair towers per metre of height: rent per day, and putting up and taking down. */
+  stairRentPerMDay?: number;
+  stairPerM?: number;
   /** Per scaffold system: on/off and its own rates (missing = the general rate). */
   systems?: Record<SystemKey, { enabled: boolean; rentPerM2Day?: number; erectPerM2?: number; dismantlePerM2?: number }>;
 }
@@ -75,13 +78,14 @@ export interface Quote {
 
 export interface Estimate {
   system?: SystemKey;
-  /** A partner's steel system: who rents the material (office and crew only). */
   sheeting?: { m2: number } | null;
   roof?: { span: number; length: number; pitch: number; support: number; sections: number; tarpWidth: number; planM2: number } | null;
   area: number;
   runM: number;
   catchRunM: number;
   extraLevelM?: number;
+  /** Stair towers: how many, and their heights to the top landing added up (m). */
+  stairs?: { n: number; m: number };
   weightKg: number;
 }
 

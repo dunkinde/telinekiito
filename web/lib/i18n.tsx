@@ -353,6 +353,8 @@ const en = {
   "line.dismantle": "Dismantling",
   "line.catch": "Roof-catch protection",
   "line.levels": "Extra working levels, {m} m",
+  "line.stairs": "Stair tower, {m} m high",
+  "line.stairsN": "Stair towers, {n}, {m} m high in all",
   "line.transport": "Delivery and pickup",
   "line.transportN": "Delivery and pickup, {n} loads",
   "line.premium": "{tier} surcharge (+{pct} % on service)",
@@ -877,6 +879,8 @@ const fi: Record<Key, Entry> = {
   "line.dismantle": "Purku",
   "line.catch": "Räystässuojaus",
   "line.levels": "Lisätyötasot, {m} m",
+  "line.stairs": "Porrastorni, korkeus {m} m",
+  "line.stairsN": "Porrastorni, {n} kpl, korkeus {m} m yhteensä",
   "line.transport": "Toimitus ja nouto",
   "line.transportN": "Toimitus ja nouto, {n} kuormaa",
   "line.premium": "{tier}lisä (+{pct} % palveluihin)",
@@ -1149,6 +1153,10 @@ export function lineLabel(i: I18n, l: QuoteLine, q?: Quote): string {
     }
     case "levels":
       return i.t("line.levels", { m: v.m ?? fromLabel(/(\d+) m/) });
+    case "stairs": {
+      const m = String(v.m ?? fromLabel(/([\d.]+) m/));
+      return i.t(Number(v.n) > 1 ? "line.stairsN" : "line.stairs", { n: v.n ?? 1, m: i.lang === "fi" ? m.replace(".", ",") : m });
+    }
     case "sheeting":
       return i.t("line.sheeting", { m2: v.m2 ?? "" });
     case "roofRent":

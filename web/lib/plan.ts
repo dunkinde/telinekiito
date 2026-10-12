@@ -31,8 +31,10 @@ export interface PlanSide {
   topUp?: number;
   /** 0.36 m inner consoles with a deck on every decked level (under a temporary roof). */
   inner?: boolean;
-  /** Access towers (hatch decks with ladders) on this side: one per connected scaffold, more every 50 m. */
+  /** Hatch decks with ladders on this side (orders from before stair towers, or no room for a tower). */
   access?: number;
+  /** Stair towers beside this side. */
+  stairs?: PlanStair[];
   /** A walking platform also on top of the 1 m base frame (work on the walls: every level is decked). */
   halfDeck?: boolean;
   /** Guardrail on the inside of the top deck (it stands above the eave, away from any wall). */
@@ -44,8 +46,28 @@ export interface PlanSide {
   area: number;
 }
 
+/**
+ * A stair tower: one bay outside the side's outer standards, a flight per lift all rising along the side's direction,
+ * the landing at the top of each flight opening onto the scaffold.
+ */
+export interface PlanStair {
+  /** The side's bay it stands beside (0 = the first from `at`). */
+  bay: number;
+  /** From the wall line to the tower's inner standards, and the tower's width, m. */
+  d0: number;
+  w: number;
+  /** On the scaffold's own outer standards (MonZon). */
+  shared?: boolean;
+  /** Beyond a roof-catch console: the lower landings are bridged over to it. */
+  console?: boolean;
+  /** Its landing passes a roof-catch wall (a gate goes in it). */
+  gate?: boolean;
+}
+
 export interface ScaffoldPlan {
   v: number;
+  /** How people get up: stair towers, or hatch decks with ladders (orders from before stair towers). */
+  access?: "stairs" | "ladders";
   system: SystemKey;
   /** Scaffold brand and model: in office and crew plans only. */
   systemName?: string;

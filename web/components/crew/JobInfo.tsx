@@ -26,7 +26,8 @@ export function SiteModel({ view }: { view: ViewCard }) {
     [t("build.roof"), `${roofLabel(t, h.roofType)}${h.roofType !== "flat" ? ` ${t("build.pitch", { n: h.pitch })}` : ""}`],
     [t("build.area"), `${fmtNum(e.area, lang, 0)} m²`],
     [t("build.run"), `${fmtNum(e.runM, lang)} m`],
-    [t("build.weight"), `${fmtNum(e.weightKg, lang, 0)} kg`]
+    [t("build.weight"), `${fmtNum(e.weightKg, lang, 0)} kg`],
+    ...(e.stairs?.n ? [[t("build.stairs"), t("build.stairsVal", { n: e.stairs.n, m: fmtNum(e.stairs.m, lang) })] as [string, string]] : [])
   ];
   return (
     <div className="space-y-3">

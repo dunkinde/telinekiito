@@ -719,7 +719,8 @@ function ScaffoldTab({ o, reload }: { o: OfficeOrderDetail; reload?: () => void 
                 { k: t("od.house.sheeting"), v: h.sheeting ? (e.sheeting ? `${t("ui.yes")} · ${number(e.sheeting.m2, lang, 0)} m²` : t("ui.yes")) : t("ui.no") },
                 { k: t("od.house.weatherRoof"), v: h.weatherRoof && e.roof ? t("od.house.roofVal", { span: number(e.roof.span, lang, 1), len: number(e.roof.length, lang, 1), m2: e.roof.planM2, h: number(e.roof.support, lang, 1) }) : t("ui.no") },
                 { k: t("od.house.run"), v: `${number(e.runM, lang, 1)} m` },
-                { k: t("od.house.catch"), v: e.catchRunM ? `${number(e.catchRunM, lang, 1)} m` : t("ui.no") }
+                { k: t("od.house.catch"), v: e.catchRunM ? `${number(e.catchRunM, lang, 1)} m` : t("ui.no") },
+                { k: t("od.house.stairs"), v: h.ladders ? t("od.house.ladders") : e.stairs?.n ? t("od.house.stairsVal", { n: e.stairs.n, m: number(e.stairs.m, lang, 1) }) : t("ui.no") }
               ]}
             />
           </div>

@@ -310,7 +310,7 @@ const en = {
   "insp.anchors": "Wall anchors fixed",
   "insp.decks": "Decks complete, undamaged and locked",
   "insp.guardrails": "Guardrails and toe boards on all working levels",
-  "insp.access": "Access (hatch deck and ladder)",
+  "insp.access": "Access (stair tower, or hatch deck and ladder)",
   "insp.catch": "Roof-catch guard fitted",
   "insp.clearance": "Clearance from power lines checked",
   "insp.tag": "Scaffold tag filled in and attached",
@@ -873,7 +873,7 @@ const en = {
   "stock.partsSub": "Lowest free = the tightest day in the next 60 days",
   "stock.value": (v) => `Replacement value ${v.v}`,
   "stock.edit": "Edit counts and prices",
-  "stock.editHint": "Owned = how many you have in total. Replacement price is charged for missing or damaged parts.",
+  "stock.editHint": "Owned = how many you have in total. Replacement price is charged for missing or damaged parts. Stair tower parts are checked once you enter any of them.",
   "stock.col.part": "Part",
   "stock.col.owned": "Owned",
   "stock.col.price": "Replacement price",
@@ -1844,7 +1844,28 @@ const en = {
   "biz.sys.allround.kind": "German steel modular scaffold",
   "biz.sys.allround.desc": "Steel modular system with a rosette every 0.5 m: it follows corners, projections, curved walls and steps in the building, and extends to stair towers and weather protection. Load class 3 as a facade scaffold; heavier set-ups are planned separately.",
   "biz.sys.allround.uses": "complex and tall buildings, renovation of apartment blocks, stair towers, industrial sites",
-  "biz.type.partner": "From our rental partner – the office confirms availability"
+  "biz.type.partner": "From our rental partner – the office confirms availability",
+  "part.stairs": "Platform stair 3.07 m (rise 2.00 m)",
+  "part.stairs1": "Starter stair 1.30 m (rise 1.00 m)",
+  "part.stairStart": "Stair starter transom 0.73 m",
+  "part.stairRails": "Stair guardrail 3.07 m",
+  "part.stairWalk": "Walk-around guardrail at the stair opening",
+  "part.stairTop": "Top landing guardrail",
+  "part.gapDecks": "Gap deck 3.07 × 0.19 m (scaffold to stair)",
+  "part.stairCouplers": "U-hook-up coupler (stair tower to scaffold)",
+  "part.mz_stairs": "MonZon U-stairway 3.07 m (rise 2.00 m)",
+  "part.mz_stairRails": "MonZon stair guardrail 3.07 m",
+  "line.stairs": (v) => `Stair tower${Number(v.n) > 1 ? "s, " + v.n : ""}, ${v.m} m high${Number(v.n) > 1 ? " in all" : ""}`,
+  "set.prices.stairRentPerMDay": "Stair tower rent per metre of height per day",
+  "set.prices.stairPerM": "Stair tower, putting up and taking down per metre of height",
+  "set.prices.stairsHint": "Every scaffold is reached by a stair tower. Its height is measured to the top landing.",
+  "chk.stair_tower": (v) => `${Number(v.n) > 1 ? v.n + " stair towers" : "Stair tower"}: ${v.system === "monzon" ? "the stair stands in two extra standards outside the scaffold, with U-transoms on every lift and the stair guardrail on the outside" : v.system === "layher" ? "own frames on 4 base jacks 0.21 m out from the scaffold, joined to it with U-hook-up couplers and a gap deck on every lift" : "the supplier's stair tower, set up by their instructions"}. The scaffold bay beside it is decked on every lift and its outer guardrail opens at the landings.`,
+  "chk.stair_gate": (v) => `The roof-catch wall at ${Number(v.n) > 1 ? v.n + " stair landings" : "the stair landing"}: fit a self-closing gate where the landing passes, so the catch wall stays closed.`,
+  "chk.no_stairs": (v) => `No room for a stair tower on ${v.n} ${Number(v.n) > 1 ? "sides" : "side"}: hatch decks with ladders there – check on site whether a tower fits.`,
+  "set.prices.stairs": "Stair towers",
+  "od.house.stairs": "Stair towers",
+  "od.house.stairsVal": (v) => `${v.n} · ${v.m} m high${Number(v.n) > 1 ? " in all" : ""}`,
+  "od.house.ladders": "Hatch decks and ladders (ordered before stair towers)"
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -2147,7 +2168,7 @@ const fi: Record<Key, Entry> = {
   "insp.anchors": "Seinäankkurit kiinnitetty",
   "insp.decks": "Tasot ehjät, täydet ja lukittu",
   "insp.guardrails": "Kaiteet ja jalkalistat kaikilla työtasoilla",
-  "insp.access": "Kulkutie (luukkutaso ja tikkaat)",
+  "insp.access": "Kulkutie (porrastorni tai luukkutaso ja tikkaat)",
   "insp.catch": "Räystässuoja asennettu",
   "insp.clearance": "Etäisyys sähköjohtoihin tarkistettu",
   "insp.tag": "Telinekortti täytetty ja kiinnitetty",
@@ -2710,7 +2731,7 @@ const fi: Record<Key, Entry> = {
   "stock.partsSub": "Pienin vapaa = tiukin päivä seuraavan 60 päivän aikana",
   "stock.value": (v) => `Jälleenhankinta-arvo ${v.v}`,
   "stock.edit": "Muokkaa määriä ja hintoja",
-  "stock.editHint": "Omat = kaikki omistamasi kappaleet. Korvaushinta laskutetaan puuttuvista ja rikkoutuneista osista.",
+  "stock.editHint": "Omat = kaikki omistamasi kappaleet. Korvaushinta laskutetaan puuttuvista ja rikkoutuneista osista. Porrastornin osat tarkistetaan, kun olet syöttänyt niistä yhdenkin.",
   "stock.col.part": "Osa",
   "stock.col.owned": "Omat",
   "stock.col.price": "Korvaushinta",
@@ -3679,7 +3700,28 @@ const fi: Record<Key, Entry> = {
   "biz.sys.allround.kind": "Saksalainen teräksinen modulaariteline",
   "biz.sys.allround.desc": "Teräksinen modulaarijärjestelmä, jossa liitoslevy 0,5 m välein: se taipuu kulmiin, ulokkeisiin, kaareviin seiniin ja porrastuksiin ja laajenee porrastorneiksi ja sääsuojiksi. Julkisivutelineenä kuormaluokka 3; raskaammat rakenteet suunnitellaan erikseen.",
   "biz.sys.allround.uses": "monimuotoiset ja korkeat rakennukset, kerrostalojen korjaukset, porrastornit, teollisuuskohteet",
-  "biz.type.partner": "Vuokrakumppaniltamme – toimisto vahvistaa saatavuuden"
+  "biz.type.partner": "Vuokrakumppaniltamme – toimisto vahvistaa saatavuuden",
+  "part.stairs": "Tasanneporras 3,07 m (nousu 2,00 m)",
+  "part.stairs1": "Aloitusporras 1,30 m (nousu 1,00 m)",
+  "part.stairStart": "Portaan aloituspoikkipuomi 0,73 m",
+  "part.stairRails": "Porraskaide 3,07 m",
+  "part.stairWalk": "Porrasaukon ympärikaide",
+  "part.stairTop": "Ylätasanteen suojakaide",
+  "part.gapDecks": "Välitaso 3,07 × 0,19 m (teline–porras)",
+  "part.stairCouplers": "U-välikytkin (porrastorni telineeseen)",
+  "part.mz_stairs": "MonZon U-porras 3,07 m (nousu 2,00 m)",
+  "part.mz_stairRails": "MonZon porraskaide 3,07 m",
+  "line.stairs": (v) => `Porrastorni${Number(v.n) > 1 ? ", " + v.n + " kpl" : ""}, korkeus ${String(v.m).replace(".", ",")} m${Number(v.n) > 1 ? " yhteensä" : ""}`,
+  "set.prices.stairRentPerMDay": "Porrastornin vuokra korkeusmetriltä päivässä",
+  "set.prices.stairPerM": "Porrastornin asennus ja purku korkeusmetriltä",
+  "set.prices.stairsHint": "Jokaiselle telineelle noustaan porrastornia pitkin. Korkeus mitataan ylätasanteeseen asti.",
+  "chk.stair_tower": (v) => `${Number(v.n) > 1 ? v.n + " porrastornia" : "Porrastorni"}: ${v.system === "monzon" ? "porras kahden lisäpystyputken varaan telineen ulkopuolelle, U-poikkipuomit joka kerrokseen ja porraskaide ulkosivulle" : v.system === "layher" ? "omat kehykset neljän säätöjalan varaan 0,21 m telineen ulkopuolelle, kiinnitys telineeseen U-välikytkimillä ja välitasolla joka kerroksessa" : "toimittajan porrastorni, pystytys heidän ohjeensa mukaan"}. Tornin viereinen kenttä on tasoitettu joka kerroksessa ja sen ulkokaide avataan tasanteiden kohdalta.`,
+  "chk.stair_gate": (v) => `Räystässuoja ${Number(v.n) > 1 ? v.n + " porrastasanteen" : "porrastasanteen"} kohdalla: asenna itsestään sulkeutuva portti tasanteen kohdalle, jotta räystässuoja pysyy suljettuna.`,
+  "chk.no_stairs": (v) => `Porrastornille ei löytynyt tilaa ${v.n} sivulla: niissä luukkutasot ja tikkaat – tarkista paikan päällä, mahtuuko torni.`,
+  "set.prices.stairs": "Porrastornit",
+  "od.house.stairs": "Porrastornit",
+  "od.house.stairsVal": (v) => `${v.n} kpl · korkeus ${v.m} m${Number(v.n) > 1 ? " yhteensä" : ""}`,
+  "od.house.ladders": "Luukkutasot ja tikkaat (tilattu ennen porrastorneja)"
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };
@@ -3746,6 +3788,8 @@ export function lineText(i: T, l: Pick<QuoteLine, "key" | "label"> & { vars?: Re
     }
     case "levels":
       return i.t("line.levels", { m: v.m ?? fromLabel(/(\d+) m/) });
+    case "stairs":
+      return i.t("line.stairs", { n: v.n ?? 1, m: v.m ?? fromLabel(/([\d.]+) m/) });
     case "sheeting":
       return i.t("line.sheeting", { m2: v.m2 ?? "" });
     case "roofRent":

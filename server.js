@@ -58,6 +58,16 @@ const crews = () => store.list("crew").sort((a, b) => a.createdAt.localeCompare(
 // Tracking links in customer messages carry the order's key, so customers never need the phone digits.
 const notify = createNotifier({ store, getOps: ops, orderKey: (ref) => (auth.enabled ? auth.orderKey(ref) : null) });
 
+// Orders from before stair towers keep the hatch decks and ladders they were priced and loaded with (runs once).
+if (!store.getSetting("stairsFrom")) {
+  const ladders = (h) => (h && !h.ladders ? { ...h, ladders: true } : h);
+  for (const o of store.listOrders(store.countOrders())) {
+    const pc = o.priceChange && o.priceChange.after && o.priceChange.after.house ? { ...o.priceChange, after: { ...o.priceChange.after, house: ladders(o.priceChange.after.house) } } : o.priceChange;
+    store.saveOrder({ ...o, house: ladders(o.house), ...(pc ? { priceChange: pc } : {}) });
+  }
+  for (const c of store.list("change", { limit: 1e6 })) if (c.proposed && c.proposed.house && !c.proposed.house.ladders) store.put("change", { ...c, proposed: { ...c.proposed, house: ladders(c.proposed.house) } });
+  store.setSetting("stairsFrom", new Date().toISOString());
+}
 // Orders from before the confirmed rates were kept on the order: today's rates become theirs.
 for (const o of store.listOrders(store.countOrders())) if (!o.pricing) store.saveOrder({ ...o, pricing: O.rateCard(pricing()) });
 // Portal logins of accounts deleted before deleting took their logins along would block those phone numbers.

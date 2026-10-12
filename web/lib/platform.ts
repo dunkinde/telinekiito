@@ -15,10 +15,11 @@ export const ORDER_FLOW: OrderStatus[] = ["received", "confirmed", "loading", "e
 export type PartKey =
   | "frames" | "baseJacks" | "decks" | "hatchDecks" | "guardrails" | "toeBoards" | "endGuards"
   | "diagonals" | "topPosts" | "catchPosts" | "catchMesh" | "anchors" | "frames1" | "consoles" | "endToeBoards" | "hBraces" | "startLedgers" | "ladders" | "tubes" | "couplers"
-  | "mz_baseJacks" | "mz_baseCollars" | "mz_standards" | "mz_transoms" | "mz_ledgers" | "mz_decks" | "mz_accessDecks" | "mz_guardrails" | "mz_endGuards" | "mz_toeBoards" | "mz_endToeBoards" | "mz_braces" | "mz_topPosts" | "mz_catchPosts" | "mz_catchMesh" | "mz_anchors" | "mz_standards1" | "mz_brackets" | "mz_stairs1" | "mz_tubes" | "mz_couplers"
+  | "stairs" | "stairs1" | "stairStart" | "stairRails" | "stairWalk" | "stairTop" | "gapDecks" | "stairCouplers"
+  | "mz_baseJacks" | "mz_baseCollars" | "mz_standards" | "mz_transoms" | "mz_ledgers" | "mz_decks" | "mz_accessDecks" | "mz_guardrails" | "mz_endGuards" | "mz_toeBoards" | "mz_endToeBoards" | "mz_braces" | "mz_topPosts" | "mz_catchPosts" | "mz_catchMesh" | "mz_anchors" | "mz_standards1" | "mz_brackets" | "mz_stairs1" | "mz_tubes" | "mz_couplers" | "mz_stairs" | "mz_stairRails"
   | "wp_sheetRolls" | "wp_ties" | "wr_eaves" | "wr_ridges" | "wr_beam300" | "wr_beam200" | "wr_beam100" | "wr_beam050" | "wr_frames" | "wr_ledgers" | "wr_tarps" | "wr_gableTarps" | "lr_eaves" | "lr_ridges" | "lr_beam300" | "lr_beam200" | "lr_supports" | "lr_ledgers" | "lr_stiffeners" | "lr_braces" | "lr_tarps" | "lr_gableTarps";
-export const LAYHER_PARTS: PartKey[] = ["frames", "frames1", "consoles", "baseJacks", "decks", "hatchDecks", "guardrails", "toeBoards", "endGuards", "endToeBoards", "diagonals", "hBraces", "startLedgers", "ladders", "tubes", "couplers", "topPosts", "catchPosts", "catchMesh", "anchors"];
-export const MONZON_PARTS: PartKey[] = ["mz_baseJacks", "mz_baseCollars", "mz_standards", "mz_standards1", "mz_brackets", "mz_stairs1", "mz_tubes", "mz_couplers", "mz_transoms", "mz_ledgers", "mz_decks", "mz_accessDecks", "mz_guardrails", "mz_endGuards", "mz_toeBoards", "mz_endToeBoards", "mz_braces", "mz_topPosts", "mz_catchPosts", "mz_catchMesh", "mz_anchors"];
+export const LAYHER_PARTS: PartKey[] = ["frames", "frames1", "consoles", "baseJacks", "decks", "hatchDecks", "guardrails", "toeBoards", "endGuards", "endToeBoards", "diagonals", "hBraces", "startLedgers", "ladders", "stairs", "stairs1", "stairStart", "stairRails", "stairWalk", "stairTop", "gapDecks", "stairCouplers", "tubes", "couplers", "topPosts", "catchPosts", "catchMesh", "anchors"];
+export const MONZON_PARTS: PartKey[] = ["mz_baseJacks", "mz_baseCollars", "mz_standards", "mz_standards1", "mz_brackets", "mz_stairs1", "mz_tubes", "mz_couplers", "mz_transoms", "mz_ledgers", "mz_decks", "mz_accessDecks", "mz_stairs", "mz_stairRails", "mz_guardrails", "mz_endGuards", "mz_toeBoards", "mz_endToeBoards", "mz_braces", "mz_topPosts", "mz_catchPosts", "mz_catchMesh", "mz_anchors"];
 export const WEATHER_PARTS: PartKey[] = ["wp_sheetRolls", "wp_ties", "wr_eaves", "wr_ridges", "wr_beam300", "wr_beam200", "wr_beam100", "wr_beam050", "wr_frames", "wr_ledgers", "wr_tarps", "wr_gableTarps", "lr_eaves", "lr_ridges", "lr_beam300", "lr_beam200", "lr_supports", "lr_ledgers", "lr_stiffeners", "lr_braces", "lr_tarps", "lr_gableTarps"];
 export const PART_KEYS: PartKey[] = [...LAYHER_PARTS, ...MONZON_PARTS, ...WEATHER_PARTS];
 /** Our own stock is Layher, MonZon and weather protection (the partners' steel systems have no parts of ours). */
@@ -55,9 +56,11 @@ export interface House {
   sheeting?: boolean;
   weatherRoof?: boolean;
   model?: { id: string; date: string | null };
+  /** Ordered before stair towers: hatch decks and ladders, as priced and loaded then. */
+  ladders?: boolean;
 }
-export interface Side { name: string; bays: number; lifts: number; workH: number; area: number; catchOn: boolean }
-export interface FullEstimate { sheeting?: { m2: number } | null; roof?: { span: number; length: number; pitch: number; support: number; sections: number; tarpWidth: number; planM2: number } | null; area: number; runM: number; catchRunM: number; extraLevelM: number; weightKg: number; parts: Parts; sides: Side[] }
+export interface Side { name: string; bays: number; lifts: number; workH: number; area: number; catchOn: boolean; stairs?: number }
+export interface FullEstimate { stairs?: { n: number; m: number }; sheeting?: { m2: number } | null; roof?: { span: number; length: number; pitch: number; support: number; sections: number; tarpWidth: number; planM2: number } | null; area: number; runM: number; catchRunM: number; extraLevelM: number; weightKg: number; parts: Parts; sides: Side[] }
 export interface Assignment { date?: string | null; time?: string; crewId?: string | null; pickupDate?: string | null; pickupTime?: string; pickupCrewId?: string | null }
 export interface HistoryEntry { status?: OrderStatus; event?: string; code?: string; at: string; by?: string; days?: number; detail?: unknown }
 export interface Message { from: "customer" | "office"; text: string; at: string; by?: string }

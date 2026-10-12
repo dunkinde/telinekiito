@@ -401,20 +401,31 @@ test("Layher parts follow the catalogue and AuV: double guardrails, end toe boar
   assert.equal(s.parts.guardrails, s.bays * D); // one double guardrail per bay and level
   assert.equal(s.parts.endToeBoards, 2 * D);
   assert.equal(s.parts.hBraces, fields);
-  assert.equal(s.parts.startLedgers, 2); // the lowest ladder stands on a deck
-  assert.equal(s.parts.decks, D * s.bays * 2 - 2 * D + 2);
+  // A stair tower is the way up: no hatch decks or ladders, every bay decked with plain decks.
+  assert.equal(s.parts.startLedgers, 0);
+  assert.equal(s.parts.hatchDecks, 0);
+  assert.equal(s.parts.decks, D * s.bays * 2);
+  // Orders from before stair towers keep the hatch bay: the lowest ladder stands on a deck.
+  const old = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "gable", pitch: 40, jobType: "facade", ladders: true }).sides.find((x) => x.kind === "eaves");
+  assert.equal(old.parts.startLedgers, 2);
+  assert.equal(old.parts.decks, D * old.bays * 2 - 2 * D + 2);
   // Roof job: no guardrails behind the roof-catch wall, ends closed with frames.
   const roof = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "gable", pitch: 30, jobType: "roof", gables: true }).sides[0];
   assert.equal(roof.parts.guardrails, 0);
   assert.equal(roof.parts.frames, (roof.bays + 1) * roof.lifts + 2);
   assert.equal(roof.parts.endGuards, 0);
-  // 1½ floors: 1 m frames braced with tubes and couplers, a ladder from the ground instead of the start ledgers.
-  const half = E.estimate({ length: 12, width: 9, eave: 4.3, roofType: "hip", pitch: 30, jobType: "gutters" }).sides[0];
+  // 1½ floors: 1 m frames braced with tubes and couplers; with ladders, a ladder from the ground instead of the
+  // start ledgers; with a stair tower, its 1.00 m starter stair.
+  const halfEst = E.estimate({ length: 12, width: 9, eave: 4.3, roofType: "hip", pitch: 30, jobType: "gutters" });
+  const half = halfEst.sides[0];
   assert.equal(half.half, 1);
   assert.equal(half.parts.tubes, Math.ceil(half.bays / 5));
   assert.equal(half.parts.couplers, 2 * Math.ceil(half.bays / 5));
-  assert.equal(half.parts.ladders, 1);
-  assert.equal(half.parts.startLedgers, 0);
+  assert.equal(half.parts.ladders, 0);
+  assert.equal(halfEst.totals.parts.stairs1, halfEst.totals.stairs.n);
+  const halfOld = E.estimate({ length: 12, width: 9, eave: 4.3, roofType: "hip", pitch: 30, jobType: "gutters", ladders: true }).sides[0];
+  assert.equal(halfOld.parts.ladders, 1);
+  assert.equal(halfOld.parts.startLedgers, 0);
   // Flat roof (≤ 22.5°): the edge protection reaches 1.0 m above the eave.
   const flat = E.estimate({ length: 12, width: 9, eave: 3.0, roofType: "flat", pitch: 0, jobType: "roof" }).sides[0];
   assert.ok(flat.deckH + E.CATCH.wall >= 3.0 + 1.0 - 1e-9);
@@ -648,7 +659,8 @@ test("an accepted offer is the agreed price for its days: other days change only
   const days = o.schedule.days;
   o.house = { ...o.house, offer: { net: 5000, days } };
   assert.equal(P.repriceOrder(o, p).quote.net, 5000);
-  const rent = (d) => P.repriceOrder({ ...o, house: { ...o.house, offer: undefined } }, p, { days: d }).quote.lines.filter((l) => l.key === "rent" || l.key === "roofRent").reduce((s, l) => s + l.amount, 0);
+  // Rent lines: the stair tower line's work is the same for any days, so only its rent moves.
+  const rent = (d) => P.repriceOrder({ ...o, house: { ...o.house, offer: undefined } }, p, { days: d }).quote.lines.filter((l) => ["rent", "roofRent", "stairs"].includes(l.key)).reduce((s, l) => s + l.amount, 0);
   const short = P.repriceOrder(o, p, { days: Math.max(1, days - 10) }).quote;
   assert.ok(short.net < 5000 && short.net > 0);
   assert.ok(Math.abs(short.net - (5000 - (rent(days) - rent(Math.max(1, days - 10))) * 0.9)) < 0.05);
@@ -668,7 +680,9 @@ test("partner steel systems: planned on our grid, no parts of ours, heavier load
     assert.ok(est.supplier);
     assert.equal(est.totals.area, alu.totals.area);
     assert.deepEqual(Object.keys(est.totals.parts), []);
-    assert.ok(Math.abs(est.totals.weightKg - est.totals.area * E.SYSTEMS[sys].kgM2) < E.SYSTEMS[sys].kgM2);
+    // Their scaffold by the m², their steel stair towers by the metre.
+    assert.ok(est.totals.stairs.n >= 1);
+    assert.ok(Math.abs(est.totals.weightKg - est.totals.area * E.SYSTEMS[sys].kgM2 - est.totals.stairs.m * 35) < E.SYSTEMS[sys].kgM2);
     const codes = checksFor(O.houseOf({ ...h, system: sys }), est).map((c) => c.code);
     assert.ok(codes.includes("anchor_8m") && codes.includes("supplier") && !codes.includes("mz_not_covered"));
   }

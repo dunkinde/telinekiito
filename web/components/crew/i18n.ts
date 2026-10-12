@@ -221,7 +221,7 @@ const fi = {
   "insp.item.anchors": "Seinäankkurit kiinnitetty",
   "insp.item.decks": "Tasot ehjät, täydet ja lukittu",
   "insp.item.guardrails": "Kaiteet ja jalkalistat kaikilla työtasoilla",
-  "insp.item.access": "Kulkutie: luukkutaso ja tikkaat",
+  "insp.item.access": "Kulkutie: porrastorni tai luukkutaso ja tikkaat",
   "insp.item.catch": "Räystässuoja asennettu",
   "insp.item.clearance": "Etäisyys sähköjohtoihin tarkistettu",
   "insp.item.tag": "Telinekortti täytetty ja kiinnitetty",
@@ -566,7 +566,22 @@ const fi = {
   "err.invalid_fields": "Tarkista mitat.",
   "err.server_error": "Palvelimella tapahtui virhe. Yritä uudelleen.",
   "err.image": "Kuvaa ei voitu lukea.",
-  "err.unknown": (v: Vars) => `Jokin meni pieleen (${v.code}).`
+  "err.unknown": (v: Vars) => `Jokin meni pieleen (${v.code}).`,
+  "part.stairs": "Tasanneporras 3,07 m (nousu 2,00 m)",
+  "part.stairs1": "Aloitusporras 1,30 m (nousu 1,00 m)",
+  "part.stairStart": "Portaan aloituspoikkipuomi 0,73 m",
+  "part.stairRails": "Porraskaide 3,07 m",
+  "part.stairWalk": "Porrasaukon ympärikaide",
+  "part.stairTop": "Ylätasanteen suojakaide",
+  "part.gapDecks": "Välitaso 3,07 × 0,19 m (teline–porras)",
+  "part.stairCouplers": "U-välikytkin (porrastorni telineeseen)",
+  "part.mz_stairs": "MonZon U-porras 3,07 m (nousu 2,00 m)",
+  "part.mz_stairRails": "MonZon porraskaide 3,07 m",
+  "chk.stair_tower": (v: Vars) => `${Number(v.n) > 1 ? v.n + " porrastornia" : "Porrastorni"}: ${v.system === "monzon" ? "porras kahden lisäpystyputken varaan telineen ulkopuolelle, U-poikkipuomit joka kerrokseen ja porraskaide ulkosivulle" : v.system === "layher" ? "omat kehykset neljän säätöjalan varaan 0,21 m telineen ulkopuolelle, kiinnitys telineeseen U-välikytkimillä ja välitasolla joka kerroksessa" : "toimittajan porrastorni, pystytys heidän ohjeensa mukaan"}. Tornin viereinen kenttä on tasoitettu joka kerroksessa ja sen ulkokaide avataan tasanteiden kohdalta.`,
+  "chk.stair_gate": (v: Vars) => `Räystässuoja ${Number(v.n) > 1 ? v.n + " porrastasanteen" : "porrastasanteen"} kohdalla: asenna itsestään sulkeutuva portti tasanteen kohdalle, jotta räystässuoja pysyy suljettuna.`,
+  "chk.no_stairs": (v: Vars) => `Porrastornille ei löytynyt tilaa ${v.n} sivulla: niissä luukkutasot ja tikkaat – tarkista paikan päällä, mahtuuko torni.`,
+  "build.stairs": "Porrastornit",
+  "build.stairsVal": (v: Vars) => `${v.n} kpl, ${v.m} m`
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof fi;
@@ -775,7 +790,7 @@ const en: Dict = {
   "insp.item.anchors": "Wall anchors fixed",
   "insp.item.decks": "Decks complete, undamaged and locked",
   "insp.item.guardrails": "Guardrails and toe boards on all working levels",
-  "insp.item.access": "Access: hatch deck and ladder",
+  "insp.item.access": "Access: stair tower, or hatch deck and ladder",
   "insp.item.catch": "Roof-catch guard fitted",
   "insp.item.clearance": "Clearance from power lines checked",
   "insp.item.tag": "Scaffold tag filled in and attached",
@@ -1120,7 +1135,22 @@ const en: Dict = {
   "err.invalid_fields": "Check the measurements.",
   "err.server_error": "Something went wrong on the server. Try again.",
   "err.image": "Couldn't read the image.",
-  "err.unknown": (v) => `Something went wrong (${v.code}).`
+  "err.unknown": (v) => `Something went wrong (${v.code}).`,
+  "part.stairs": "Platform stair 3.07 m (rise 2.00 m)",
+  "part.stairs1": "Starter stair 1.30 m (rise 1.00 m)",
+  "part.stairStart": "Stair starter transom 0.73 m",
+  "part.stairRails": "Stair guardrail 3.07 m",
+  "part.stairWalk": "Walk-around guardrail at the stair opening",
+  "part.stairTop": "Top landing guardrail",
+  "part.gapDecks": "Gap deck 3.07 × 0.19 m (scaffold to stair)",
+  "part.stairCouplers": "U-hook-up coupler (stair tower to scaffold)",
+  "part.mz_stairs": "MonZon U-stairway 3.07 m (rise 2.00 m)",
+  "part.mz_stairRails": "MonZon stair guardrail 3.07 m",
+  "chk.stair_tower": (v) => `${Number(v.n) > 1 ? v.n + " stair towers" : "Stair tower"}: ${v.system === "monzon" ? "the stair stands in two extra standards outside the scaffold, with U-transoms on every lift and the stair guardrail on the outside" : v.system === "layher" ? "own frames on 4 base jacks 0.21 m out from the scaffold, joined to it with U-hook-up couplers and a gap deck on every lift" : "the supplier's stair tower, set up by their instructions"}. The scaffold bay beside it is decked on every lift and its outer guardrail opens at the landings.`,
+  "chk.stair_gate": (v) => `The roof-catch wall at ${Number(v.n) > 1 ? v.n + " stair landings" : "the stair landing"}: fit a self-closing gate where the landing passes, so the catch wall stays closed.`,
+  "chk.no_stairs": (v) => `No room for a stair tower on ${v.n} ${Number(v.n) > 1 ? "sides" : "side"}: hatch decks with ladders there – check on site whether a tower fits.`,
+  "build.stairs": "Stair towers",
+  "build.stairsVal": (v) => `${v.n}, ${v.m} m`
 };
 
 const ru: Dict = {
@@ -1326,7 +1356,7 @@ const ru: Dict = {
   "insp.item.anchors": "Стеновые анкеры закреплены",
   "insp.item.decks": "Настилы полные, целые и зафиксированы",
   "insp.item.guardrails": "Перила и бортовые доски на всех рабочих ярусах",
-  "insp.item.access": "Проход: настил с люком и лестница",
+  "insp.item.access": "Проход: лестничная башня или настил с люком и лестница",
   "insp.item.catch": "Защита свеса кровли установлена",
   "insp.item.clearance": "Расстояние до электропроводов проверено",
   "insp.item.tag": "Бирка лесов заполнена и закреплена",
@@ -1671,7 +1701,22 @@ const ru: Dict = {
   "err.invalid_fields": "Проверьте размеры.",
   "err.server_error": "Ошибка на сервере. Попробуйте ещё раз.",
   "err.image": "Не удалось прочитать изображение.",
-  "err.unknown": (v) => `Что-то пошло не так (${v.code}).`
+  "err.unknown": (v) => `Что-то пошло не так (${v.code}).`,
+  "part.stairs": "Лестничный марш 3,07 м (подъём 2,00 м)",
+  "part.stairs1": "Стартовый марш 1,30 м (подъём 1,00 м)",
+  "part.stairStart": "Стартовый ригель лестницы 0,73 м",
+  "part.stairRails": "Лестничное ограждение 3,07 м",
+  "part.stairWalk": "Ограждение лестничного проёма",
+  "part.stairTop": "Ограждение верхней площадки",
+  "part.gapDecks": "Промежуточный настил 3,07 × 0,19 м (леса–лестница)",
+  "part.stairCouplers": "U-муфта (башня к лесам)",
+  "part.mz_stairs": "Лестница MonZon 3,07 м (подъём 2,00 м)",
+  "part.mz_stairRails": "Лестничное ограждение MonZon 3,07 м",
+  "chk.stair_tower": (v) => `${Number(v.n) > 1 ? "Лестничные башни (" + v.n + ")" : "Лестничная башня"}: ${v.system === "monzon" ? "лестница на двух дополнительных стойках снаружи лесов, U-ригели на каждом ярусе и лестничное ограждение снаружи" : v.system === "layher" ? "собственные рамы на 4 домкратах в 0,21 м от лесов, крепление к лесам U-муфтами и промежуточным настилом на каждом ярусе" : "лестничная башня поставщика, монтаж по их инструкции"}. Пролёт лесов рядом с башней настилается на каждом ярусе, его наружное ограждение открыто у площадок.`,
+  "chk.stair_gate": (v) => `Улавливающая стенка у ${Number(v.n) > 1 ? "лестничных площадок (" + v.n + ")" : "лестничной площадки"}: установите самозакрывающуюся калитку в месте прохода, чтобы стенка оставалась закрытой.`,
+  "chk.no_stairs": (v) => `Нет места для лестничной башни на сторонах: ${v.n}. Там настилы с люком и лестницы — проверьте на месте, помещается ли башня.`,
+  "build.stairs": "Лестничные башни",
+  "build.stairsVal": (v) => `${v.n} шт., ${v.m} м`
 };
 
 const DICTS: Record<Lang, Dict> = { fi, en, ru };

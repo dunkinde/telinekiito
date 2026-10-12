@@ -57,6 +57,7 @@
         return t("line.premium", { tier: urgLabel(tier), pct: v.pct != null ? v.pct : num(/\+([\d.]+)%/) });
       }
       case "levels": return t("line.levels", { m: v.m != null ? v.m : num(/(\d+) m/) });
+      case "stairs": return t(v.n > 1 ? "line.stairsN" : "line.stairs", { n: v.n || 1, m: v.m != null ? v.m : num(/([\d.]+) m/) });
       default: return I.has("line." + l.key) ? t("line." + l.key) : l.label;
     }
   }
