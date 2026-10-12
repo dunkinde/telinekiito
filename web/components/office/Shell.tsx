@@ -346,7 +346,7 @@ export function Shell() {
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-[244px] flex-col bg-ink lg:flex">
         <div className="flex h-16 shrink-0 items-center px-5">
           <a href="#/overview" aria-label={t("nav.home")} className="rounded-lg focus-visible:outline-sun">
-            <Logo dark className="scale-[0.92] origin-left" />
+            <Logo dark className="h-[15px]" />
           </a>
         </div>
         <div className="no-scrollbar flex min-h-0 flex-1 flex-col justify-between gap-6 overflow-y-auto px-3 pt-2 pb-4">

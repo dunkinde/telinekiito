@@ -2,7 +2,7 @@
 // Phone number + PIN. Big fields with number keypads; the owner's password login hides behind "Office login".
 import { useEffect, useRef, useState } from "react";
 import { loginWithPassword, loginWithPin, type StaffUser } from "@/lib/platform";
-import { LogoMark } from "../Logo";
+import { Logo } from "../Logo";
 import { lsGet, lsSet } from "./context";
 import { errorText, LANG_NAMES, LANGS, type Lang, type T } from "./i18n";
 import { IEye, IEyeOff, IKey } from "./icons";
@@ -53,12 +53,7 @@ export function Login({ t, lang, setLang, onLogin, notice }: { t: T; lang: Lang;
     <main className="flex min-h-[100dvh] flex-col bg-ink text-white">
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pt-[max(20px,env(safe-area-inset-top))] pb-[max(24px,env(safe-area-inset-bottom))]">
         <div className="flex items-center justify-between gap-3 py-2">
-          <span className="inline-flex items-center gap-2.5">
-            <LogoMark className="h-10 w-10" />
-            <span className="font-display text-[22px] leading-none font-extrabold tracking-[-0.01em]">
-              Teline<span className="text-sun">Kiito</span>
-            </span>
-          </span>
+          <Logo dark className="h-[11px] min-[360px]:h-[14px] min-[400px]:h-[18px]" />
           <div className="flex gap-1 rounded-full bg-white/10 p-1" role="radiogroup" aria-label="Language / Kieli / Язык">
             {LANGS.map((l) => (
               <button

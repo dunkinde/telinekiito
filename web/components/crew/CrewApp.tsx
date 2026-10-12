@@ -4,7 +4,7 @@
 // and are sent when the connection comes back; the service worker (/crew-sw.js) keeps the app and the last jobs.
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { ApiError, getMe, logout, type Me, type StaffUser } from "@/lib/platform";
-import { LogoMark } from "../Logo";
+import { Logo } from "../Logo";
 import { Approvals } from "./Approvals";
 import { Ctx, lsGet, lsSet, ssGet, ssSet, type AppCtx } from "./context";
 import { isLang, makeT, type Lang } from "./i18n";
@@ -228,12 +228,7 @@ function Root() {
 function Splash() {
   return (
     <main className="grid min-h-[100dvh] place-items-center bg-ink" aria-busy="true">
-      <div className="flex flex-col items-center gap-4">
-        <LogoMark className="h-16 w-16" />
-        <span className="font-display text-[22px] font-extrabold tracking-[-0.01em] text-white">
-          Teline<span className="text-sun">Kiito</span>
-        </span>
-      </div>
+      <Logo dark className="h-5" />
     </main>
   );
 }

@@ -93,14 +93,14 @@ export function Header() {
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       />
       <motion.div
-        className="relative mx-auto flex h-20 max-w-7xl items-center gap-6 px-4 sm:px-6 lg:px-8"
+        className="relative mx-auto flex h-20 max-w-7xl items-center gap-3 px-4 sm:gap-6 sm:px-6 lg:px-8"
         initial={false}
         animate={{ y: scrolled && !menu ? -8 : 0 }}
         transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
       >
         <a href="#top" aria-label={t("nav.home")} className="mr-auto shrink-0">
           <motion.span className="block origin-left" animate={{ scale: scrolled ? 0.92 : 1 }} transition={{ duration: 0.35 }}>
-            <Logo />
+            <Logo className="h-[11px] min-[360px]:h-[14px] min-[420px]:h-[18px] sm:h-[22px] lg:h-[13px] xl:h-[16px] 2xl:h-[22px]" />
           </motion.span>
         </a>
 

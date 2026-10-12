@@ -4,7 +4,7 @@
  * - Photos (/api/files/…): cache first (they never change), at most 200.
  * - Never cached: POST/PUT/…, logins (/api/staff/*), the office API and everything else under /api.
  * Bump VERSION to drop old caches. */
-const VERSION = "tk-crew-v1";
+const VERSION = "tk-crew-v2";
 const SHELL = `${VERSION}-shell`;
 const API = `${VERSION}-api`;
 const FILES = `${VERSION}-files`;
