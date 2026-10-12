@@ -127,6 +127,7 @@ Scaffolding-rental platform for David (business idea; no real company yet). Finn
 ## What's left
 - Merge `platform-wip` → `main`, check `/healthz/deploy` and the live site (if not done yet).
 - Company details (M1 phone, privacy controller details), email/SMS keys in `.env`.
+- Planned, not built (owner first asks Renta/Ramirent/Cramo if they'd use it): supplier quote requests for partner steel jobs. Office sends one request to several firms (site address, dates, plan + parts list; never our client's name), each firm answers via a no-login link (price, delivery/pickup, availability, delivery date, validity, PDF) or declines; office compares against the material budget, accepts one (order + "not selected" drafts, supplier on job card); 24 h reminders. Prefer sending before the client price is confirmed.
 
 ## Local testing
 - On a normal machine (Windows too): `cd web && npm install && npm run build`, then run `server.js` with `SITE_DIR=<abs path to web/out>` (use a Windows path on Windows), `DATA_DIR`, `OFFICE_PASSWORD=localpassword`, `SESSION_SECRET=<32+ chars>`. Playwright can drive the installed Edge (`channel: "msedge"`).
