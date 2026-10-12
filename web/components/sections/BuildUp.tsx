@@ -1,9 +1,9 @@
 "use client";
-// "Installation day" timelapse: the section stays pinned while you scroll, and the scaffold on the 3D house goes
-// up level by level with the scroll position. A clock and milestones follow along. On desktops the page snaps
-// to each milestone, so one scroll step = one stage of the day.
-import { motion, useMotionValueEvent, useScroll, useTransform } from "framer-motion";
-import { useRef, useState } from "react";
+// "Installation day" timelapse: when the section is in view, the scaffold on the 3D house goes up level by level
+// on its own, with the clock and milestones following along. It holds the finished scaffold, then replays.
+// Pauses off-screen and on request; visitors who prefer reduced motion see the finished scaffold.
+import { animate, motion, useInView, useMotionValue, useMotionValueEvent, useReducedMotion, type AnimationPlaybackControls } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
 import { BUILD_STEPS } from "@/lib/content";
 import { useI18n } from "@/lib/i18n";
 import { HouseModel } from "../HouseModel";
@@ -11,19 +11,40 @@ import { IconCheck } from "../ui/Icons";
 
 const HOUSE = { length: 11, width: 8, eave: 5.8, roofType: "gable" as const, pitch: 30, jobType: "roof_facade" as const };
 const DAY_START = 7 * 60 + 30, DAY_END = 14 * 60 + 30; // 07:30 → 14:30
-// Section is (STAGES - 1) * 40vh of scrolling plus one pinned screen.
-const STAGE_VH = 40;
+const PLAY_S = 12; // one installation day
+const HOLD_MS = 3000; // finished scaffold stays up before the replay
 
 export function BuildUp() {
   const { t, pick } = useI18n();
   const ref = useRef<HTMLElement>(null);
   const clock = useRef<HTMLSpanElement>(null);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
+  const progress = useMotionValue(0);
+  const inView = useInView(ref, { amount: 0.4 });
+  const reduce = useReducedMotion();
+  const [paused, setPaused] = useState(false);
   const [active, setActive] = useState(0);
-  const bar = useTransform(scrollYProgress, [0, 1], [0, 1]);
 
-  // Clock text and the current milestone follow the scroll position (no re-render per frame for the clock).
-  useMotionValueEvent(scrollYProgress, "change", (v) => {
+  useEffect(() => {
+    if (reduce) {
+      progress.set(1);
+      return;
+    }
+    if (!inView || paused) return;
+    let ctl: AnimationPlaybackControls | undefined;
+    let hold = 0;
+    const run = () => {
+      if (progress.get() >= 1) progress.set(0);
+      ctl = animate(progress, 1, { duration: PLAY_S * (1 - progress.get()), ease: "linear", onComplete: () => (hold = window.setTimeout(run, HOLD_MS)) });
+    };
+    run();
+    return () => {
+      ctl?.stop();
+      window.clearTimeout(hold);
+    };
+  }, [inView, paused, reduce, progress]);
+
+  // Clock text and the current milestone follow the progress (no re-render per frame for the clock).
+  useMotionValueEvent(progress, "change", (v) => {
     const mins = Math.round(DAY_START + (DAY_END - DAY_START) * Math.min(1, Math.max(0, v)));
     if (clock.current) clock.current.textContent = `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
     let i = 0;
@@ -33,14 +54,9 @@ export function BuildUp() {
     setActive((prev) => (prev === i ? prev : i));
   });
 
-  const stages = BUILD_STEPS.length;
   return (
-    <section id="build" ref={ref} className="snap-full relative bg-white" style={{ height: `calc(100svh + ${(stages - 1) * STAGE_VH}vh)` }}>
-      {/* Snap stops: one per milestone (desktop). */}
-      {BUILD_STEPS.map((_, i) => (
-        <span key={i} aria-hidden className="snap-point pointer-events-none absolute inset-x-0 h-px" style={{ top: `${i * STAGE_VH}vh` }} />
-      ))}
-      <div className="sticky top-0 flex h-[100svh] items-center overflow-hidden pt-20 pb-[clamp(0.75rem,3svh,2rem)]">
+    <section id="build" ref={ref} className="snap-full relative bg-white">
+      <div className="flex min-h-[100svh] items-center overflow-hidden pt-20 pb-[clamp(0.75rem,3svh,2rem)]">
         <div className="mx-auto grid w-full max-w-7xl items-center gap-4 px-4 sm:px-6 lg:grid-cols-12 lg:gap-10 lg:px-8">
           <div className="lg:col-span-5">
             <p className="mb-3 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-ink-soft lg:mb-[clamp(0.5rem,1.6svh,1rem)]">
@@ -52,14 +68,26 @@ export function BuildUp() {
             </h2>
             <p className="mt-4 hidden max-w-md text-lg leading-relaxed text-muted sm:block lg:mt-[clamp(0.5rem,1.8svh,1rem)] lg:text-[clamp(0.95rem,2.4svh,1.125rem)]">{t("build.intro")}</p>
 
-            <div className="mt-5 flex items-end gap-4 lg:mt-[clamp(0.75rem,2.6svh,1.5rem)]">
+            <div className="mt-5 flex max-w-md items-end gap-4 lg:mt-[clamp(0.75rem,2.6svh,1.5rem)]">
               <span ref={clock} className="font-mono text-5xl font-bold tabular-nums text-ink sm:text-6xl lg:text-[clamp(2.5rem,7.5svh,3.75rem)]">
                 07:30
               </span>
               <span className="mb-2 text-sm text-muted">{t("build.clock")}</span>
+              {reduce ? null : (
+                <button
+                  type="button"
+                  onClick={() => setPaused((p) => !p)}
+                  aria-label={t(paused ? "build.play" : "build.pause")}
+                  className="mb-1.5 ml-auto grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink ring-1 ring-inset ring-ink/15 transition-colors hover:bg-mist"
+                >
+                  <svg aria-hidden viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor">
+                    {paused ? <path d="M7 4.5v15l13-7.5z" /> : <path d="M6 4h4v16H6zM14 4h4v16h-4z" />}
+                  </svg>
+                </button>
+              )}
             </div>
             <div className="mt-3 h-1 w-full max-w-md overflow-hidden rounded-full bg-line">
-              <motion.div className="h-full origin-left rounded-full bg-sun" style={{ scaleX: bar }} />
+              <motion.div className="h-full origin-left rounded-full bg-sun" style={{ scaleX: progress }} />
             </div>
 
             <ol className="mt-5 space-y-2.5 lg:mt-[clamp(0.75rem,2.6svh,1.5rem)] lg:space-y-[clamp(0.3rem,1.2svh,0.625rem)]">
@@ -79,7 +107,7 @@ export function BuildUp() {
             <HouseModel
               shape={HOUSE}
               mode="progress"
-              progress={scrollYProgress}
+              progress={progress}
               className="mx-auto h-[36svh] w-full max-w-2xl sm:h-[46svh] lg:h-[calc(100svh-8rem)] lg:max-h-[38rem]"
               label={t("build.title")}
             />

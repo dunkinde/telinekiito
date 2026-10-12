@@ -64,8 +64,10 @@ const en = {
 
   "build.eyebrow": "Installation day",
   "build.title": "Up in a day, ready to work on",
-  "build.intro": "A typical two-storey house: delivered in the morning, installed level by level, inspected and tagged by the afternoon. Scroll to watch it go up.",
+  "build.intro": "A typical two-storey house: delivered in the morning, installed level by level, inspected and tagged by the afternoon. Watch it go up.",
   "build.clock": "installation day",
+  "build.pause": "Pause the animation",
+  "build.play": "Play the animation",
   "cov.eyebrow": "Delivery area",
   "cov.title": "Fastest close by, all of Finland by arrangement",
   "cov.intro": "We work from the Helsinki region. The closer the site, the faster the scaffold is up – every quote shows the delivery zone and price.",
@@ -592,8 +594,10 @@ const fi: Record<Key, Entry> = {
 
   "build.eyebrow": "Pystytyspäivä",
   "build.title": "Pystyssä päivässä, valmiina työhön",
-  "build.intro": "Tyypillinen kaksikerroksinen talo: toimitus aamulla, pystytys taso kerrallaan, tarkastus ja merkintä iltapäivällä. Vieritä ja katso, miten teline nousee.",
+  "build.intro": "Tyypillinen kaksikerroksinen talo: toimitus aamulla, pystytys taso kerrallaan, tarkastus ja merkintä iltapäivällä. Katso, miten teline nousee.",
   "build.clock": "pystytyspäivä",
+  "build.pause": "Pysäytä animaatio",
+  "build.play": "Toista animaatio",
   "cov.eyebrow": "Toimitusalue",
   "cov.title": "Nopeimmin lähellä, koko Suomeen sopimuksella",
   "cov.intro": "Toimimme pääkaupunkiseudulta käsin. Mitä lähempänä kohde on, sitä nopeammin telineet ovat pystyssä – jokainen tarjous näyttää toimitusalueen ja hinnan.",
