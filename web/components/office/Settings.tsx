@@ -71,7 +71,7 @@ function PricesTab() {
         if (!d) return null;
         const def = data.defaults;
         const dirty = !same(d, data.pricing);
-        const nums: unknown[] = [d.rentPerM2Day, d.minRentDays, d.erectPerM2, d.dismantlePerM2, d.catchPerMetre, d.extraLevelPerM, d.truckCapacityKg, d.minOrder, d.vat, d.rangePct, d.zones.A.trip, d.zones.B.trip, d.zones.C.trip, d.urgency.express.pct, d.urgency.emergency.pct, d.sheetingPerM2 ?? 0, d.roofRentPerM2Day ?? 0, d.roofWorkPerM2 ?? 0, d.stairRentPerMDay ?? 0, d.stairPerM ?? 0];
+        const nums: unknown[] = [d.rentPerM2Day, d.minRentDays, d.erectPerM2, d.dismantlePerM2, d.catchPerMetre, d.extraLevelPerM, d.truckCapacityKg, d.minOrder, d.vat, d.rangePct, d.zones.A.trip, d.zones.B.trip, d.zones.C.trip, d.urgency.express.pct, d.urgency.emergency.pct, d.sheetingPerM2 ?? 0, d.roofRentPerM2Day ?? 0, d.roofWorkPerM2 ?? 0, d.stairRentPerMDay ?? 0, d.stairPerM ?? 0, d.craneLiftPerDirection ?? 0, d.extraWorkPerPersonHour ?? 0, d.winterSheetingPct ?? 0, d.winterWorkPct ?? 0];
         const bad = nums.some((n) => n == null || !Number.isFinite(n as number) || (n as number) < 0);
         const f = (k: keyof Pricing, label: string, unit: string, hint?: string) => (
           <Field label={label} hint={<>{hint ? `${hint} ` : ""}<Def v={def[k] as number} unit={unit} lang={lang} /></>}>
@@ -96,6 +96,7 @@ function PricesTab() {
                   {f("dismantlePerM2", t("set.prices.dismantlePerM2"), "€/m²")}
                   {f("catchPerMetre", t("set.prices.catchPerMetre"), lang === "fi" ? "€/jm" : lang === "ru" ? "€/пог. м" : "€/m")}
                   {f("extraLevelPerM", t("set.prices.extraLevelPerM"), lang === "fi" ? "€/jm" : lang === "ru" ? "€/пог. м" : "€/m")}
+                  {f("extraWorkPerPersonHour", t("set.prices.extraWorkPerPersonHour"), lang === "ru" ? "€/ч" : "€/h", t("set.prices.extraWorkHint"))}
                 </div>
               </Card>
               <Card aria-labelledby="p-trans">
@@ -137,6 +138,9 @@ function PricesTab() {
                   {f("sheetingPerM2", t("set.prices.sheetingPerM2"), "€/m²")}
                   {f("roofRentPerM2Day", t("set.prices.roofRentPerM2Day"), lang === "fi" ? "€/m²/pv" : lang === "ru" ? "€/м²/день" : "€/m²/day")}
                   {f("roofWorkPerM2", t("set.prices.roofWorkPerM2"), "€/m²")}
+                  {f("craneLiftPerDirection", t("set.prices.craneLiftPerDirection"), "€", t("set.prices.craneHint"))}
+                  {f("winterSheetingPct", t("set.prices.winterSheetingPct"), "%", t("set.prices.winterHint"))}
+                  {f("winterWorkPct", t("set.prices.winterWorkPct"), "%", t("set.prices.winterHint"))}
                 </div>
               </Card>
               <Card aria-labelledby="p-stairs" className="xl:col-span-2">

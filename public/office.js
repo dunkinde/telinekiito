@@ -223,7 +223,11 @@
     { id: "uE", step: 1, get: (p) => p.urgency.emergency.pct, set: (p, v) => { p.urgency.emergency.pct = v; } },
     { id: "minOrder", step: 10 },
     { id: "vat", step: 0.1 },
-    { id: "rangePct", step: 1 }
+    { id: "rangePct", step: 1 },
+    { id: "craneLiftPerDirection", step: 50 },
+    { id: "extraWorkPerPersonHour", step: 1 },
+    { id: "winterSheetingPct", step: 5 },
+    { id: "winterWorkPct", step: 5 }
   ];
   function renderSettings(p) {
     $("#set-grid").innerHTML = SET_FIELDS.map((f) => {

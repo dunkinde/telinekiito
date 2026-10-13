@@ -82,7 +82,7 @@
     const h = houseFromForm(S.form);
     if (!validHouse(h)) { S.est = null; S.q = null; return renderTicket(); }
     S.est = E.estimate(h);
-    S.q = E.quote(S.est, { days: Number(S.form.days) || 0, zone: S.form.zone, urgency: S.form.urgency }, S.pricing);
+    S.q = E.quote(S.est, { days: Number(S.form.days) || 0, zone: S.form.zone, urgency: S.form.urgency, start: S.form.start }, S.pricing);
     renderTicket();
   }
 

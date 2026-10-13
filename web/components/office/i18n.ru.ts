@@ -1862,5 +1862,14 @@ export const ru: Record<Key, Entry> = {
   "set.prices.stairs": "Лестничные башни",
   "od.house.stairs": "Лестничные башни",
   "od.house.stairsVal": (v: V) => `${v.n} шт. · высота ${v.m} м${Number(v.n) > 1 ? " всего" : ""}`,
-  "od.house.ladders": "Настилы с люком и лестницы (заказ до лестничных башен)"
+  "od.house.ladders": "Настилы с люком и лестницы (заказ до лестничных башен)",
+  "line.crane": (v: V) => `Работа крана для временной крыши, 2 × ${v.per}`,
+  "line.winter": (v: V) => ` (зимняя надбавка +${v.pct} %)`,
+  "set.prices.craneLiftPerDirection": "Работа крана для временной крыши, в одну сторону",
+  "set.prices.craneHint": "Начисляется дважды: при доставке и при вывозе.",
+  "set.prices.winterSheetingPct": "Зимняя надбавка на плёнку",
+  "set.prices.winterWorkPct": "Зимняя надбавка на монтаж и демонтаж",
+  "set.prices.winterHint": "Работы с плёнкой, начало с 1.11 по 31.3.",
+  "set.prices.extraWorkPerPersonHour": "Дополнительные работы",
+  "set.prices.extraWorkHint": "Изменения и дополнительные работы вне заказа. Видно на сайте и в подтверждении заказа."
 };

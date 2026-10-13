@@ -476,6 +476,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         days: Math.max(1, Math.round(Number(form.days) || 28)),
         zone: form.zone,
         urgency: form.urgency,
+        start: form.start || undefined,
         partnerCode: form.partnerCode.trim() || undefined,
         model: modelRef
       })
@@ -491,7 +492,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
     }, 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode, modelId, form.system, form.sheeting, form.weatherRoof]);
+  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode, modelId, form.system, form.sheeting, form.weatherRoof, form.start]);
 
   /* ----- address lookup ----- */
   const addressNow = useRef("");

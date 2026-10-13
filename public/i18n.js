@@ -393,7 +393,11 @@
     "set.uE": "Emergency premium", "setU.uE": "% on service",
     "set.minOrder": "Minimum order", "setU.minOrder": "€ excl. VAT",
     "set.vat": "VAT", "setU.vat": "%",
-    "set.rangePct": "Quote range", "setU.rangePct": "± %"
+    "set.rangePct": "Quote range", "setU.rangePct": "± %",
+    "set.craneLiftPerDirection": "Crane lifting, temporary roof", "setU.craneLiftPerDirection": "€ each way",
+    "set.extraWorkPerPersonHour": "Extra work", "setU.extraWorkPerPersonHour": "€ per person-hour",
+    "set.winterSheetingPct": "Winter surcharge, sheeting", "setU.winterSheetingPct": "% (start 1 Nov – 31 Mar)",
+    "set.winterWorkPct": "Winter surcharge, erection and dismantling", "setU.winterWorkPct": "% (sheeted jobs, 1 Nov – 31 Mar)"
   };
 
   const fi = {
@@ -776,7 +780,11 @@
     "set.uE": "Kiirelisä", "setU.uE": "% palveluihin",
     "set.minOrder": "Minimitilaus", "setU.minOrder": "€ alv 0 %",
     "set.vat": "ALV", "setU.vat": "%",
-    "set.rangePct": "Hintahaarukka", "setU.rangePct": "± %"
+    "set.rangePct": "Hintahaarukka", "setU.rangePct": "± %",
+    "set.craneLiftPerDirection": "Nosturinosto, sääsuojakatto", "setU.craneLiftPerDirection": "€ / suunta",
+    "set.extraWorkPerPersonHour": "Lisätyöt", "setU.extraWorkPerPersonHour": "€ / henkilötyötunti",
+    "set.winterSheetingPct": "Talvilisä, sääsuojapeite", "setU.winterSheetingPct": "% (aloitus 1.11.–31.3.)",
+    "set.winterWorkPct": "Talvilisä, asennus ja purku", "setU.winterWorkPct": "% (peitetyt työt, 1.11.–31.3.)"
   };
 
   const DICT = { fi, en };

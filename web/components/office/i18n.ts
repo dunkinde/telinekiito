@@ -1,7 +1,7 @@
 // Office texts in Finnish (default), English and Russian (i18n.ru.ts), plus helpers that turn API values into words.
 import type { QuoteLine } from "@/lib/api";
 import type { Alert, AuditEntry, ChangeRequest, HistoryEntry } from "@/lib/platform";
-import { day, money } from "./format";
+import { day, money, moneyShort } from "./format";
 import { ru } from "./i18n.ru";
 
 export type Lang = "fi" | "en" | "ru";
@@ -1865,7 +1865,16 @@ const en = {
   "set.prices.stairs": "Stair towers",
   "od.house.stairs": "Stair towers",
   "od.house.stairsVal": (v) => `${v.n} · ${v.m} m high${Number(v.n) > 1 ? " in all" : ""}`,
-  "od.house.ladders": "Hatch decks and ladders (ordered before stair towers)"
+  "od.house.ladders": "Hatch decks and ladders (ordered before stair towers)",
+  "line.crane": (v) => `Crane lifting for the temporary roof, 2 × ${v.per}`,
+  "line.winter": (v) => ` (winter +${v.pct} %)`,
+  "set.prices.craneLiftPerDirection": "Crane lifting for the temporary roof, each way",
+  "set.prices.craneHint": "Charged twice per job, on delivery and on collection.",
+  "set.prices.winterSheetingPct": "Winter surcharge on sheeting",
+  "set.prices.winterWorkPct": "Winter surcharge on erection and dismantling",
+  "set.prices.winterHint": "Jobs with sheeting that start 1 Nov – 31 Mar.",
+  "set.prices.extraWorkPerPersonHour": "Extra work",
+  "set.prices.extraWorkHint": "Change and extra work outside the order. Shown on the website and the order confirmation."
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -3721,7 +3730,16 @@ const fi: Record<Key, Entry> = {
   "set.prices.stairs": "Porrastornit",
   "od.house.stairs": "Porrastornit",
   "od.house.stairsVal": (v) => `${v.n} kpl · korkeus ${v.m} m${Number(v.n) > 1 ? " yhteensä" : ""}`,
-  "od.house.ladders": "Luukkutasot ja tikkaat (tilattu ennen porrastorneja)"
+  "od.house.ladders": "Luukkutasot ja tikkaat (tilattu ennen porrastorneja)",
+  "line.crane": (v) => `Nosturinostot sääsuojakatolle, 2 × ${v.per}`,
+  "line.winter": (v) => ` (talvilisä +${v.pct} %)`,
+  "set.prices.craneLiftPerDirection": "Nosturinosto sääsuojakatolle, suuntaansa",
+  "set.prices.craneHint": "Veloitetaan kahdesti: tuonnissa ja noudossa.",
+  "set.prices.winterSheetingPct": "Talvilisä sääsuojapeitteeseen",
+  "set.prices.winterWorkPct": "Talvilisä asennukseen ja purkuun",
+  "set.prices.winterHint": "Peitetyt työt, jotka alkavat 1.11.–31.3.",
+  "set.prices.extraWorkPerPersonHour": "Lisätyöt",
+  "set.prices.extraWorkHint": "Muutos- ja lisätyöt tilauksen ulkopuolelta. Näkyy verkkosivuilla ja tilausvahvistuksessa."
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };
@@ -3770,7 +3788,14 @@ export function sideText(i: T, name: string) {
 }
 
 /** Price or invoice line in the chosen language, using the numbers stored with it. */
+/** Price line in the office language; winter rates add a note. */
 export function lineText(i: T, l: Pick<QuoteLine, "key" | "label"> & { vars?: Record<string, unknown> | null }, q?: { rentDays?: number; trucks?: number }) {
+  const base = lineBase(i, l, q);
+  const pct = Number((l.vars || {}).winterPct);
+  return pct > 0 ? base + i.t("line.winter", { pct }) : base;
+}
+
+function lineBase(i: T, l: Pick<QuoteLine, "key" | "label"> & { vars?: Record<string, unknown> | null }, q?: { rentDays?: number; trucks?: number }) {
   const v = (l.vars || {}) as Record<string, string | number>;
   const fromLabel = (re: RegExp) => (re.exec(l.label || "") || [])[1] || "";
   const pm = /^(missing|damaged)_(\w+)$/.exec(l.key);
@@ -3796,6 +3821,8 @@ export function lineText(i: T, l: Pick<QuoteLine, "key" | "label"> & { vars?: Re
       return i.t("line.roofRent", { m2: v.m2 ?? "", days: v.days ?? q?.rentDays ?? "" });
     case "roofWork":
       return i.t("line.roofWork");
+    case "crane":
+      return i.t("line.crane", { per: moneyShort(Number(v.per) || 0, i.lang) });
     case "discount":
       return i.t("line.discount", { pct: v.pct ?? fromLabel(/−?([\d.]+) %/) });
     default:

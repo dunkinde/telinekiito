@@ -601,8 +601,8 @@ test("rent is billed for the days up: erection → pickup request (or dismantlin
     return { ...o, example: false, schedule: { ...o.schedule, days: 42 }, rental, history };
   };
   const rent = (o) => P.buildInvoice(store, o, { pricing, ops: { paymentDays: 14 }, stock: { prices: {} } }).rentDays;
-  // Up 20 days, asked for pickup after 12: billed 12 (our pickup lag isn't theirs), not the 42 booked.
-  assert.equal(rent(order({ startedAt: ago(20), endedAt: ago(0) }, [{ status: "pickup_requested", at: ago(8) }])), 12);
+  // Up 30 days, asked for pickup after 20: billed 20 (our pickup lag isn't theirs), not the 42 booked.
+  assert.equal(rent(order({ startedAt: ago(30), endedAt: ago(0) }, [{ status: "pickup_requested", at: ago(10) }])), 20);
   // Never asked: until it came down.
   assert.equal(rent(order({ startedAt: ago(20), endedAt: ago(0) })), 20);
   // Kept past the booking: the days used.

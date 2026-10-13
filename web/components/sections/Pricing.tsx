@@ -44,7 +44,8 @@ export function Pricing() {
         { label: t("price.rate.trip", { z: "A" }), value: eur(p.zones.A.trip) },
         { label: t("price.rate.trip", { z: "B" }), value: eur(p.zones.B.trip) },
         { label: t("price.rate.trip", { z: "C" }), value: eur(p.zones.C.trip) },
-        { label: t("price.rate.min"), value: t("price.rate.days", { n: p.minRentDays }) }
+        { label: t("price.rate.min"), value: t("price.rate.days", { n: p.minRentDays }) },
+        ...(p.extraWorkPerPersonHour ? [{ label: t("price.rate.extraWork"), value: `${num2d(p.extraWorkPerPersonHour)} ${t("price.rate.perHour")}` }] : [])
       ]
     : [];
 

@@ -35,6 +35,10 @@ export interface Pricing {
   /** Stair towers per metre of height: rent per day, and putting up and taking down. */
   stairRentPerMDay?: number;
   stairPerM?: number;
+  craneLiftPerDirection?: number;
+  extraWorkPerPersonHour?: number;
+  winterSheetingPct?: number;
+  winterWorkPct?: number;
   /** Per scaffold system: on/off and its own rates (missing = the general rate). */
   systems?: Record<SystemKey, { enabled: boolean; rentPerM2Day?: number; erectPerM2?: number; dismantlePerM2?: number }>;
 }
@@ -100,6 +104,8 @@ export interface QuoteInput {
   days: number;
   zone: Zone;
   urgency: Urgency;
+  /** Start date: jobs with sheeting starting 1 Nov – 31 Mar get the winter rates. */
+  start?: string;
   partnerCode?: string;
   /** The 3D building from the address lookup: the server prices its measured walls. */
   model?: ModelRef;

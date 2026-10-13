@@ -157,7 +157,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
     const id = window.setTimeout(() => {
       bizQuote({
         length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables,
-        sheeting: f.sheeting, weatherRoof: f.weatherRoof, days, zone: f.zone, urgency: f.urgency, system: f.system || undefined, storeys: storeys ?? undefined, model: modelRef
+        sheeting: f.sheeting, weatherRoof: f.weatherRoof, days, zone: f.zone, urgency: f.urgency, start: f.start || undefined, system: f.system || undefined, storeys: storeys ?? undefined, model: modelRef
       })
         .then((r) => {
           if (!alive) return;
@@ -177,7 +177,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
       window.clearTimeout(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [house, offerOnly, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, modelId, f.system, f.sheeting, f.weatherRoof, storeys]);
+  }, [house, offerOnly, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, modelId, f.system, f.sheeting, f.weatherRoof, storeys, f.start]);
   const chosen: BizType | null = price ? price.types.find((x) => x.system === (f.system || price.system)) || price.types[0] || null : null;
   const firstFree = (chosen?.earliest ?? price?.available?.[f.urgency]) || null;
   useEffect(() => {

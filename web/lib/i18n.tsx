@@ -2,6 +2,7 @@
 // Finnish (default) and English. Short UI strings live here; longer section content lives in content.ts.
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ApiError, QuoteLine, Quote } from "./api";
+import { eur } from "./format";
 
 export type Lang = "fi" | "en";
 export type Vars = Record<string, string | number>;
@@ -98,6 +99,8 @@ const en = {
   "price.rate.trip": "Transport, zone {z} (one way)",
   "price.rate.min": "Minimum rental",
   "price.rate.days": (v) => plural(v.n, "1 day", `${v.n} days`),
+  "price.rate.extraWork": "Extra work",
+  "price.rate.perHour": "€ / person-hour",
   "price.note": "Homeowners can claim the household tax credit on the labour share. The final price is confirmed after we check the details.",
   "price.included": "Every price includes",
   "price.ratesOpen": "See unit prices",
@@ -205,6 +208,8 @@ const en = {
   "line.sheeting": "Weather sheeting, {m2} m²",
   "line.roofRent": "Temporary roof rent, {m2} m², {days} days",
   "line.roofWork": "Temporary roof, putting up and taking down",
+  "line.crane": "Crane lifting for the temporary roof, 2 × {per}",
+  "line.winter": " (winter +{pct} %)",
   "p3d.title": "Scaffold plan",
   "p3d.sub": "{area} m² · {sides} sides",
   "p3d.hint": "Drag to turn · pinch or scroll to zoom · tap a side",
@@ -628,6 +633,8 @@ const fi: Record<Key, Entry> = {
   "price.rate.trip": "Kuljetus, alue {z} (suuntaansa)",
   "price.rate.min": "Vähimmäisvuokra-aika",
   "price.rate.days": (v) => plural(v.n, "1 päivä", `${v.n} päivää`),
+  "price.rate.extraWork": "Lisätyöt",
+  "price.rate.perHour": "€ / henkilötyötunti",
   "price.note": "Kotitalousvähennyksen voi hakea työn osuudesta. Lopullinen hinta vahvistetaan, kun olemme tarkistaneet tiedot.",
   "price.included": "Hintaan sisältyy aina",
   "price.ratesOpen": "Katso yksikköhinnat",
@@ -734,6 +741,8 @@ const fi: Record<Key, Entry> = {
   "line.sheeting": "Sääsuojapeite, {m2} m²",
   "line.roofRent": "Sääsuojakaton vuokra, {m2} m², {days} päivää",
   "line.roofWork": "Sääsuojakaton asennus ja purku",
+  "line.crane": "Nosturinostot sääsuojakatolle, 2 × {per}",
+  "line.winter": " (talvilisä +{pct} %)",
   "p3d.title": "Telinesuunnitelma",
   "p3d.sub": "{area} m² · {sides} sivua",
   "p3d.hint": "Käännä vetämällä · zoomaa nipistämällä tai rullalla · napauta sivua",
@@ -1140,8 +1149,14 @@ export function useI18n(): I18n {
 
 /* ---------- Helpers for values that come from the API ---------- */
 
-/** Price line label in the page language, using the numbers stored with the line. */
+/** Price line label in the page language, using the numbers stored with the line; winter rates add a note. */
 export function lineLabel(i: I18n, l: QuoteLine, q?: Quote): string {
+  const base = lineBase(i, l, q);
+  const pct = Number(l.vars?.winterPct);
+  return pct > 0 ? base + i.t("line.winter", { pct }) : base;
+}
+
+function lineBase(i: I18n, l: QuoteLine, q?: Quote): string {
   const v = l.vars || {};
   const fromLabel = (re: RegExp) => (re.exec(l.label || "") || [])[1] || "";
   switch (l.key) {
@@ -1167,6 +1182,8 @@ export function lineLabel(i: I18n, l: QuoteLine, q?: Quote): string {
       return i.t("line.roofRent", { m2: v.m2 ?? "", days: v.days ?? q?.rentDays ?? "" });
     case "roofWork":
       return i.t("line.roofWork");
+    case "crane":
+      return i.t("line.crane", { per: eur(Number(v.per) || 0) });
     case "discount":
       return i.t("line.discount", { pct: v.pct ?? fromLabel(/([\d.]+) %/) });
     default:
