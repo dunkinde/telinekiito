@@ -42,6 +42,7 @@ type Form = {
   jobType: JobType;
   gables: boolean;
   sheeting: boolean;
+  inspections: boolean;
   weatherRoof: boolean;
   zone: Zone;
   urgency: Urgency;
@@ -51,7 +52,7 @@ type Form = {
   /** "" = the first system the office has switched on. */
   system: SystemKey | "";
 };
-const blank: Form = { address: "", length: "", width: "", floors: "", roofType: "gable", pitch: "30", eave: "", jobType: "roof", gables: true, sheeting: false, weatherRoof: false, zone: "A", urgency: "standard", start: "", days: "28", notes: "", system: "" };
+const blank: Form = { address: "", length: "", width: "", floors: "", roofType: "gable", pitch: "30", eave: "", jobType: "roof", gables: true, sheeting: false, weatherRoof: false, inspections: false, zone: "A", urgency: "standard", start: "", days: "28", notes: "", system: "" };
 const blankBiz: BizDetails = { po: "", project: "", costCentre: "", siteContact: { name: "", phone: "" }, siteInfo: "" };
 type Geo = { lat: number; lon: number; for: string; checks?: string[]; result?: AddressResult; storeys?: number | null };
 type Model = { id: string; lat: number; lon: number; date: string | null; perimeterM: number; corners: number; eaveMin: number | null; eaveMax: number | null; ridge: number | null };
@@ -100,7 +101,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
     const o = r.order;
     setF((x) => ({
       ...x, address: o.address, length: String(o.house.length), width: String(o.house.width), floors: o.house.floors || "", roofType: o.house.roofType, pitch: String(o.house.pitch),
-      eave: String(o.house.eave), jobType: o.house.jobType, gables: o.house.gables, sheeting: Boolean(o.house.sheeting), weatherRoof: Boolean(o.house.weatherRoof), zone: o.zone, days: String(o.days), system: o.house.system || ""
+      eave: String(o.house.eave), jobType: o.house.jobType, gables: o.house.gables, sheeting: Boolean(o.house.sheeting), weatherRoof: Boolean(o.house.weatherRoof), inspections: Boolean(o.house.inspections), zone: o.zone, days: String(o.days), system: o.house.system || ""
     }));
     setBiz({ ...blankBiz, project: o.business.project, costCentre: o.business.costCentre, siteContact: { ...o.business.siteContact }, siteInfo: o.business.siteInfo });
     setGeo(o.geo ? { ...o.geo, for: o.address } : null);
@@ -157,7 +158,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
     const id = window.setTimeout(() => {
       bizQuote({
         length: house.L, width: house.W, eave: house.E, roofType: f.roofType, pitch: house.P, jobType: f.jobType, gables: f.roofType === "gable" && f.jobType === "roof" && f.gables,
-        sheeting: f.sheeting, weatherRoof: f.weatherRoof, days, zone: f.zone, urgency: f.urgency, start: f.start || undefined, system: f.system || undefined, storeys: storeys ?? undefined, model: modelRef
+        sheeting: f.sheeting, weatherRoof: f.weatherRoof, inspections: f.inspections, days, zone: f.zone, urgency: f.urgency, start: f.start || undefined, system: f.system || undefined, storeys: storeys ?? undefined, model: modelRef
       })
         .then((r) => {
           if (!alive) return;
@@ -177,7 +178,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
       window.clearTimeout(id);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [house, offerOnly, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, modelId, f.system, f.sheeting, f.weatherRoof, storeys, f.start]);
+  }, [house, offerOnly, f.roofType, f.jobType, f.gables, days, f.zone, f.urgency, modelId, f.system, f.sheeting, f.weatherRoof, storeys, f.start, f.inspections]);
   const chosen: BizType | null = price ? price.types.find((x) => x.system === (f.system || price.system)) || price.types[0] || null : null;
   const firstFree = (chosen?.earliest ?? price?.available?.[f.urgency]) || null;
   useEffect(() => {
@@ -254,6 +255,7 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
         gables: f.roofType === "gable" && f.jobType === "roof" && f.gables,
         sheeting: f.sheeting,
         weatherRoof: f.weatherRoof,
+        inspections: f.inspections,
         zone: f.zone,
         urgency: f.urgency,
         start: f.start,
@@ -428,6 +430,9 @@ export function NewOrder({ copyFrom, onPlaced }: { copyFrom?: string; onPlaced?:
                     <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.weatherRoof} onChange={(e) => set("weatherRoof", e.target.checked)} /> {t("biz.new.weatherRoof")}
                   </label>
                 ) : null}
+                <label className="flex items-center gap-2 text-[14px] text-ink-soft">
+                  <input type="checkbox" className="h-4 w-4 accent-ink" checked={f.inspections} onChange={(e) => set("inspections", e.target.checked)} /> {t("biz.new.inspections")}
+                </label>
               </div>
               <Chips label={t("biz.new.speed")} value={f.urgency} onChange={(v) => set("urgency", v)} options={urgencies.map((u) => ({ key: u, label: urgLabel(i, u) }))} />
               <div className="grid gap-4 sm:grid-cols-3">

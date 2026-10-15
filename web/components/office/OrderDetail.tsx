@@ -849,13 +849,13 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
 
   // Preview: the server prices the changed layout and returns its plan. The newest request wins.
   const seq = useRef(0);
-  const preview = (adjust: LayoutAdjust | null | undefined, system?: SystemKey) => {
+  const preview = (adjust: LayoutAdjust | null | undefined, system?: SystemKey, crane?: boolean) => {
     const id = ++seq.current;
-    previewLayout(o.ref, adjust, system)
+    previewLayout(o.ref, adjust, system, crane)
       .then((r) => {
         if (id !== seq.current) return;
         setPlan(r.plan);
-        setEdit((e) => ({ system: r.system, adjust: r.adjust, base: r.base || e?.base || [], total: r.quote.total, area: r.estimate.area, weightKg: r.estimate.weightKg, before: r.before.total }));
+        setEdit((e) => ({ system: r.system, crane: r.crane, adjust: r.adjust, base: r.base || e?.base || [], total: r.quote.total, area: r.estimate.area, weightKg: r.estimate.weightKg, before: r.before.total }));
       })
       .catch(() => {});
   };
@@ -867,12 +867,12 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
     if (Object.keys(next).length) sides[name] = next; else delete sides[name];
     const adjust = Object.keys(sides).length ? { sides } : null;
     setEdit({ ...edit, adjust });
-    preview(adjust, edit.system);
+    preview(adjust, edit.system, edit.crane);
   };
   const save = async () => {
     if (!edit) return;
     const priced = edit.total !== edit.before;
-    const r = await run("layout", () => saveLayout(o.ref, edit.adjust, edit.system, priced ? reason.trim() : undefined), priced ? t("od.3d.sentToCustomer") : undefined);
+    const r = await run("layout", () => saveLayout(o.ref, edit.adjust, edit.system, priced ? reason.trim() : undefined, edit.crane), priced ? t("od.3d.sentToCustomer") : undefined);
     if (r) { setEdit(null); setReason(""); reload?.(); }
   };
   const pickName = pick != null ? plan?.sides.find((s) => s.i === pick)?.name : null;
@@ -896,7 +896,7 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
               <select
                 className="rounded-lg px-2 py-1.5 ring-1 ring-line"
                 value={edit.system}
-                onChange={(e) => { const system = e.target.value as SystemKey; setEdit({ ...edit, system }); preview(edit.adjust, system); }}
+                onChange={(e) => { const system = e.target.value as SystemKey; setEdit({ ...edit, system }); preview(edit.adjust, system, edit.crane); }}
               >
                 <optgroup label={t("od.sys.own")}>
                   {SYSTEM_KEYS.filter((k) => !isPartnerSystem(k)).map((k) => (
@@ -909,6 +909,16 @@ function PlanCard({ o, reload }: { o: OfficeOrderDetail; reload?: () => void }) 
                   ))}
                 </optgroup>
               </select>
+            </label>
+            <label className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[14px] text-ink">
+              <input
+                type="checkbox"
+                className="h-4 w-4 accent-ink"
+                checked={edit.crane}
+                onChange={(e) => { const crane = e.target.checked; setEdit({ ...edit, crane }); preview(edit.adjust, edit.system, crane); }}
+              />
+              <span className="font-semibold">{t("od.3d.crane")}</span>
+              <span className="text-[13px] text-ink-soft">{t("od.3d.craneHint")}</span>
             </label>
             <ul className="divide-y divide-line rounded-xl ring-1 ring-line">
               {edit.base.map((b) => {

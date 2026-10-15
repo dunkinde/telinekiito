@@ -226,8 +226,9 @@
     { id: "rangePct", step: 1 },
     { id: "craneLiftPerDirection", step: 50 },
     { id: "extraWorkPerPersonHour", step: 1 },
-    { id: "winterSheetingPct", step: 5 },
-    { id: "winterWorkPct", step: 5 }
+    { id: "extraWorkMinHours", step: 0.5 },
+    { id: "inspectionPerVisit", step: 5 },
+    { id: "winterSheetingPct", step: 5 }
   ];
   function renderSettings(p) {
     $("#set-grid").innerHTML = SET_FIELDS.map((f) => {

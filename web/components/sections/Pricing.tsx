@@ -41,11 +41,13 @@ export function Pricing() {
         { label: t("price.rate.dismantle"), value: `${num2d(p.dismantlePerM2)} ${t("price.rate.m2")}` },
         { label: t("price.rate.catch"), value: `${num2d(p.catchPerMetre)} ${t("price.rate.perM")}` },
         { label: t("price.rate.levels"), value: `${num2d(p.extraLevelPerM)} ${t("price.rate.perLevel")}` },
-        { label: t("price.rate.trip", { z: "A" }), value: eur(p.zones.A.trip) },
-        { label: t("price.rate.trip", { z: "B" }), value: eur(p.zones.B.trip) },
-        { label: t("price.rate.trip", { z: "C" }), value: eur(p.zones.C.trip) },
+        { label: t("price.rate.trip", { z: "A" }), value: p.zones.A.trip ? eur(p.zones.A.trip) : t("price.rate.included") },
+        { label: t("price.rate.trip", { z: "B" }), value: p.zones.B.trip ? eur(p.zones.B.trip) : t("price.rate.included") },
+        { label: t("price.rate.trip", { z: "C" }), value: p.zones.C.trip ? eur(p.zones.C.trip) : t("price.rate.included") },
         { label: t("price.rate.min"), value: t("price.rate.days", { n: p.minRentDays }) },
-        ...(p.extraWorkPerPersonHour ? [{ label: t("price.rate.extraWork"), value: `${num2d(p.extraWorkPerPersonHour)} ${t("price.rate.perHour")}` }] : [])
+        ...(p.extraWorkPerPersonHour
+          ? [{ label: t("price.rate.extraWork"), value: `${num2d(p.extraWorkPerPersonHour)} ${t("price.rate.perHour")}${p.extraWorkMinHours ? t("price.rate.minHours", { h: p.extraWorkMinHours }) : ""}` }]
+          : [])
       ]
     : [];
 

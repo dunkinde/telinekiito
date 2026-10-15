@@ -54,6 +54,7 @@ interface Form {
   jobType: JobType;
   gables: boolean;
   sheeting: boolean;
+  inspections: boolean;
   weatherRoof: boolean;
   urgency: Urgency;
   start: string;
@@ -347,6 +348,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
       jobType: start.jobType ?? "roof",
       gables: true,
       sheeting: false,
+      inspections: false,
       weatherRoof: false,
       urgency,
       start: "",
@@ -473,6 +475,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         gables: form.roofType === "gable" && form.jobType === "roof" && form.gables,
         sheeting: form.sheeting,
         weatherRoof: form.weatherRoof,
+        inspections: form.inspections,
         days: Math.max(1, Math.round(Number(form.days) || 28)),
         zone: form.zone,
         urgency: form.urgency,
@@ -492,7 +495,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
     }, 250);
     return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode, modelId, form.system, form.sheeting, form.weatherRoof, form.start]);
+  }, [house, form.roofType, form.jobType, form.gables, form.days, form.zone, form.urgency, form.partnerCode, modelId, form.system, form.sheeting, form.weatherRoof, form.start, form.inspections]);
 
   /* ----- address lookup ----- */
   const addressNow = useRef("");
@@ -601,6 +604,7 @@ function WizardBody({ start }: { start: QuoteStart }) {
         gables: form.roofType === "gable" && form.jobType === "roof" && form.gables,
         sheeting: form.sheeting,
         weatherRoof: form.weatherRoof,
+        inspections: form.inspections,
         zone: form.zone,
         urgency: form.urgency,
         start: form.start,
@@ -837,6 +841,15 @@ function WizardBody({ start }: { start: QuoteStart }) {
           ))}
         </div>
       </div>
+      ) : null}
+      {config?.pricing.inspectionPerVisit ? (
+        <label className="flex cursor-pointer items-start gap-3 rounded-2xl bg-white p-4 ring-1 ring-line">
+          <input type="checkbox" className="mt-1 h-5 w-5 accent-ink" checked={form.inspections} onChange={(e) => set("inspections", e.target.checked)} />
+          <span>
+            <span className="font-semibold text-ink">{t("q.inspections")}</span>
+            <span className="block text-sm text-muted">{t("q.inspectionsHint", { price: eur(config.pricing.inspectionPerVisit) })}</span>
+          </span>
+        </label>
       ) : null}
     </div>,
 

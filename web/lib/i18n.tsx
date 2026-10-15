@@ -101,6 +101,10 @@ const en = {
   "price.rate.days": (v) => plural(v.n, "1 day", `${v.n} days`),
   "price.rate.extraWork": "Extra work",
   "price.rate.perHour": "€ / person-hour",
+  "price.rate.minHours": ", min {h} h",
+  "price.rate.included": "Included",
+  "q.inspections": "Weekly inspections by TelineKiito",
+  "q.inspectionsHint": "{price} per visit, once a week while the scaffold is up. We check it and record the result.",
   "price.note": "Homeowners can claim the household tax credit on the labour share. The final price is confirmed after we check the details.",
   "price.included": "Every price includes",
   "price.ratesOpen": "See unit prices",
@@ -208,7 +212,9 @@ const en = {
   "line.sheeting": "Weather sheeting, {m2} m²",
   "line.roofRent": "Temporary roof rent, {m2} m², {days} days",
   "line.roofWork": "Temporary roof, putting up and taking down",
-  "line.crane": "Crane lifting for the temporary roof, 2 × {per}",
+  "line.crane": "Crane lifting, 2 × {per}",
+  "line.inspection": "Weekly inspections, {n} × {per}",
+  "line.roofWorkSheet": "Temporary roof, putting up and taking down, wall sheeting included",
   "line.winter": " (winter +{pct} %)",
   "p3d.title": "Scaffold plan",
   "p3d.sub": "{area} m² · {sides} sides",
@@ -635,6 +641,10 @@ const fi: Record<Key, Entry> = {
   "price.rate.days": (v) => plural(v.n, "1 päivä", `${v.n} päivää`),
   "price.rate.extraWork": "Lisätyöt",
   "price.rate.perHour": "€ / henkilötyötunti",
+  "price.rate.minHours": ", väh. {h} h",
+  "price.rate.included": "Sisältyy",
+  "q.inspections": "Viikkotarkastukset TelineKiitolta",
+  "q.inspectionsHint": "{price} / käynti, kerran viikossa niin kauan kuin teline on pystyssä. Tarkastamme telineen ja kirjaamme tuloksen.",
   "price.note": "Kotitalousvähennyksen voi hakea työn osuudesta. Lopullinen hinta vahvistetaan, kun olemme tarkistaneet tiedot.",
   "price.included": "Hintaan sisältyy aina",
   "price.ratesOpen": "Katso yksikköhinnat",
@@ -741,7 +751,9 @@ const fi: Record<Key, Entry> = {
   "line.sheeting": "Sääsuojapeite, {m2} m²",
   "line.roofRent": "Sääsuojakaton vuokra, {m2} m², {days} päivää",
   "line.roofWork": "Sääsuojakaton asennus ja purku",
-  "line.crane": "Nosturinostot sääsuojakatolle, 2 × {per}",
+  "line.crane": "Nosturinostot, 2 × {per}",
+  "line.inspection": "Viikkotarkastukset, {n} × {per}",
+  "line.roofWorkSheet": "Sääsuojakaton asennus ja purku, seinäpeite sisältyy",
   "line.winter": " (talvilisä +{pct} %)",
   "p3d.title": "Telinesuunnitelma",
   "p3d.sub": "{area} m² · {sides} sivua",
@@ -1181,9 +1193,11 @@ function lineBase(i: I18n, l: QuoteLine, q?: Quote): string {
     case "roofRent":
       return i.t("line.roofRent", { m2: v.m2 ?? "", days: v.days ?? q?.rentDays ?? "" });
     case "roofWork":
-      return i.t("line.roofWork");
+      return i.t(v.sheeting ? "line.roofWorkSheet" : "line.roofWork");
     case "crane":
       return i.t("line.crane", { per: eur(Number(v.per) || 0) });
+    case "inspection":
+      return i.t("line.inspection", { n: v.n ?? "", per: eur(Number(v.per) || 0) });
     case "discount":
       return i.t("line.discount", { pct: v.pct ?? fromLabel(/([\d.]+) %/) });
     default:

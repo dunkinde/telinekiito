@@ -1866,15 +1866,24 @@ const en = {
   "od.house.stairs": "Stair towers",
   "od.house.stairsVal": (v) => `${v.n} · ${v.m} m high${Number(v.n) > 1 ? " in all" : ""}`,
   "od.house.ladders": "Hatch decks and ladders (ordered before stair towers)",
-  "line.crane": (v) => `Crane lifting for the temporary roof, 2 × ${v.per}`,
+  "line.crane": (v) => `Crane lifting, 2 × ${v.per}`,
   "line.winter": (v) => ` (winter +${v.pct} %)`,
-  "set.prices.craneLiftPerDirection": "Crane lifting for the temporary roof, each way",
-  "set.prices.craneHint": "Charged twice per job, on delivery and on collection.",
+  "set.prices.craneLiftPerDirection": "Crane lifting, each way",
+  "set.prices.craneHint": "Charged twice, on delivery and on collection, only on orders the office marks as needing a crane (3D layout editor).",
   "set.prices.winterSheetingPct": "Winter surcharge on sheeting",
-  "set.prices.winterWorkPct": "Winter surcharge on erection and dismantling",
   "set.prices.winterHint": "Jobs with sheeting that start 1 Nov – 31 Mar.",
   "set.prices.extraWorkPerPersonHour": "Extra work",
-  "set.prices.extraWorkHint": "Change and extra work outside the order. Shown on the website and the order confirmation."
+  "set.prices.extraWorkHint": "Change and extra work outside the order. Shown on the website and the order confirmation.",
+  "set.prices.extraWorkMinHours": "Extra work, minimum hours per installer and visit",
+  "set.prices.extraWorkMinHint": "Shown to customers with the hourly rate.",
+  "set.prices.inspectionPerVisit": "Weekly inspection, per visit",
+  "set.prices.inspectionHint": "When the customer ticks weekly inspections: one visit per started week of rent.",
+  "set.prices.shelterSheetingIncluded": "Wall sheeting included with a temporary roof (no separate sheeting line)",
+  "line.inspection": (v) => `Weekly inspections, ${v.n} × ${v.per}`,
+  "line.roofWorkSheet": "Temporary roof, putting up and taking down, wall sheeting included",
+  "biz.new.inspections": "Weekly inspections by us",
+  "od.3d.crane": "Crane needed",
+  "od.3d.craneHint": "lifting on delivery and on collection, 2 × the crane price"
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -3731,15 +3740,24 @@ const fi: Record<Key, Entry> = {
   "od.house.stairs": "Porrastornit",
   "od.house.stairsVal": (v) => `${v.n} kpl · korkeus ${v.m} m${Number(v.n) > 1 ? " yhteensä" : ""}`,
   "od.house.ladders": "Luukkutasot ja tikkaat (tilattu ennen porrastorneja)",
-  "line.crane": (v) => `Nosturinostot sääsuojakatolle, 2 × ${v.per}`,
+  "line.crane": (v) => `Nosturinostot, 2 × ${v.per}`,
   "line.winter": (v) => ` (talvilisä +${v.pct} %)`,
-  "set.prices.craneLiftPerDirection": "Nosturinosto sääsuojakatolle, suuntaansa",
-  "set.prices.craneHint": "Veloitetaan kahdesti: tuonnissa ja noudossa.",
+  "set.prices.craneLiftPerDirection": "Nosturinosto, suuntaansa",
+  "set.prices.craneHint": "Veloitetaan kahdesti, tuonnissa ja noudossa, vain tilauksilta, joihin toimisto merkitsee nosturin (3D-asettelu).",
   "set.prices.winterSheetingPct": "Talvilisä sääsuojapeitteeseen",
-  "set.prices.winterWorkPct": "Talvilisä asennukseen ja purkuun",
   "set.prices.winterHint": "Peitetyt työt, jotka alkavat 1.11.–31.3.",
   "set.prices.extraWorkPerPersonHour": "Lisätyöt",
-  "set.prices.extraWorkHint": "Muutos- ja lisätyöt tilauksen ulkopuolelta. Näkyy verkkosivuilla ja tilausvahvistuksessa."
+  "set.prices.extraWorkHint": "Muutos- ja lisätyöt tilauksen ulkopuolelta. Näkyy verkkosivuilla ja tilausvahvistuksessa.",
+  "set.prices.extraWorkMinHours": "Lisätyöt, vähimmäistunnit asentajaa ja käyntiä kohden",
+  "set.prices.extraWorkMinHint": "Näytetään asiakkaille tuntihinnan kanssa.",
+  "set.prices.inspectionPerVisit": "Viikkotarkastus, käynti",
+  "set.prices.inspectionHint": "Kun asiakas valitsee viikkotarkastukset: yksi käynti jokaista alkavaa vuokraviikkoa kohden.",
+  "set.prices.shelterSheetingIncluded": "Seinien sääsuojapeite sisältyy sääsuojakattoon (ei erillistä peiteriviä)",
+  "line.inspection": (v) => `Viikkotarkastukset, ${v.n} × ${v.per}`,
+  "line.roofWorkSheet": "Sääsuojakaton asennus ja purku, seinäpeite sisältyy",
+  "biz.new.inspections": "Viikkotarkastukset meiltä",
+  "od.3d.crane": "Nosturi tarvitaan",
+  "od.3d.craneHint": "nosto tuonnissa ja noudossa, 2 × nosturihinta"
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };
@@ -3820,9 +3838,11 @@ function lineBase(i: T, l: Pick<QuoteLine, "key" | "label"> & { vars?: Record<st
     case "roofRent":
       return i.t("line.roofRent", { m2: v.m2 ?? "", days: v.days ?? q?.rentDays ?? "" });
     case "roofWork":
-      return i.t("line.roofWork");
+      return i.t(v.sheeting ? "line.roofWorkSheet" : "line.roofWork");
     case "crane":
       return i.t("line.crane", { per: moneyShort(Number(v.per) || 0, i.lang) });
+    case "inspection":
+      return i.t("line.inspection", { n: v.n ?? "", per: moneyShort(Number(v.per) || 0, i.lang) });
     case "discount":
       return i.t("line.discount", { pct: v.pct ?? fromLabel(/−?([\d.]+) %/) });
     default:

@@ -55,6 +55,9 @@ export interface House {
   system?: SystemKey;
   sheeting?: boolean;
   weatherRoof?: boolean;
+  inspections?: boolean;
+  /** Crane lifting on delivery and collection, set by the office. */
+  crane?: boolean;
   model?: { id: string; date: string | null };
   /** Ordered before stair towers: hatch decks and ladders, as priced and loaded then. */
   ladders?: boolean;
@@ -500,14 +503,14 @@ export const getOrders = () => call<{ orders: FullOrder[]; crews: Crew[] }>("GET
 export interface LayoutSide { off?: boolean; bays?: number; lifts?: number; deckAll?: boolean; catchOn?: boolean }
 export interface LayoutAdjust { sides: Record<string, LayoutSide> }
 export interface LayoutBase { name: string; kind: string; bays: number; lifts: number; deckAll: boolean; catchOn: boolean }
-export interface LayoutEdit { system: SystemKey; adjust: LayoutAdjust | null; base: LayoutBase[]; total: number; area: number; weightKg: number; before: number }
+export interface LayoutEdit { system: SystemKey; crane: boolean; adjust: LayoutAdjust | null; base: LayoutBase[]; total: number; area: number; weightKg: number; before: number }
 /** Price and 3D plan with layout changes; adjust undefined = the order's saved layout. */
-export const previewLayout = (ref: string, adjust: LayoutAdjust | null | undefined, system?: SystemKey) =>
-  call<{ adjust: LayoutAdjust | null; system: SystemKey; base: LayoutBase[]; plan: ScaffoldPlan; estimate: { area: number; weightKg: number }; quote: Quote; before: { total: number; area: number } }>(
-    "POST", `/api/office/orders/${enc(ref)}/layout/preview`, { ...(adjust === undefined ? {} : { adjust }), ...(system ? { system } : {}) });
+export const previewLayout = (ref: string, adjust: LayoutAdjust | null | undefined, system?: SystemKey, crane?: boolean) =>
+  call<{ adjust: LayoutAdjust | null; system: SystemKey; crane: boolean; base: LayoutBase[]; plan: ScaffoldPlan; estimate: { area: number; weightKg: number }; quote: Quote; before: { total: number; area: number } }>(
+    "POST", `/api/office/orders/${enc(ref)}/layout/preview`, { ...(adjust === undefined ? {} : { adjust }), ...(system ? { system } : {}), ...(crane === undefined ? {} : { crane }) });
 /** Saves the layout; when the price moves it goes to the customer to accept, with the reason. */
-export const saveLayout = (ref: string, adjust: LayoutAdjust | null, system?: SystemKey, reason?: string) =>
-  call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/layout`, { adjust, ...(system ? { system } : {}), ...(reason ? { reason } : {}) });
+export const saveLayout = (ref: string, adjust: LayoutAdjust | null, system?: SystemKey, reason?: string, crane?: boolean) =>
+  call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/layout`, { adjust, ...(system ? { system } : {}), ...(reason ? { reason } : {}), ...(crane === undefined ? {} : { crane }) });
 export const sendOffer = (ref: string, body: { net: number; reason: string }) => call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/offer`, body);
 export const withdrawPriceChange = (ref: string) => call<{ order: OfficeOrderDetail }>("POST", `/api/office/orders/${enc(ref)}/price-change/withdraw`, {});
 export const getOrderPlan = (ref: string) => call<{ plan: ScaffoldPlan }>("GET", `/api/office/orders/${enc(ref)}/plan`);

@@ -37,8 +37,10 @@ export interface Pricing {
   stairPerM?: number;
   craneLiftPerDirection?: number;
   extraWorkPerPersonHour?: number;
+  extraWorkMinHours?: number;
+  inspectionPerVisit?: number;
+  shelterSheetingIncluded?: boolean;
   winterSheetingPct?: number;
-  winterWorkPct?: number;
   /** Per scaffold system: on/off and its own rates (missing = the general rate). */
   systems?: Record<SystemKey, { enabled: boolean; rentPerM2Day?: number; erectPerM2?: number; dismantlePerM2?: number }>;
 }
@@ -114,6 +116,8 @@ export interface QuoteInput {
   /** Weather sheeting on the scaffold, and a temporary roof over the house. */
   sheeting?: boolean;
   weatherRoof?: boolean;
+  /** Weekly inspections by us, one visit per started week of rent. */
+  inspections?: boolean;
 }
 
 /** The same house priced with one scaffold system. */

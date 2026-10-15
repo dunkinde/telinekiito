@@ -1267,9 +1267,11 @@ function baseSides(o) {
   const est = E.estimate(O.houseOf({ ...o.house, adjust: undefined }));
   return est.sides.map((s) => ({ name: s.name, kind: s.kind, bays: s.bays, lifts: s.lifts, deckAll: s.deckAll, catchOn: s.catchOn }));
 }
-function layoutResult(o, adjust, system) {
+function layoutResult(o, adjust, system, crane) {
   const house = { ...o.house };
   if (E.SYSTEM_KEYS.includes(system)) house.system = system;
+  // Crane lifting (2 × the per-direction price) is the office's call per order.
+  if (crane === true) house.crane = true; else if (crane === false) delete house.crane;
   if (adjust) house.adjust = adjust; else delete house.adjust;
   const r = P.repriceOrder(o, pricing(), { house });
   return { house, r, plan: O.orderPlan({ ...o, house }) };
@@ -1282,8 +1284,9 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout\/preview$/, async (r
   const pc = o.priceChange && o.priceChange.status === "pending" && o.priceChange.source === "layout" ? o.priceChange : null;
   const from = body.adjust === undefined && pc ? pc.after.house : o.house;
   const adjust = body.adjust === undefined ? from.adjust || null : parseAdjust(o, body);
-  const { house, r, plan } = layoutResult(o, adjust, body.system || from.system);
-  return { adjust, system: house.system || "layher", base: baseSides(o), plan, estimate: r.estimate, quote: r.quote, before: { total: o.quote.total, area: o.estimate.area } };
+  const crane = body.crane === undefined ? Boolean(from.crane) : Boolean(body.crane);
+  const { house, r, plan } = layoutResult(o, adjust, body.system || from.system, crane);
+  return { adjust, system: house.system || "layher", crane: Boolean(house.crane), base: baseSides(o), plan, estimate: r.estimate, quote: r.quote, before: { total: o.quote.total, area: o.estimate.area } };
 });
 route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) => {
   const user = requireOffice(req);
@@ -1291,7 +1294,7 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) =>
   if (["dismantled", "closed", "cancelled"].includes(o.status)) throw new HttpError(409, "order_finished", "This order is already finished.");
   const body = await readJson(req, 16384);
   const adjust = parseAdjust(o, body);
-  const { house, r } = layoutResult(o, adjust, body.system);
+  const { house, r } = layoutResult(o, adjust, body.system, body.crane === undefined ? undefined : Boolean(body.crane));
   const before = o.quote.total;
   if (r.quote.total !== before) {
     // A new price: the customer accepts it first; the old one stays valid until then.
@@ -1308,7 +1311,7 @@ route("POST", /^\/api\/office\/orders\/([A-Z0-9-]+)\/layout$/, async (req, m) =>
   o.estimate = r.estimate;
   o.quote = r.quote;
   o.pricing = O.rateCard(pricing());
-  O.pushHistory(o, { event: "Scaffold layout changed", code: "layout_changed", at: new Date().toISOString(), by: user.name, detail: { before, after: r.quote.total, system: house.system } });
+  O.pushHistory(o, { event: "Scaffold layout changed", code: "layout_changed", at: new Date().toISOString(), by: user.name, detail: { before, after: r.quote.total, system: house.system, crane: Boolean(house.crane) } });
   o.updatedAt = new Date().toISOString();
   saveOrder(o);
   return { order: officeOrderView(o) };
