@@ -1,11 +1,16 @@
 "use client";
-// Page-load intro (about 1.4 s): the wordmark rises letter by letter, the two slashes shoot in, then the panel lifts away.
+// Page-load intro (about 2.3 s): the 8-point rose goes up ring by ring from the inside out, like scaffolding going up a
+// level at a time, the name appears across it, then the panel lifts away.
 // Shown once per browser session on desktop; skipped on phones and tablets and for visitors who prefer reduced motion.
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { ROSE_EDGE, ROSE_RINGS } from "./introRose";
 import { LETTERS, SLASHES } from "./Logo";
 import { useSite } from "./SiteContext";
 import { RICH_MOTION } from "./ui/useMedia";
+
+const HOLD_MS = 1750;
+const ring = (k: number) => ({ duration: 0.3, delay: 0.1 + Math.max(0, k - 1) * 0.12, ease: "easeOut" as const });
 
 export function Intro() {
   const { setIntroDone } = useSite();
@@ -24,7 +29,7 @@ export function Intro() {
       setShow(false);
       return;
     }
-    const t = window.setTimeout(() => setShow(false), 900);
+    const t = window.setTimeout(() => setShow(false), HOLD_MS);
     return () => window.clearTimeout(t);
   }, [reduce]);
 
@@ -43,28 +48,30 @@ export function Intro() {
           transition={{ duration: 0.55, ease: [0.76, 0, 0.24, 1] }}
           aria-hidden
         >
-          <svg viewBox="0 0 766 59" className="h-12 w-auto max-w-[80vw]">
-            <defs>
-              <clipPath id="intro-clip">
-                <rect width="766" height="59" />
-              </clipPath>
-            </defs>
-            <g clipPath="url(#intro-clip)">
-              {LETTERS.map(([x, d], i) => (
-                <g key={x} transform={`translate(${x} 0)`}>
-                  <motion.path d={d} fillRule="evenodd" fill="#ffffff" initial={{ y: 64 }} animate={{ y: 0 }} transition={{ duration: 0.5, delay: 0.1 + i * 0.03, ease: [0.16, 1, 0.3, 1] }} />
-                </g>
-              ))}
-              {SLASHES.map((d, i) => (
-                <motion.path key={d} d={d} fill="#ffc20e" initial={{ x: -48, opacity: 0 }} animate={{ x: 0, opacity: 1 }} transition={{ duration: 0.4, delay: 0.45 + i * 0.08, ease: [0.16, 1, 0.3, 1] }} />
-              ))}
-            </g>
+          <svg viewBox="0 0 640 360" className="h-auto w-[min(92vw,150vh)]" fill="none" strokeLinecap="round">
+            {ROSE_RINGS.map((d, k) =>
+              d ? <motion.path key={`r${k}`} d={d} stroke="#3a434e" strokeWidth={1.2} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={ring(k)} /> : null
+            )}
+            {ROSE_EDGE.map((d, k) =>
+              d ? <motion.path key={`e${k}`} d={d} stroke="#ffc20e" strokeWidth={2} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={ring(k)} /> : null
+            )}
+            <motion.g initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: 0.95, ease: [0.16, 1, 0.3, 1] }}>
+              <rect x="0" y="146" width="640" height="68" fill="#0e1217" opacity="0.88" />
+              <g transform="translate(130 165) scale(0.4961)">
+                {LETTERS.map(([x, d]) => (
+                  <path key={x} transform={`translate(${x} 0)`} d={d} fill="#ffffff" fillRule="evenodd" />
+                ))}
+                {SLASHES.map((d) => (
+                  <path key={d} d={d} fill="#ffc20e" />
+                ))}
+              </g>
+            </motion.g>
           </svg>
           <motion.span
             className="absolute bottom-0 left-0 h-[3px] w-full origin-left bg-sun"
             initial={{ scaleX: 0 }}
             animate={{ scaleX: 1 }}
-            transition={{ duration: 0.9, ease: [0.65, 0, 0.35, 1] }}
+            transition={{ duration: HOLD_MS / 1000, ease: [0.65, 0, 0.35, 1] }}
           />
         </motion.div>
       ) : null}
