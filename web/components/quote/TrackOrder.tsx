@@ -8,6 +8,7 @@ import { answerPriceChange, getOrder, getOrderPlan, orderAction, STATUSES, uploa
 import { Plan3DOverlay } from "../scaffold3d/Plan3DOverlay";
 import { siteTexts } from "../scaffold3d/siteTexts";
 import { shrinkImage } from "@/lib/image";
+import { logEvent } from "@/lib/events";
 import { digits, eur, fmtDate, fmtStamp } from "@/lib/format";
 import { errText, lineLabel, useI18n } from "@/lib/i18n";
 import { useSite } from "../SiteContext";
@@ -112,6 +113,7 @@ function TrackBody({ initialRef, initialPhone, initialKey }: { initialRef?: stri
   // Opened from the wizard's "Track this order" or a message link with the order's key: look it up right away.
   // With only the reference (and no key remembered here), the phone digits field gets the focus.
   useEffect(() => {
+    logEvent("tracking_opened");
     if (initialRef && (initialPhone || initialKey || remembered(normRef(initialRef)))) void find(initialRef, initialPhone || "", initialKey);
     else if (initialRef) window.setTimeout(() => phoneInput.current?.focus(), 350);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -296,7 +298,10 @@ function TrackBody({ initialRef, initialPhone, initialKey }: { initialRef?: stri
 
       {!cancelled && creds.current ? (
         <div className="mt-6">
-          <Button size="sm" variant="ghost" onClick={() => setShow3d(true)}>
+          <Button size="sm" variant="ghost" onClick={() => {
+              setShow3d(true);
+              logEvent("view_3d_opened");
+            }}>
             {t("p3d.open")}
           </Button>
         </div>
