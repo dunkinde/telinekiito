@@ -1883,7 +1883,9 @@ const en = {
   "line.roofWorkSheet": "Temporary roof, putting up and taking down, wall sheeting included",
   "biz.new.inspections": "Weekly inspections by us",
   "od.3d.crane": "Crane needed",
-  "od.3d.craneHint": "lifting on delivery and on collection, 2 × the crane price"
+  "od.3d.craneHint": "lifting on delivery and on collection, 2 × the crane price",
+  "nav.work": "Work",
+  "sub.work": "Tasks, projects, routines and hours"
 } satisfies Record<string, Entry>;
 
 export type Key = keyof typeof en;
@@ -3757,7 +3759,9 @@ const fi: Record<Key, Entry> = {
   "line.roofWorkSheet": "Sääsuojakaton asennus ja purku, seinäpeite sisältyy",
   "biz.new.inspections": "Viikkotarkastukset meiltä",
   "od.3d.crane": "Nosturi tarvitaan",
-  "od.3d.craneHint": "nosto tuonnissa ja noudossa, 2 × nosturihinta"
+  "od.3d.craneHint": "nosto tuonnissa ja noudossa, 2 × nosturihinta",
+  "nav.work": "Työt",
+  "sub.work": "Tehtävät, projektit, rutiinit ja tunnit"
 };
 
 const DICT: Record<Lang, Record<Key, Entry>> = { en, fi, ru };

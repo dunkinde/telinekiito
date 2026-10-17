@@ -26,6 +26,7 @@ const B = require("./lib/business");
 const { finvoice } = require("./lib/finvoice");
 const PR = require("./lib/prospects");
 const CRM = require("./lib/crm");
+const W = require("./lib/work");
 const { HttpError } = O;
 
 const PORT = Number(process.env.PORT) || 3000;
@@ -1752,6 +1753,112 @@ route("GET", /^\/api\/office\/audit$/, (req, m, url) => {
 });
 
 /* Team */
+/* ---------- Internal work: projects, tasks, routines, hours (everyone in the office, sales too) ---------- */
+const requireWork = (req) => requireStaff(req, ["owner", "leader", "sales"]);
+const workPeople = () => [{ id: "owner", name: "Owner", role: "owner" }].concat(store.list("staff", { limit: 500 }).filter((x) => x.active !== false && x.id !== "owner").map((x) => ({ id: x.id, name: x.name, role: x.role })));
+function getWork(kind, wid) {
+  const r = /^[\w-]{1,40}$/.test(wid) ? store.get(kind, wid) : null;
+  if (!r) throw new HttpError(404, "not_found", "Not found.");
+  return r;
+}
+/** Routines make their tasks for every due date up to today (on reading, so nothing has to run on a timer). */
+function runRoutines() {
+  const today = P.today();
+  for (const r of store.list("routine", { limit: 500 })) {
+    if (r.active === false) continue;
+    const dates = W.dueDates(r, today);
+    for (const d of dates) store.put("task", W.taskFromRoutine(r, d));
+    if (r.lastMade !== today) store.put("routine", { ...r, lastMade: today });
+  }
+}
+const byName = (u) => ({ by: u.id, byName: u.name });
+route("GET", /^\/api\/office\/work$/, (req) => {
+  requireWork(req);
+  runRoutines();
+  const since = W.addDays(P.today(), -90);
+  const tasks = store.list("task", { limit: 5000 }).filter((t) => t.status !== "done" || (t.doneAt || t.updatedAt || "").slice(0, 10) >= since);
+  return { today: P.today(), projects: store.list("project", { limit: 500 }), tasks, routines: store.list("routine", { limit: 500 }), people: workPeople() };
+});
+route("POST", /^\/api\/office\/work\/projects$/, async (req) => {
+  const user = requireWork(req);
+  const p = store.put("project", { ...W.projectInput(await readJson(req, 8192)), createdBy: user.id });
+  return { project: p };
+});
+route("PATCH", /^\/api\/office\/work\/projects\/([\w-]+)$/, async (req, m) => {
+  requireWork(req);
+  const p = getWork("project", m[1]);
+  return { project: store.put("project", { ...p, ...W.projectInput(await readJson(req, 8192), true) }) };
+});
+route("DELETE", /^\/api\/office\/work\/projects\/([\w-]+)$/, (req, m) => {
+  requireWork(req);
+  getWork("project", m[1]);
+  // Its tasks and routines stay, without a project.
+  for (const t of store.list("task", { limit: 5000 })) if (t.projectId === m[1]) store.put("task", { ...t, projectId: null });
+  for (const r of store.list("routine", { limit: 500 })) if (r.projectId === m[1]) store.put("routine", { ...r, projectId: null });
+  store.del("project", m[1]);
+  return { ok: true };
+});
+route("POST", /^\/api\/office\/work\/tasks$/, async (req) => {
+  const user = requireWork(req);
+  const t = W.taskInput(await readJson(req, 32768));
+  return { task: store.put("task", { ...t, checklist: t.checklist || [], comments: [], hours: [], createdBy: user.id, ...(t.status === "done" ? { doneAt: new Date().toISOString() } : {}) }) };
+});
+route("PATCH", /^\/api\/office\/work\/tasks\/([\w-]+)$/, async (req, m) => {
+  requireWork(req);
+  const t = getWork("task", m[1]);
+  const patch = W.taskInput(await readJson(req, 32768), true);
+  const next = { ...t, ...patch };
+  if (patch.status && patch.status !== t.status) next.doneAt = patch.status === "done" ? new Date().toISOString() : null;
+  return { task: store.put("task", next) };
+});
+route("DELETE", /^\/api\/office\/work\/tasks\/([\w-]+)$/, (req, m) => {
+  requireWork(req);
+  getWork("task", m[1]);
+  store.del("task", m[1]);
+  return { ok: true };
+});
+route("POST", /^\/api\/office\/work\/tasks\/([\w-]+)\/comments$/, async (req, m) => {
+  const user = requireWork(req);
+  const t = getWork("task", m[1]);
+  const text = W.str((await readJson(req, 8192)).text, 2000);
+  if (!text) throw new HttpError(400, "text_required", "Write the comment.");
+  const comments = [...(t.comments || []), { id: store.newId("cmt"), ...byName(user), text, at: new Date().toISOString() }].slice(-200);
+  return { task: store.put("task", { ...t, comments }) };
+});
+route("POST", /^\/api\/office\/work\/tasks\/([\w-]+)\/hours$/, async (req, m) => {
+  const user = requireWork(req);
+  const t = getWork("task", m[1]);
+  const h = W.hoursInput(await readJson(req, 4096));
+  const hours = [...(t.hours || []), { id: store.newId("hrs"), userId: user.id, userName: user.name, ...h }].slice(-500);
+  return { task: store.put("task", { ...t, hours }) };
+});
+route("DELETE", /^\/api\/office\/work\/tasks\/([\w-]+)\/hours\/([\w-]+)$/, (req, m) => {
+  const user = requireWork(req);
+  const t = getWork("task", m[1]);
+  const e = (t.hours || []).find((x) => x.id === m[2]);
+  if (!e) throw new HttpError(404, "not_found", "Not found.");
+  // Your own hours; the owner can remove anyone's.
+  if (e.userId !== user.id && user.role !== "owner") throw new HttpError(403, "forbidden", "Only your own hours.");
+  return { task: store.put("task", { ...t, hours: t.hours.filter((x) => x.id !== m[2]) }) };
+});
+route("POST", /^\/api\/office\/work\/routines$/, async (req) => {
+  const user = requireWork(req);
+  const r = store.put("routine", { ...W.routineInput(await readJson(req, 16384)), createdBy: user.id });
+  runRoutines();
+  return { routine: store.get("routine", r.id) };
+});
+route("PATCH", /^\/api\/office\/work\/routines\/([\w-]+)$/, async (req, m) => {
+  requireWork(req);
+  const r = getWork("routine", m[1]);
+  return { routine: store.put("routine", { ...r, ...W.routineInput(await readJson(req, 16384), true) }) };
+});
+route("DELETE", /^\/api\/office\/work\/routines\/([\w-]+)$/, (req, m) => {
+  requireWork(req);
+  getWork("routine", m[1]);
+  store.del("routine", m[1]);
+  return { ok: true };
+});
+
 route("GET", /^\/api\/office\/staff$/, (req) => {
   requireOffice(req);
   return { staff: store.list("staff").map(P.publicStaff), crews: crews() };

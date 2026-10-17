@@ -84,14 +84,16 @@ export function useT(): I18n {
 }
 
 /* ---------------- Navigation ---------------- */
-export const SECTIONS = ["overview", "orders", "calendar", "map", "approvals", "messages", "leads", "crm", "stock", "team", "invoices", "customers", "reviews", "reports", "settings"] as const;
+export const SECTIONS = ["overview", "orders", "calendar", "map", "approvals", "messages", "work", "leads", "crm", "stock", "team", "invoices", "customers", "reviews", "reports", "settings"] as const;
 export type Section = (typeof SECTIONS)[number];
 /** Sections that only the head of company sees (their endpoints refuse team leaders). */
 export const OWNER_ONLY: Section[] = ["invoices", "customers", "reviews", "reports", "settings"];
 /** Sales sections: the head of company and the sales role only. Sales sees nothing else. */
 export const SALES_SECTIONS: Section[] = ["leads", "crm"];
+/** Sections everyone in the office sees, sales included. */
+const SHARED: Section[] = ["work"];
 export function canSee(role: string, s: Section) {
-  if (role === "owner") return true;
+  if (role === "owner" || SHARED.includes(s)) return true;
   if (role === "sales") return SALES_SECTIONS.includes(s);
   return !OWNER_ONLY.includes(s) && !SALES_SECTIONS.includes(s);
 }

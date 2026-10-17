@@ -28,6 +28,7 @@ import {
   IStock,
   ITeam
 } from "./icons";
+import { Work } from "./Work";
 import { IconClose } from "../ui/Icons";
 import { LangSwitch } from "./Login";
 import { Count, IconBtn, cx, usePopover } from "./ui";
@@ -53,6 +54,7 @@ const ICONS: Record<Section, (p: { className?: string }) => React.ReactNode> = {
   map: IMap,
   approvals: IApprove,
   messages: IMessages,
+  work: IApprove,
   leads: IReports,
   crm: ICustomers,
   stock: IStock,
@@ -64,7 +66,7 @@ const ICONS: Record<Section, (p: { className?: string }) => React.ReactNode> = {
   settings: ISettings
 };
 const GROUPS: { key: "daily" | "sales" | "resources" | "money"; items: Section[] }[] = [
-  { key: "daily", items: ["overview", "orders", "calendar", "map", "approvals", "messages"] },
+  { key: "daily", items: ["overview", "orders", "calendar", "map", "approvals", "messages", "work"] },
   { key: "sales", items: ["leads", "crm"] },
   { key: "resources", items: ["stock", "team"] },
   { key: "money", items: ["invoices", "customers", "reviews", "reports", "settings"] }
@@ -421,6 +423,8 @@ function SectionView({ section }: { section: Section }) {
       return <Approvals />;
     case "messages":
       return <Messages />;
+    case "work":
+      return <Work />;
     case "leads":
       return <Leads />;
     case "crm":
